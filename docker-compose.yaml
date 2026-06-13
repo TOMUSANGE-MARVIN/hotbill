@@ -17,7 +17,7 @@ services:
 
   api:
     build:
-      context: ../api
+      context: ./api
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
@@ -44,7 +44,7 @@ services:
 
   queue:
     build:
-      context: ../api
+      context: ./api
       dockerfile: Dockerfile
     restart: unless-stopped
     command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
@@ -69,7 +69,7 @@ services:
 
   web:
     build:
-      context: ../web
+      context: ./web
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
