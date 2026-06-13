@@ -40,7 +40,7 @@ services:
       CACHE_STORE: database
       RUN_MIGRATIONS: "true"
     ports:
-      - "8080:80"
+      - "8090:80"
 
   queue:
     build:
