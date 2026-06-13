@@ -1,0 +1,83 @@
+services:
+  mariadb:
+    image: mariadb:11
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_DATABASE:-hotbill}
+      MARIADB_USER: ${DB_USERNAME:-hotbill}
+      MARIADB_PASSWORD: ${DB_PASSWORD:-hotbill_secret}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../hotbill-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      APP_NAME: ${APP_NAME:-HotBill}
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      DB_CONNECTION: mysql
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-hotbill}
+      DB_USERNAME: ${DB_USERNAME:-hotbill}
+      DB_PASSWORD: ${DB_PASSWORD:-hotbill_secret}
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+      RUN_MIGRATIONS: "true"
+    ports:
+      - "8080:80"
+
+  queue:
+    build:
+      context: ../hotbill-api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      APP_NAME: ${APP_NAME:-HotBill}
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      DB_CONNECTION: mysql
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-hotbill}
+      DB_USERNAME: ${DB_USERNAME:-hotbill}
+      DB_PASSWORD: ${DB_PASSWORD:-hotbill_secret}
+      SESSION_DRIVER: database
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+
+  web:
+    build:
+      context: ../hotbill-web
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3010:3000"
+
+volumes:
+  db_data:
