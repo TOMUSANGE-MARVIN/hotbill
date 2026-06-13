@@ -18,9 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->statefulApi();
 
-        $middleware->trustHosts(at: [
+        $middleware->trustHosts(at: fn () => [
             'localhost',
             '127.0.0.1',
+            parse_url(config('app.url'), PHP_URL_HOST),
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
