@@ -101,7 +101,7 @@ SCRIPT;
     public function getProvisionScriptAttribute(): string
     {
         $url = config('app.url');
-        $radiusHost = parse_url($url, PHP_URL_HOST);
+        $radiusHost = gethostbyname(parse_url($url, PHP_URL_HOST));
         $token = $this->token;
         $apiUser = $this->api_username;
         $apiPass = $this->api_password;
