@@ -125,7 +125,6 @@ SCRIPT;
 
 /system scheduler remove [find name=hotbill-heartbeat]
 /system scheduler add name=hotbill-heartbeat interval=60s start-time=startup on-event=":local cpu [/system resource get cpu-load]; :local mem [/system resource get free-memory]; :local tmem [/system resource get total-memory]; :local upt [/system resource get uptime]; :local usr [/ip hotspot active print count-only]; :local ip \"\"; :local addrs [/ip address find disabled=no]; :if ([:len \$addrs] > 0) do={ :local cidr [/ip address get ([:pick \$addrs 0]) address]; :set ip [:pick \$cidr 0 [:find \$cidr \"/\"]] }; /tool fetch url=\"{$url}/api/v1/routers/heartbeat\" http-method=post http-header-field=\"Authorization: Bearer {$token}\" http-data=(\"cpu=\" . \$cpu . \"&memory=\" . \$mem . \"&total_memory=\" . \$tmem . \"&uptime=\" . \$upt . \"&active_users=\" . \$usr . \"&ip=\" . \$ip) keep-result=no"
-/system scheduler run hotbill-heartbeat
 
 :log info "HotBill: provisioning complete"
 :put "HotBill provisioning complete"
