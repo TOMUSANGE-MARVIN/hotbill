@@ -56,6 +56,11 @@ DOCKER_IFACE=$(ip -4 route | awk '/^default/ {print $5; exit}')
 iptables -C FORWARD -i wg0 -o "$DOCKER_IFACE" -j ACCEPT 2>/dev/null || iptables -A FORWARD -i wg0 -o "$DOCKER_IFACE" -j ACCEPT
 iptables -C FORWARD -i "$DOCKER_IFACE" -o wg0 -j ACCEPT 2>/dev/null || iptables -A FORWARD -i "$DOCKER_IFACE" -o wg0 -j ACCEPT
 
+# Router peers restrict allowed-address to the VPN subnet (cryptokey routing), so
+# traffic from the docker bridge (10.0.x.x) must look like it comes from our own
+# wg0 address or routers silently drop it as out-of-range.
+iptables -t nat -C POSTROUTING -o wg0 -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -o wg0 -j MASQUERADE
+
 echo "WireGuard interface wg0 is up. Server public key: $(cat "$SERVER_PUB")"
 
 exec ./watch-peers.sh "$WG_CONF" "$PEERS_DIR" "$SERVER_PRIVATE_KEY" "$WG_SERVER_IP" "$WG_LISTEN_PORT"
