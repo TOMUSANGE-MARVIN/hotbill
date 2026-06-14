@@ -15,14 +15,40 @@ services:
       timeout: 5s
       retries: 10
 
+  wireguard:
+    build:
+      context: ./wireguard
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    environment:
+      WG_SERVER_IP: 10.66.0.1
+      WG_LISTEN_PORT: 51820
+    ports:
+      - "51820:51820/udp"
+    volumes:
+      - wg_data:/etc/wireguard
+
   api:
     build:
       context: ./api
       dockerfile: Dockerfile
     restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
     depends_on:
       mariadb:
         condition: service_healthy
+      wireguard:
+        condition: service_started
+    volumes:
+      - wg_data:/var/wireguard
     environment:
       APP_NAME: ${APP_NAME:-HotBill}
       APP_ENV: ${APP_ENV:-production}
@@ -48,9 +74,15 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
+    cap_add:
+      - NET_ADMIN
     depends_on:
       mariadb:
         condition: service_healthy
+      wireguard:
+        condition: service_started
+    volumes:
+      - wg_data:/var/wireguard
     environment:
       APP_NAME: ${APP_NAME:-HotBill}
       APP_ENV: ${APP_ENV:-production}
@@ -81,3 +113,4 @@ services:
 
 volumes:
   db_data:
+  wg_data:

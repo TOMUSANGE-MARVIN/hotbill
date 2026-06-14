@@ -37,6 +37,15 @@ class RouterController extends Controller
             'tenant_id' => $request->user()->tenant_id,
         ]));
 
+        try {
+            $router->provisionVpn();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('VPN provisioning deferred', [
+                'router_id' => $router->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         // Register as NAS for RADIUS
         if ($router->ip_address) {
             app(RadiusService::class)->registerNas(
@@ -77,6 +86,18 @@ class RouterController extends Controller
     {
         $this->authorize_tenant($router, $request);
         app(RadiusService::class)->removeNas($router->ip_address ?? '');
+
+        if (config('hotbill.wireguard.enabled')) {
+            try {
+                app(\App\Services\WireguardService::class)->removePeerConfig($router);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Failed to remove WireGuard peer config', [
+                    'router_id' => $router->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
         $router->delete();
         return response()->json(['message' => 'Deleted']);
     }

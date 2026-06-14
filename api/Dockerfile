@@ -26,6 +26,9 @@ RUN apk add --no-cache \
         libjpeg-turbo \
         freetype \
         oniguruma \
+        wireguard-tools \
+        iproute2 \
+        iputils \
     && apk add --no-cache --virtual .build-deps \
         icu-dev \
         libzip-dev \

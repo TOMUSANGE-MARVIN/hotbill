@@ -17,8 +17,10 @@ class MikrotikService
 
     public function connect(): void
     {
+        $host = $this->router->vpn_ip ?: $this->router->ip_address;
+
         $this->socket = @fsockopen(
-            $this->router->ip_address,
+            $host,
             $this->router->api_port,
             $errno,
             $errstr,

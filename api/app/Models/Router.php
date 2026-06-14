@@ -15,13 +15,15 @@ class Router extends Model
         'identity', 'model', 'ros_version', 'serial_number',
         'cpu_load', 'free_memory', 'total_memory', 'uptime', 'active_users',
         'data_rx', 'data_tx', 'status', 'last_seen_at', 'is_active',
+        'vpn_ip', 'vpn_private_key', 'vpn_public_key', 'vpn_listen_port', 'vpn_configured_at',
     ];
 
-    protected $hidden = ['api_password', 'token', 'radius_secret'];
+    protected $hidden = ['api_password', 'token', 'radius_secret', 'vpn_private_key'];
 
     protected $casts = [
         'last_seen_at' => 'datetime',
         'is_active' => 'boolean',
+        'vpn_configured_at' => 'datetime',
     ];
 
     protected $appends = ['is_online'];
@@ -77,6 +79,57 @@ class Router extends Model
     }
 
     /**
+     * Idempotently allocate WireGuard keys/VPN IP for this router if not already
+     * present, and (re)write its peer config so the wireguard container picks it
+     * up. Safe to call repeatedly — also how lazy backfill happens for routers
+     * provisioned before VPN support existed.
+     */
+    public function provisionVpn(): void
+    {
+        if (!config('hotbill.wireguard.enabled')) {
+            return;
+        }
+
+        $wireguard = app(\App\Services\WireguardService::class);
+
+        if (!$this->vpn_private_key || !$this->vpn_public_key || !$this->vpn_ip) {
+            $keys = $wireguard->generateKeypair();
+
+            $attempt = 0;
+            while (true) {
+                $attempt++;
+
+                $this->vpn_private_key = $keys['private'];
+                $this->vpn_public_key = $keys['public'];
+                $this->vpn_ip = $wireguard->allocateIp();
+                $this->vpn_listen_port = $this->vpn_listen_port
+                    ?? config('hotbill.wireguard.router_listen_port');
+
+                try {
+                    $this->save();
+                    break;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($attempt >= 5 || !$this->isUniqueConstraintViolation($e)) {
+                        throw $e;
+                    }
+                    $this->vpn_ip = null; // retry allocation
+                }
+            }
+        }
+
+        $wireguard->writePeerConfig($this);
+
+        if (!$this->vpn_configured_at) {
+            $this->forceFill(['vpn_configured_at' => now()])->save();
+        }
+    }
+
+    private function isUniqueConstraintViolation(\Illuminate\Database\QueryException $e): bool
+    {
+        return (int) ($e->errorInfo[1] ?? 0) === 1062; // MySQL/MariaDB duplicate entry
+    }
+
+    /**
      * The single command the user pastes into the router terminal. It fetches and
      * runs provision_script, which contains the actual setup logic — nothing else
      * needs to be typed in (no IP, no credentials).
@@ -108,6 +161,36 @@ SCRIPT;
         $apiPort = $this->api_port;
         $name = $this->name;
 
+        $this->provisionVpn();
+
+        $vpnSection = '';
+        if (config('hotbill.wireguard.enabled')) {
+            try {
+                $serverPubKey = app(\App\Services\WireguardService::class)->getServerPublicKey();
+                $endpoint = config('hotbill.wireguard.server_endpoint');
+                $port = config('hotbill.wireguard.server_port');
+                $listenPort = $this->vpn_listen_port ?? config('hotbill.wireguard.router_listen_port');
+                $vpnIp = $this->vpn_ip;
+                $privKey = $this->vpn_private_key;
+                $subnet = config('hotbill.wireguard.subnet');
+
+                $vpnSection = <<<VPN
+
+/interface wireguard remove [find name=hotbill-vpn]
+/interface wireguard add name=hotbill-vpn private-key="{$privKey}" listen-port={$listenPort}
+/interface wireguard peers remove [find interface=hotbill-vpn]
+/interface wireguard peers add interface=hotbill-vpn public-key="{$serverPubKey}" endpoint-address={$endpoint} endpoint-port={$port} allowed-address={$subnet} persistent-keepalive=25s
+/ip address remove [find interface=hotbill-vpn]
+/ip address add address={$vpnIp}/24 interface=hotbill-vpn
+VPN;
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning(
+                    'HotBill: skipping WireGuard provisioning block',
+                    ['router_id' => $this->id, 'error' => $e->getMessage()]
+                );
+            }
+        }
+
         return <<<SCRIPT
 :log info "HotBill: provisioning started"
 /system identity set name="{$name}"
@@ -122,6 +205,7 @@ SCRIPT;
 
 /ip hotspot walled-garden remove [find comment="hotbill-portal"]
 /ip hotspot walled-garden add dst-host=*hotbill* action=allow comment="hotbill-portal"
+{$vpnSection}
 
 /system scheduler remove [find name=hotbill-heartbeat]
 /system scheduler add name=hotbill-heartbeat interval=60s start-time=startup on-event=":local cpu [/system resource get cpu-load]; :local mem [/system resource get free-memory]; :local tmem [/system resource get total-memory]; :local upt [/system resource get uptime]; :local usr [/ip hotspot active print count-only]; :local ip \"\"; :local addrs [/ip address find disabled=no]; :if ([:len \$addrs] > 0) do={ :local cidr [/ip address get ([:pick \$addrs 0]) address]; :set ip [:pick \$cidr 0 [:find \$cidr \"/\"]] }; /tool fetch url=\"{$url}/api/v1/routers/heartbeat\" http-method=post http-header-field=\"Authorization: Bearer {$token}\" http-data=(\"cpu=\" . \$cpu . \"&memory=\" . \$mem . \"&total_memory=\" . \$tmem . \"&uptime=\" . \$upt . \"&active_users=\" . \$usr . \"&ip=\" . \$ip) keep-result=no"
