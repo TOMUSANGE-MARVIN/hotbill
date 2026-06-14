@@ -101,6 +101,7 @@ SCRIPT;
     public function getProvisionScriptAttribute(): string
     {
         $url = config('app.url');
+        $radiusHost = parse_url($url, PHP_URL_HOST);
         $token = $this->token;
         $apiUser = $this->api_username;
         $apiPass = $this->api_password;
@@ -116,7 +117,7 @@ SCRIPT;
 /ip service set api port={$apiPort} disabled=no
 
 /radius remove [find comment="hotbill"]
-/radius add address={$url} secret={$this->radius_secret} service=hotspot,ppp authentication-port=1812 accounting-port=1813 comment="hotbill"
+/radius add address={$radiusHost} secret={$this->radius_secret} service=hotspot,ppp authentication-port=1812 accounting-port=1813 comment="hotbill"
 /ip hotspot profile set [find] use-radius=yes radius-accounting=yes
 
 /ip hotspot walled-garden remove [find comment="hotbill-portal"]
