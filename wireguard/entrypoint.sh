@@ -11,11 +11,25 @@ WG_LISTEN_PORT="${WG_LISTEN_PORT:-51820}"
 
 mkdir -p "$PEERS_DIR"
 
+# wireguard-tools installs /etc/wireguard as 0700 root-only, which blocks the
+# api/queue containers (running as www-data) from traversing into it even to
+# read world-readable files. Open up traversal; individual secret files
+# (server_private.key, wg0.conf) keep their own 0600 permissions.
+chmod 755 "$WG_DIR"
+# Writable by other UIDs too: the api/queue containers (running as www-data)
+# write/remove peer config files here via WireguardService.
+chmod 777 "$PEERS_DIR"
+
 if [ ! -f "$SERVER_PRIV" ]; then
     echo "Generating WireGuard server keypair..."
     umask 077
     wg genkey | tee "$SERVER_PRIV" | wg pubkey > "$SERVER_PUB"
 fi
+
+# Keep the private key root-only, but the public key must be readable by
+# www-data in the api container (WireguardService::getServerPublicKey()).
+chmod 600 "$SERVER_PRIV"
+chmod 644 "$SERVER_PUB"
 
 SERVER_PRIVATE_KEY=$(cat "$SERVER_PRIV")
 
