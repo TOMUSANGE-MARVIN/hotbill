@@ -176,42 +176,87 @@ SCRIPT;
 
                 $vpnSection = <<<VPN
 
+:put "Downloading VPN configuration..."
+:do {
 /interface wireguard remove [find name=hotbill-vpn]
 /interface wireguard add name=hotbill-vpn private-key="{$privKey}" listen-port={$listenPort}
 /interface wireguard peers remove [find interface=hotbill-vpn]
 /interface wireguard peers add interface=hotbill-vpn public-key="{$serverPubKey}" endpoint-address={$endpoint} endpoint-port={$port} allowed-address={$subnet} persistent-keepalive=25s
 /ip address remove [find interface=hotbill-vpn]
 /ip address add address={$vpnIp}/24 interface=hotbill-vpn
+:put "VPN configuration applied successfully"
+} on-error={
+:put "VPN setup failed - this router's RouterOS version may not support WireGuard (requires 7.x)"
+:log warning "HotBill: WireGuard setup failed"
+}
 VPN;
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning(
                     'HotBill: skipping WireGuard provisioning block',
                     ['router_id' => $this->id, 'error' => $e->getMessage()]
                 );
+
+                $vpnSection = <<<VPN
+
+:put "VPN configuration not ready yet - skipping (will retry on next run)"
+VPN;
             }
         }
 
         return <<<SCRIPT
-:log info "HotBill: provisioning started"
-/system identity set name="{$name}"
+:put ""
+:put "=== HotBill: provisioning started ==="
 
+:put "Setting router identity..."
+:do {
+/system identity set name="{$name}"
+:put "Router identity set to '{$name}'"
+} on-error={
+:put "FAILED: could not set router identity"
+}
+
+:put "Adding HotBill API user..."
+:do {
 /user remove [find name="{$apiUser}"]
 /user add name="{$apiUser}" password="{$apiPass}" group=full comment="hotbill-managed"
 /ip service set api port={$apiPort} disabled=no
+:put "HotBill API user added successfully"
+} on-error={
+:put "FAILED: could not configure HotBill API user"
+}
 
+:put "Registering RADIUS server..."
+:do {
 /radius remove [find comment="hotbill"]
 /radius add address={$radiusHost} secret={$this->radius_secret} service=hotspot,ppp authentication-port=1812 accounting-port=1813 comment="hotbill"
 /ip hotspot profile set [find] use-radius=yes radius-accounting=yes
+:put "RADIUS server registered successfully"
+} on-error={
+:put "FAILED: could not register RADIUS server"
+}
 
+:put "Configuring captive portal walled garden..."
+:do {
 /ip hotspot walled-garden remove [find comment="hotbill-portal"]
 /ip hotspot walled-garden add dst-host=*hotbill* action=allow comment="hotbill-portal"
+:put "Walled garden configured successfully"
+} on-error={
+:put "FAILED: could not configure walled garden"
+}
 {$vpnSection}
 
+:put "Scheduling heartbeat..."
+:do {
 /system scheduler remove [find name=hotbill-heartbeat]
 /system scheduler add name=hotbill-heartbeat interval=60s start-time=startup on-event=":local cpu [/system resource get cpu-load]; :local mem [/system resource get free-memory]; :local tmem [/system resource get total-memory]; :local upt [/system resource get uptime]; :local usr [/ip hotspot active print count-only]; :local ip \"\"; :local addrs [/ip address find disabled=no]; :if ([:len \$addrs] > 0) do={ :local cidr [/ip address get ([:pick \$addrs 0]) address]; :set ip [:pick \$cidr 0 [:find \$cidr \"/\"]] }; /tool fetch url=\"{$url}/api/v1/routers/heartbeat\" http-method=post http-header-field=\"Authorization: Bearer {$token}\" http-data=(\"cpu=\" . \$cpu . \"&memory=\" . \$mem . \"&total_memory=\" . \$tmem . \"&uptime=\" . \$upt . \"&active_users=\" . \$usr . \"&ip=\" . \$ip) keep-result=no"
+:put "Heartbeat scheduled successfully"
+} on-error={
+:put "FAILED: could not schedule heartbeat"
+}
 
+:put "=== HotBill: provisioning complete ==="
+:put "Services configured successfully"
 :log info "HotBill: provisioning complete"
-:put "HotBill provisioning complete"
 SCRIPT;
     }
 }
