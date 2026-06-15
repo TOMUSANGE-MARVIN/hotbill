@@ -57,7 +57,24 @@ class MikrotikService
     public function command(string $command, array $attributes = []): array
     {
         $this->write(array_merge([$command], $attributes));
-        return $this->read();
+        $response = $this->read();
+
+        foreach ($response as $sentence) {
+            if (($sentence['type'] ?? null) === '!trap') {
+                throw new Exception($sentence['message'] ?? "RouterOS rejected command: {$command}");
+            }
+        }
+
+        return $response;
+    }
+
+    /**
+     * Filter a print response down to its data rows (!re sentences),
+     * discarding the trailing !done status sentence.
+     */
+    private function rows(array $response): array
+    {
+        return array_values(array_filter($response, fn ($row) => ($row['type'] ?? null) === '!re'));
     }
 
     private function write(array $words): void
@@ -78,37 +95,42 @@ class MikrotikService
         fwrite($this->socket, chr(0)); // end of sentence
     }
 
+    /**
+     * Reads one full reply: a sequence of sentences (each a list of
+     * words terminated by a zero-length word), ending with the
+     * sentence whose first word is !done.
+     */
     private function read(): array
     {
         $response = [];
-        $current = [];
 
         while (true) {
-            $len = $this->readLength();
-            if ($len === 0) {
-                if (!empty($current)) {
-                    $response[] = $current;
-                    $current = [];
-                }
-                $sentence = $this->readSentenceEnd();
-                if ($sentence === '!done') break;
-                continue;
-            }
-            $word = fread($this->socket, $len);
-            if ($word === '!done') break;
-            if (str_starts_with($word, '!')) {
-                if (!empty($current)) {
-                    $response[] = $current;
-                }
-                $current = ['type' => $word];
-            } elseif (str_starts_with($word, '=')) {
-                [$key, $value] = explode('=', substr($word, 1), 2) + [1 => ''];
-                $current[$key] = $value;
-            }
-        }
+            $sentence = [];
+            $done = false;
 
-        if (!empty($current)) {
-            $response[] = $current;
+            while (true) {
+                $len = $this->readLength();
+                if ($len === 0) break;
+
+                $word = $this->readBytes($len);
+
+                if ($word === '!done') {
+                    $done = true;
+                }
+
+                if (str_starts_with($word, '!')) {
+                    $sentence['type'] = $word;
+                } elseif (str_starts_with($word, '=')) {
+                    [$key, $value] = explode('=', substr($word, 1), 2) + [1 => ''];
+                    $sentence[$key] = $value;
+                }
+            }
+
+            if (!empty($sentence)) {
+                $response[] = $sentence;
+            }
+
+            if ($done) break;
         }
 
         return $response;
@@ -116,37 +138,34 @@ class MikrotikService
 
     private function readLength(): int
     {
-        $byte = fread($this->socket, 1);
-        if ($byte === '' || $byte === false) {
-            throw new Exception('RouterOS connection closed unexpectedly while reading response');
-        }
-
-        $b = ord($byte);
+        $b = ord($this->readBytes(1));
         if ($b < 0x80) return $b;
         if ($b < 0xC0) {
-            $b2 = ord(fread($this->socket, 1));
+            $b2 = ord($this->readBytes(1));
             return (($b & ~0x80) << 8) | $b2;
         }
         if ($b < 0xE0) {
-            $b2 = ord(fread($this->socket, 1));
-            $b3 = ord(fread($this->socket, 1));
+            $b2 = ord($this->readBytes(1));
+            $b3 = ord($this->readBytes(1));
             return (($b & ~0xC0) << 16) | ($b2 << 8) | $b3;
         }
-        $b2 = ord(fread($this->socket, 1));
-        $b3 = ord(fread($this->socket, 1));
-        $b4 = ord(fread($this->socket, 1));
+        $b2 = ord($this->readBytes(1));
+        $b3 = ord($this->readBytes(1));
+        $b4 = ord($this->readBytes(1));
         return (($b & ~0xE0) << 24) | ($b2 << 16) | ($b3 << 8) | $b4;
     }
 
-    private function readSentenceEnd(): string
+    private function readBytes(int $length): string
     {
-        $word = '';
-        while (true) {
-            $len = $this->readLength();
-            if ($len === 0) break;
-            $word .= fread($this->socket, $len);
+        $data = '';
+        while (strlen($data) < $length) {
+            $chunk = fread($this->socket, $length - strlen($data));
+            if ($chunk === '' || $chunk === false) {
+                throw new Exception('RouterOS connection closed unexpectedly while reading response');
+            }
+            $data .= $chunk;
         }
-        return $word;
+        return $data;
     }
 
     // ── High-level helpers ──────────────────────────────────────
@@ -294,10 +313,10 @@ class MikrotikService
 
     public function addBridgePort(string $bridge, string $interface): void
     {
-        $existing = $this->command('/interface/bridge/port/print', [
+        $existing = $this->rows($this->command('/interface/bridge/port/print', [
             '?bridge=' . $bridge,
             '?interface=' . $interface,
-        ]);
+        ]));
         if (!empty($existing)) return;
 
         $this->command('/interface/bridge/port/add', [
@@ -332,7 +351,7 @@ class MikrotikService
         $rangeEnd = $this->broadcastMinusOne($network, (int) $prefix);
 
         $poolName = $bridge . '-pool';
-        $existingPool = $this->command('/ip/pool/print', ['?name=' . $poolName]);
+        $existingPool = $this->rows($this->command('/ip/pool/print', ['?name=' . $poolName]));
         if (empty($existingPool)) {
             $this->command('/ip/pool/add', [
                 '=name=' . $poolName,
@@ -340,7 +359,7 @@ class MikrotikService
             ]);
         }
 
-        $existingDhcp = $this->command('/ip/dhcp-server/print', ['?interface=' . $bridge]);
+        $existingDhcp = $this->rows($this->command('/ip/dhcp-server/print', ['?interface=' . $bridge]));
         if (empty($existingDhcp)) {
             $this->command('/ip/dhcp-server/add', [
                 '=name=' . $bridge . '-dhcp',
@@ -351,7 +370,7 @@ class MikrotikService
             ]);
         }
 
-        $existingNetwork = $this->command('/ip/dhcp-server/network/print', ['?address=' . $networkCidr]);
+        $existingNetwork = $this->rows($this->command('/ip/dhcp-server/network/print', ['?address=' . $networkCidr]));
         if (empty($existingNetwork)) {
             $this->command('/ip/dhcp-server/network/add', [
                 '=address=' . $networkCidr,
@@ -361,7 +380,7 @@ class MikrotikService
         }
 
         $profileName = $bridge . '-profile';
-        $existingProfile = $this->command('/ip/hotspot/profile/print', ['?name=' . $profileName]);
+        $existingProfile = $this->rows($this->command('/ip/hotspot/profile/print', ['?name=' . $profileName]));
         if (empty($existingProfile)) {
             $this->command('/ip/hotspot/profile/add', [
                 '=name=' . $profileName,
@@ -371,7 +390,7 @@ class MikrotikService
             ]);
         }
 
-        $existingHotspot = $this->command('/ip/hotspot/print', ['?interface=' . $bridge]);
+        $existingHotspot = $this->rows($this->command('/ip/hotspot/print', ['?interface=' . $bridge]));
         if (empty($existingHotspot)) {
             $this->command('/ip/hotspot/add', [
                 '=name=' . $bridge . '-hotspot',
