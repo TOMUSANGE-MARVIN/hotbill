@@ -8,6 +8,7 @@ use App\Models\RouterBridge;
 use App\Services\MikrotikService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class RouterSetupController extends Controller
 {
@@ -59,6 +60,8 @@ class RouterSetupController extends Controller
                 'bridges' => $bridges,
             ]);
         } catch (\Exception $e) {
+            Log::warning('HotBill: topology fetch failed', ['router_id' => $router->id, 'error' => $e->getMessage()]);
+
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
@@ -89,6 +92,8 @@ class RouterSetupController extends Controller
 
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
+            Log::warning('HotBill: toggleInterface failed', ['router_id' => $router->id, 'error' => $e->getMessage()]);
+
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
@@ -164,6 +169,13 @@ class RouterSetupController extends Controller
                 'bootstrap_script' => $this->bootstrapScript($bridge, $networkCidr),
             ]);
         } catch (\Exception $e) {
+            Log::error('HotBill: bridge deployment failed', [
+                'router_id' => $router->id,
+                'bridge' => $data['name'],
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             $bridge->update(['status' => 'failed', 'deploy_error' => $e->getMessage()]);
 
             return response()->json(['message' => $e->getMessage()], 422);
