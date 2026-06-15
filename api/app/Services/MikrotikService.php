@@ -44,14 +44,10 @@ class MikrotikService
 
     private function login(string $username, string $password): void
     {
-        $response = $this->command('/login', [
+        $this->command('/login', [
             '=name=' . $username,
             '=password=' . $password,
         ]);
-
-        if (isset($response[0]) && str_starts_with($response[0], '!trap')) {
-            throw new Exception('RouterOS authentication failed');
-        }
     }
 
     public function command(string $command, array $attributes = []): array
