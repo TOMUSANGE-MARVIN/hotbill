@@ -34,7 +34,7 @@ class RouterSetupController extends Controller
                     'disabled' => ($row['disabled'] ?? 'false') === 'true',
                     'mac_address' => $row['mac-address'] ?? null,
                 ])
-                ->filter(fn ($row) => !str_contains($row['type'], 'bridge'))
+                ->filter(fn ($row) => !in_array($row['type'], ['bridge', 'wg', 'loopback']))
                 ->values();
 
             $bridgePorts = collect($mikrotik->getBridgePorts())

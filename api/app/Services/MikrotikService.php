@@ -116,7 +116,12 @@ class MikrotikService
 
     private function readLength(): int
     {
-        $b = ord(fread($this->socket, 1));
+        $byte = fread($this->socket, 1);
+        if ($byte === '' || $byte === false) {
+            throw new Exception('RouterOS connection closed unexpectedly while reading response');
+        }
+
+        $b = ord($byte);
         if ($b < 0x80) return $b;
         if ($b < 0xC0) {
             $b2 = ord(fread($this->socket, 1));
