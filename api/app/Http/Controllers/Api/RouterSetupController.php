@@ -25,6 +25,7 @@ class RouterSetupController extends Controller
 
             $resource = $mikrotik->getSystemResource();
             $identity = $mikrotik->getSystemIdentity();
+            $wanInterfaces = $mikrotik->getWanInterfaces();
 
             $interfaces = collect($mikrotik->getInterfaces())
                 ->filter(fn ($row) => isset($row['name']))
@@ -34,6 +35,8 @@ class RouterSetupController extends Controller
                     'running' => ($row['running'] ?? 'false') === 'true',
                     'disabled' => ($row['disabled'] ?? 'false') === 'true',
                     'mac_address' => $row['mac-address'] ?? null,
+                    // WAN/uplink ports are locked — bridging them drops internet + the tunnel.
+                    'is_wan' => in_array($row['name'], $wanInterfaces, true),
                 ])
                 ->filter(fn ($row) => !in_array($row['type'], ['bridge', 'wg', 'loopback']))
                 ->values();
@@ -144,6 +147,20 @@ class RouterSetupController extends Controller
 
         try {
             $mikrotik = MikrotikService::connect_to($router);
+
+            // Safety: never bridge the WAN/uplink port — it would drop the
+            // router's internet and the management tunnel. Reject up-front,
+            // before changing anything on the device.
+            $wan = $mikrotik->getWanInterfaces();
+            $badPorts = array_intersect($data['ports'], $wan);
+            if (!empty($badPorts)) {
+                $mikrotik->disconnect();
+                $names = implode(', ', $badPorts);
+                $bridge->update(['status' => 'failed', 'deploy_error' => "WAN port(s) cannot be bridged: {$names}"]);
+                return response()->json([
+                    'message' => "Cannot add the WAN/uplink port ({$names}) to a hotspot bridge — that would cut the router's internet. Remove it from the selected ports.",
+                ], 422);
+            }
 
             $mikrotik->addBridge($data['name']);
 

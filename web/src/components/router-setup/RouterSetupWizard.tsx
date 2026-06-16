@@ -27,7 +27,7 @@ const SUBNET_OPTIONS = [
 ]
 
 const FALLBACK_INTERFACES: IfaceInfo[] = [
-  { name: 'ether1', type: 'ether', running: true, disabled: false },
+  { name: 'ether1', type: 'ether', running: true, disabled: false, is_wan: true },
   { name: 'ether2', type: 'ether', running: false, disabled: false },
   { name: 'ether3', type: 'ether', running: false, disabled: false },
   { name: 'ether4', type: 'ether', running: false, disabled: false },
@@ -40,6 +40,7 @@ interface IfaceInfo {
   type: string
   running: boolean
   disabled: boolean
+  is_wan?: boolean
 }
 
 interface BridgeDraft {
@@ -438,6 +439,8 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
     e.preventDefault()
     const portName = e.dataTransfer.getData('text/plain')
     if (!portName) return
+    // Never allow the WAN/uplink onto a bridge.
+    if (interfaces.find((i) => i.name === portName)?.is_wan) return
     setBridges((prev) =>
       prev.map((b) => {
         if (b.id === bridgeId) {
@@ -574,37 +577,48 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
 
           {/* Interface row */}
           <div className="relative flex flex-wrap gap-3 mb-8">
-            {interfaces.map((iface, idx) => {
+            {interfaces.map((iface) => {
               const Icon = isWireless(iface.type) ? Wifi : Cable
               const wireless = isWireless(iface.type)
               const active = !iface.disabled
+              const isWan = !!iface.is_wan
               return (
                 <div
                   key={iface.name}
                   ref={(el) => {
                     ifaceRefs.current[iface.name] = el
                   }}
-                  draggable
-                  onDragStart={(e) => e.dataTransfer.setData('text/plain', iface.name)}
-                  onDoubleClick={() => handleDoubleClickInterface(iface)}
+                  draggable={!isWan}
+                  onDragStart={(e) => {
+                    if (isWan) { e.preventDefault(); return }
+                    e.dataTransfer.setData('text/plain', iface.name)
+                  }}
+                  onDoubleClick={() => { if (!isWan) handleDoubleClickInterface(iface) }}
                   className={cn(
-                    'relative w-24 px-3 py-3 rounded-lg border bg-white text-center cursor-grab select-none hover:border-gray-400 transition-colors',
-                    wireless && active ? 'border-green-400 ring-1 ring-green-200' : 'border-gray-200'
+                    'relative w-24 px-3 py-3 rounded-lg border bg-white text-center select-none transition-colors',
+                    isWan
+                      ? 'border-gray-200 opacity-50 cursor-not-allowed bg-gray-50'
+                      : 'cursor-grab hover:border-gray-400',
+                    wireless && active && !isWan ? 'border-green-400 ring-1 ring-green-200' : 'border-gray-200'
                   )}
                   title={
-                    wireless
+                    isWan
+                      ? 'WAN / internet uplink — locked. Bridging it would cut the router’s internet.'
+                      : wireless
                       ? 'Double-click to toggle wireless'
                       : 'Drag onto a bridge to connect'
                   }
                 >
-                  {idx === 0 && (
+                  {isWan && (
                     <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold bg-amber-400 text-white px-1.5 py-0.5 rounded">
                       WAN
                     </span>
                   )}
-                  <Icon size={20} className={cn('mx-auto mb-1', wireless && active ? 'text-green-500' : 'text-gray-400')} />
+                  <Icon size={20} className={cn('mx-auto mb-1', wireless && active && !isWan ? 'text-green-500' : 'text-gray-400')} />
                   <p className="text-xs font-medium text-gray-700">{iface.name}</p>
-                  {wireless && <p className="text-[10px] text-gray-400">{active ? 'active' : 'inactive'}</p>}
+                  {isWan
+                    ? <p className="text-[10px] text-gray-400">locked</p>
+                    : wireless && <p className="text-[10px] text-gray-400">{active ? 'active' : 'inactive'}</p>}
                 </div>
               )
             })}

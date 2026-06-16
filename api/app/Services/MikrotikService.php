@@ -355,6 +355,28 @@ class MikrotikService
         return $this->command('/interface/print');
     }
 
+    /**
+     * Interfaces that carry the router's internet uplink (the default route).
+     * These must NEVER be added to a hotspot bridge — doing so drops the WAN,
+     * which also kills the WireGuard management tunnel.
+     */
+    public function getWanInterfaces(): array
+    {
+        $wan = [];
+        $routes = $this->rows($this->command('/ip/route/print', ['?dst-address=0.0.0.0/0']));
+        foreach ($routes as $r) {
+            $gw = $r['immediate-gw'] ?? $r['gateway'] ?? '';
+            if ($gw === '') continue;
+            // ROS7 immediate-gw looks like "192.168.1.1%ether1"; PPPoE gateway is the iface name.
+            if (str_contains($gw, '%')) {
+                $wan[] = substr($gw, strpos($gw, '%') + 1);
+            } elseif (!filter_var($gw, FILTER_VALIDATE_IP)) {
+                $wan[] = $gw;
+            }
+        }
+        return array_values(array_unique(array_filter($wan)));
+    }
+
     public function getBridges(): array
     {
         return $this->command('/interface/bridge/print');
