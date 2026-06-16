@@ -39,6 +39,7 @@ Route::prefix('v1')->group(function () {
         Route::get('routers/{router}/packages', [PortalController::class, 'packages']);
         Route::get('routers/{router}/login.html', [PortalController::class, 'loginTemplate']);
         Route::post('pay', [PortalController::class, 'pay']);
+        Route::post('redeem', [PortalController::class, 'redeem']);
         Route::get('ipn', [PortalController::class, 'ipn']);
         Route::get('orders/{reference}/status', [PortalController::class, 'status']);
     });

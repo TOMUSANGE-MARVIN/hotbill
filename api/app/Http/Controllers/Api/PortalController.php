@@ -7,6 +7,7 @@ use App\Models\Package;
 use App\Models\PortalOrder;
 use App\Models\Router;
 use App\Models\Transaction;
+use App\Models\Voucher;
 use App\Services\MikrotikService;
 use App\Services\PesapalService;
 use Illuminate\Http\JsonResponse;
@@ -146,6 +147,89 @@ HTML;
         return response()->json([
             'reference' => $order->merchant_reference,
             'redirect_url' => $result['redirect_url'],
+        ]);
+    }
+
+    /**
+     * Public: redeem a pre-sold voucher. Provisions the same one-time hotspot
+     * session as a paid order (so auto-login is identical) — no payment, no
+     * wallet credit (the operator already collected cash for the voucher).
+     */
+    public function redeem(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'router_id' => 'required|exists:routers,id',
+            'code' => 'required|string|max:40',
+            'mac' => 'nullable|string|max:32',
+            'ip' => 'nullable|string|max:45',
+            'link_login' => 'nullable|string',
+        ]);
+
+        $router = Router::findOrFail($data['router_id']);
+        $voucher = Voucher::where('code', strtoupper(trim($data['code'])))
+            ->where('tenant_id', $router->tenant_id)
+            ->first();
+
+        if (!$voucher || $voucher->status !== 'unused') {
+            return response()->json(['message' => 'Invalid or already-used voucher code.'], 422);
+        }
+
+        $package = $voucher->package;
+        if (!$package) {
+            return response()->json(['message' => 'This voucher has no package configured.'], 422);
+        }
+
+        $username = 'V' . $voucher->code;
+        $password = strtoupper(Str::random(6));
+
+        try {
+            $mikrotik = MikrotikService::connect_to($router);
+            $mikrotik->createHotspotSession(
+                $username,
+                $password,
+                $package->mikrotik_rate_limit,
+                $package->mikrotik_limit_uptime ?: null,
+                $package->data_limit_bytes,
+            );
+            $mikrotik->disconnect();
+        } catch (\Throwable $e) {
+            Log::error('Portal voucher provisioning failed', ['voucher' => $voucher->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Could not activate your voucher. Please try again.'], 502);
+        }
+
+        $expiresAt = $package->mikrotik_limit_uptime
+            ? now()->addDays($package->duration_days ?? 0)->addHours($package->duration_hours ?? 0)->addMinutes($package->duration_minutes ?? 0)
+            : null;
+
+        $voucher->update([
+            'status' => 'active',
+            'router_id' => $router->id,
+            'used_by_username' => $username,
+            'used_at' => now(),
+            'expires_at' => $expiresAt,
+        ]);
+
+        Transaction::create([
+            'tenant_id' => $voucher->tenant_id,
+            'voucher_id' => $voucher->id,
+            'package_id' => $package->id,
+            'reference' => 'VCH-' . $voucher->code,
+            'type' => 'voucher',
+            'method' => 'cash',
+            'amount' => $voucher->price,
+            'net_amount' => $voucher->price,
+            'currency' => $router->tenant?->currency ?? config('hotbill.pesapal.currency'),
+            'status' => 'completed',
+            'notes' => 'Captive portal voucher redemption',
+            'paid_at' => now(),
+        ]);
+
+        return response()->json([
+            'status' => 'paid',
+            'package' => $package->name,
+            'username' => $username,
+            'password' => $password,
+            'link_login' => $data['link_login'] ?? null,
         ]);
     }
 

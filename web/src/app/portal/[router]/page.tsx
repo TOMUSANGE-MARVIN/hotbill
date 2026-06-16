@@ -39,6 +39,10 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
+  const [voucher, setVoucher] = useState('')
+  const [voucherError, setVoucherError] = useState<string | null>(null)
+  const [redeeming, setRedeeming] = useState(false)
+  const [redeemed, setRedeemed] = useState<any>(null)
 
   useEffect(() => {
     http.get(`/portal/routers/${routerId}/packages`)
@@ -65,7 +69,25 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
     }
   }
 
+  const redeem = async () => {
+    if (!voucher.trim()) return
+    setRedeeming(true); setVoucherError(null)
+    try {
+      const res = await http.post('/portal/redeem', {
+        router_id: Number(routerId),
+        code: voucher.trim(),
+        mac, ip, link_login: linkLogin,
+      })
+      setRedeemed(res.data)
+    } catch (e: any) {
+      setVoucherError(e.response?.data?.message ?? 'Could not redeem voucher.')
+    } finally {
+      setRedeeming(false)
+    }
+  }
+
   if (loading) return <Splash><Loader2 className="animate-spin" /> Loading packages…</Splash>
+  if (redeemed) return <Connected data={redeemed} />
 
   return (
     <Shell org={data?.organization}>
@@ -139,6 +161,27 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
           <p className="text-[11px] text-gray-400 text-center">Approve the prompt on your phone to complete payment. A PesaPal page may open first.</p>
         </div>
       )}
+
+      {/* Voucher redemption */}
+      <div className="mt-6 pt-5 border-t border-gray-100">
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">Have a voucher?</label>
+        {voucherError && <div className="bg-red-50 text-red-600 text-xs rounded-lg px-3 py-2 mb-2">{voucherError}</div>}
+        <div className="flex gap-2">
+          <input
+            value={voucher}
+            onChange={(e) => setVoucher(e.target.value.toUpperCase())}
+            placeholder="Enter voucher code"
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-green-500"
+          />
+          <button
+            onClick={redeem}
+            disabled={redeeming || !voucher.trim()}
+            className="bg-gray-900 text-white rounded-lg px-4 py-2.5 text-sm font-semibold hover:bg-black disabled:opacity-50 whitespace-nowrap"
+          >
+            {redeeming ? '…' : 'Redeem'}
+          </button>
+        </div>
+      </div>
     </Shell>
   )
 }
@@ -146,7 +189,6 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
 function Verify({ reference }: { reference: string }) {
   const [order, setOrder] = useState<any>(null)
   const [failed, setFailed] = useState(false)
-  const formRef = useRef<HTMLFormElement>(null)
 
   useEffect(() => {
     let active = true
@@ -164,14 +206,6 @@ function Verify({ reference }: { reference: string }) {
     poll()
     return () => { active = false }
   }, [reference])
-
-  // Auto-submit the hotspot login once we have credentials + a login URL.
-  useEffect(() => {
-    if (order?.username && order?.link_login && formRef.current) {
-      const t = setTimeout(() => formRef.current?.submit(), 1200)
-      return () => clearTimeout(t)
-    }
-  }, [order])
 
   if (failed) {
     return (
@@ -198,19 +232,34 @@ function Verify({ reference }: { reference: string }) {
     )
   }
 
+  return <Connected data={order} />
+}
+
+/** Shared "you're connected" view — auto-submits the hotspot login. Used by
+ * both the paid flow and voucher redemption. */
+function Connected({ data }: { data: any }) {
+  const formRef = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    if (data?.username && data?.link_login && formRef.current) {
+      const t = setTimeout(() => formRef.current?.submit(), 1200)
+      return () => clearTimeout(t)
+    }
+  }, [data])
+
   return (
     <Shell>
       <div className="text-center py-6">
         <CheckCircle2 className="mx-auto text-green-500 mb-3" size={44} />
         <p className="font-semibold text-gray-900 text-lg">You&apos;re connected!</p>
-        <p className="text-sm text-gray-500 mt-1">{order.package} is now active.</p>
+        {data.package && <p className="text-sm text-gray-500 mt-1">{data.package} is now active.</p>}
 
-        {order.link_login ? (
+        {data.link_login ? (
           <>
             <p className="text-xs text-gray-400 mt-4">Logging you in…</p>
-            <form ref={formRef} action={order.link_login} method="post">
-              <input type="hidden" name="username" value={order.username} />
-              <input type="hidden" name="password" value={order.password} />
+            <form ref={formRef} action={data.link_login} method="post">
+              <input type="hidden" name="username" value={data.username} />
+              <input type="hidden" name="password" value={data.password} />
               <input type="hidden" name="dst" value="https://www.google.com" />
               <button type="submit" className="mt-3 bg-green-600 text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-green-700">
                 Connect Now
@@ -220,8 +269,8 @@ function Verify({ reference }: { reference: string }) {
         ) : (
           <div className="mt-4 bg-gray-50 rounded-lg p-4 text-left text-sm">
             <p className="text-gray-500 mb-2">Use these details on the WiFi login page:</p>
-            <p>Username: <span className="font-mono font-semibold">{order.username}</span></p>
-            <p>Password: <span className="font-mono font-semibold">{order.password}</span></p>
+            <p>Username: <span className="font-mono font-semibold">{data.username}</span></p>
+            <p>Password: <span className="font-mono font-semibold">{data.password}</span></p>
           </div>
         )}
       </div>
