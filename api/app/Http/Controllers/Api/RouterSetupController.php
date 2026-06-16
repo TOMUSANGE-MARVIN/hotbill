@@ -158,6 +158,25 @@ class RouterSetupController extends Controller
 
             if ($data['hotspot_enabled'] ?? false) {
                 $mikrotik->setupHotspot($data['name'], $networkCidr, $data['gateway_ip']);
+
+                // Wire the HotBill captive portal (walled garden + login redirect).
+                // Non-fatal: a failure here shouldn't fail the whole bridge deploy.
+                try {
+                    $portalHost = parse_url(config('hotbill.portal_url'), PHP_URL_HOST);
+                    $apiHost = parse_url(config('app.url'), PHP_URL_HOST);
+                    $loginUrl = rtrim(config('app.url'), '/') . '/api/v1/portal/routers/' . $router->id . '/login.html';
+                    $mikrotik->configureCaptivePortal($loginUrl, array_filter([
+                        $portalHost,
+                        $apiHost,
+                        '*.pesapal.com',
+                        'pesapal.com',
+                    ]));
+                } catch (\Throwable $e) {
+                    Log::warning('HotBill: captive portal config failed (bridge still deployed)', [
+                        'router_id' => $router->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
             }
 
             $mikrotik->disconnect();

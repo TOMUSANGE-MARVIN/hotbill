@@ -171,7 +171,7 @@ class RouterController extends Controller
         $stats = RouterStat::where('router_id', $router->id)
             ->where('recorded_at', '>=', now()->subHours(24))
             ->orderBy('recorded_at')
-            ->get(['cpu_load', 'active_users', 'data_rx', 'data_tx', 'recorded_at']);
+            ->get(['cpu_load', 'free_memory', 'total_memory', 'active_users', 'data_rx', 'data_tx', 'recorded_at']);
 
         return response()->json($stats);
     }
@@ -194,6 +194,54 @@ class RouterController extends Controller
             ]);
 
             return response()->json(['success' => true, 'identity' => $identity, 'resource' => $resource]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function reboot(Request $request, Router $router): JsonResponse
+    {
+        $this->authorize_tenant($router, $request);
+
+        try {
+            $mikrotik = MikrotikService::connect_to($router);
+            $mikrotik->reboot();
+            try { $mikrotik->disconnect(); } catch (\Throwable $e) { /* socket already dropping */ }
+
+            $router->update(['status' => 'offline']);
+            return response()->json(['success' => true, 'message' => 'Reboot command sent']);
+        } catch (\Exception $e) {
+            // The router drops the API socket as it goes down — expected after reboot is issued.
+            if (str_contains($e->getMessage(), 'connection closed')) {
+                $router->update(['status' => 'offline']);
+                return response()->json(['success' => true, 'message' => 'Reboot command sent']);
+            }
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    public function updateAdminPassword(Request $request, Router $router): JsonResponse
+    {
+        $this->authorize_tenant($router, $request);
+
+        $data = $request->validate([
+            'username' => 'nullable|string',
+            'password' => 'required|string|min:4',
+        ]);
+
+        $username = $data['username'] ?: 'admin';
+
+        try {
+            $mikrotik = MikrotikService::connect_to($router);
+            $mikrotik->setUserPassword($username, $data['password']);
+            $mikrotik->disconnect();
+
+            // Keep stored credentials in sync if we changed the account HotBill connects with.
+            if ($username === $router->api_username) {
+                $router->update(['api_password' => $data['password']]);
+            }
+
+            return response()->json(['success' => true, 'message' => "Password updated for '{$username}'"]);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         }

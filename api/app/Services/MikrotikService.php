@@ -253,6 +253,101 @@ class MikrotikService
         ]);
     }
 
+    /**
+     * Create a one-time hotspot user enforcing a package's limits. Used by the
+     * captive portal after payment so the client can auto-login and is shaped
+     * by the package (rate-limit, session time, data cap) via the router itself.
+     */
+    public function createHotspotSession(
+        string $username,
+        string $password,
+        ?string $rateLimit = null,
+        ?string $limitUptime = null,
+        ?int $limitBytesTotal = null,
+        string $server = 'all'
+    ): void {
+        // Replace any stale user with the same name (idempotent re-purchase).
+        $existing = $this->rows($this->command('/ip/hotspot/user/print', ['?name=' . $username]));
+        foreach ($existing as $u) {
+            if (isset($u['.id'])) {
+                $this->command('/ip/hotspot/user/remove', ['=.id=' . $u['.id']]);
+            }
+        }
+
+        $attrs = [
+            '=name=' . $username,
+            '=password=' . $password,
+            '=server=' . $server,
+        ];
+        if ($rateLimit && $rateLimit !== '0/0') $attrs[] = '=rate-limit=' . $rateLimit;
+        if ($limitUptime) $attrs[] = '=limit-uptime=' . $limitUptime;
+        if ($limitBytesTotal) $attrs[] = '=limit-bytes-total=' . $limitBytesTotal;
+
+        $this->command('/ip/hotspot/user/add', $attrs);
+    }
+
+    /**
+     * Allow a destination host through the hotspot walled garden while the
+     * client is still unauthenticated (e.g. the payment provider's domains).
+     */
+    public function allowWalledGarden(string $dstHost, string $comment): void
+    {
+        $existing = $this->rows($this->command('/ip/hotspot/walled-garden/print', ['?comment=' . $comment]));
+        if (!empty($existing)) return;
+
+        $this->command('/ip/hotspot/walled-garden/add', [
+            '=dst-host=' . $dstHost,
+            '=action=allow',
+            '=comment=' . $comment,
+        ]);
+    }
+
+    /**
+     * Wire the captive portal: allow the portal + payment domains through the
+     * walled garden (so pre-auth clients can reach them) and replace the hotspot
+     * login page with one that redirects to the HotBill portal.
+     *
+     * @param string[] $allowHosts dst-host patterns to whitelist
+     */
+    public function configureCaptivePortal(string $loginTemplateUrl, array $allowHosts): void
+    {
+        foreach ($allowHosts as $host) {
+            $this->allowWalledGarden($host, 'hotbill-portal-' . substr(md5($host), 0, 8));
+        }
+
+        // Pull the redirecting login.html into the hotspot html directory.
+        $this->command('/tool/fetch', [
+            '=url=' . $loginTemplateUrl,
+            '=dst-path=hotspot/login.html',
+            '=mode=https',
+        ]);
+    }
+
+    /**
+     * Reboot the router. The API socket drops as the device goes down, so
+     * callers should treat a post-send "connection closed" as success.
+     */
+    public function reboot(): void
+    {
+        $this->command('/system/reboot');
+    }
+
+    /**
+     * Change the password of an existing router user (e.g. "admin").
+     */
+    public function setUserPassword(string $username, string $newPassword): void
+    {
+        $users = $this->rows($this->command('/user/print', ['?name=' . $username]));
+        if (empty($users[0]['.id'])) {
+            throw new Exception("User '{$username}' not found on router");
+        }
+
+        $this->command('/user/set', [
+            '=.id=' . $users[0]['.id'],
+            '=password=' . $newPassword,
+        ]);
+    }
+
     // ── Topology / setup wizard helpers ─────────────────────────
 
     public function getInterfaces(): array
@@ -376,13 +471,21 @@ class MikrotikService
         }
 
         $profileName = $bridge . '-profile';
+        // http-pap is required so the external HotBill portal can auto-login a
+        // client with a plain-password POST (CHAP nonces aren't available off-router).
+        $loginBy = 'http-pap,http-chap,cookie';
         $existingProfile = $this->rows($this->command('/ip/hotspot/profile/print', ['?name=' . $profileName]));
         if (empty($existingProfile)) {
             $this->command('/ip/hotspot/profile/add', [
                 '=name=' . $profileName,
                 '=hotspot-address=' . $gatewayIp,
                 '=dns-name=hotspot.local',
-                '=login-by=http-chap,cookie',
+                '=login-by=' . $loginBy,
+            ]);
+        } elseif (isset($existingProfile[0]['.id'])) {
+            $this->command('/ip/hotspot/profile/set', [
+                '=.id=' . $existingProfile[0]['.id'],
+                '=login-by=' . $loginBy,
             ]);
         }
 

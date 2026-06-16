@@ -6,11 +6,14 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\PackageController;
+use App\Http\Controllers\Api\PortalController;
 use App\Http\Controllers\Api\RadiusController;
 use App\Http\Controllers\Api\RouterController;
 use App\Http\Controllers\Api\RouterSetupController;
 use App\Http\Controllers\Api\SubscriberController;
+use App\Http\Controllers\Api\TenantController;
 use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\VoucherController;
 use Illuminate\Support\Facades\Route;
 
@@ -30,6 +33,15 @@ Route::prefix('v1')->group(function () {
         Route::post('authorize', [RadiusController::class, 'authorize']);
         Route::post('accounting', [RadiusController::class, 'accounting']);
     });
+
+    // Captive portal (public — hotspot clients pre-auth)
+    Route::prefix('portal')->group(function () {
+        Route::get('routers/{router}/packages', [PortalController::class, 'packages']);
+        Route::get('routers/{router}/login.html', [PortalController::class, 'loginTemplate']);
+        Route::post('pay', [PortalController::class, 'pay']);
+        Route::get('ipn', [PortalController::class, 'ipn']);
+        Route::get('orders/{reference}/status', [PortalController::class, 'status']);
+    });
 });
 
 // ── Authenticated (Sanctum) ──────────────────────────────
@@ -48,6 +60,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('routers/{router}/script', [RouterController::class, 'script']);
     Route::get('routers/{router}/stats', [RouterController::class, 'stats']);
     Route::post('routers/{router}/test-connection', [RouterController::class, 'testConnection']);
+    Route::post('routers/{router}/reboot', [RouterController::class, 'reboot']);
+    Route::post('routers/{router}/admin-password', [RouterController::class, 'updateAdminPassword']);
     Route::post('routers/{router}/command', [RouterController::class, 'remoteCommand']);
 
     // Router setup wizard (topology designer)
@@ -56,6 +70,12 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('routers/{router}/bridges', [RouterSetupController::class, 'bridges']);
     Route::post('routers/{router}/bridges', [RouterSetupController::class, 'deployBridge']);
     Route::get('routers/{router}/bridges/{bridge}/script', [RouterSetupController::class, 'bootstrapScriptFor']);
+
+    // Organization settings + operator wallet
+    Route::get('tenant', [TenantController::class, 'show']);
+    Route::patch('tenant', [TenantController::class, 'update']);
+    Route::get('wallet', [WalletController::class, 'index']);
+    Route::post('wallet/withdraw', [WalletController::class, 'withdraw']);
 
     // Packages
     Route::apiResource('packages', PackageController::class);

@@ -13,7 +13,7 @@ class Package extends Model
         'speed_up', 'speed_down', 'data_limit_mb', 'duration_days',
         'duration_hours', 'duration_minutes', 'burst_up', 'burst_down',
         'burst_threshold_up', 'burst_threshold_down', 'burst_time',
-        'pool_name', 'is_active',
+        'pool_name', 'billing_starts', 'is_active',
     ];
 
     protected $casts = [
@@ -57,5 +57,21 @@ class Package extends Model
         $up = $this->speed_up ? "{$this->speed_up}k" : '0';
         $down = $this->speed_down ? "{$this->speed_down}k" : '0';
         return "{$up}/{$down}";
+    }
+
+    // MikroTik limit-uptime string (e.g. "1d2h30m"); empty = no time limit
+    public function getMikrotikLimitUptimeAttribute(): string
+    {
+        $parts = '';
+        if ($this->duration_days) $parts .= "{$this->duration_days}d";
+        if ($this->duration_hours) $parts .= "{$this->duration_hours}h";
+        if ($this->duration_minutes) $parts .= "{$this->duration_minutes}m";
+        return $parts;
+    }
+
+    // Total data cap in bytes; null = unlimited
+    public function getDataLimitBytesAttribute(): ?int
+    {
+        return $this->data_limit_mb ? $this->data_limit_mb * 1048576 : null;
     }
 }

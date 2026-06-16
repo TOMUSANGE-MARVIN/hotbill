@@ -37,6 +37,7 @@ class PackageController extends Controller
             'burst_threshold_down' => 'nullable|integer',
             'burst_time' => 'nullable|integer',
             'pool_name' => 'nullable|string',
+            'billing_starts' => 'nullable|in:first_use,on_purchase',
             'is_active' => 'nullable|boolean',
         ]);
 
@@ -64,9 +65,17 @@ class PackageController extends Controller
             'speed_up' => 'nullable|integer',
             'speed_down' => 'nullable|integer',
             'data_limit_mb' => 'nullable|integer',
+            'data_limit_mb' => 'nullable|integer',
             'duration_days' => 'nullable|integer',
             'duration_hours' => 'nullable|integer',
             'duration_minutes' => 'nullable|integer',
+            'burst_up' => 'nullable|integer',
+            'burst_down' => 'nullable|integer',
+            'burst_threshold_up' => 'nullable|integer',
+            'burst_threshold_down' => 'nullable|integer',
+            'burst_time' => 'nullable|integer',
+            'pool_name' => 'nullable|string',
+            'billing_starts' => 'nullable|in:first_use,on_purchase',
             'is_active' => 'nullable|boolean',
         ]);
 

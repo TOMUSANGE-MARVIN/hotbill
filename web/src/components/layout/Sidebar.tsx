@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/auth'
 import {
   LayoutDashboard, Router, BarChart3, TrendingDown,
   ShoppingCart, Users, Package, CreditCard, UserCheck,
-  Ticket, MonitorSmartphone, Megaphone, Settings, ChevronDown, LogOut
+  Ticket, MonitorSmartphone, Megaphone, Settings, ChevronDown, LogOut, Wallet
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -34,6 +34,7 @@ const navItems = [
     ]
   },
   { href: '/packages', label: 'Packages', icon: Package },
+  { href: '/wallet', label: 'Wallet', icon: Wallet },
   { href: '/transactions', label: 'Transactions', icon: CreditCard },
   { href: '/agents', label: 'Agent', icon: UserCheck },
   { href: '/vouchers', label: 'Vouchers', icon: Ticket },
@@ -43,6 +44,7 @@ const navItems = [
     label: 'Settings', icon: Settings,
     children: [
       { href: '/settings', label: 'General' },
+      { href: '/settings/routers', label: 'Routers' },
       { href: '/settings/router-setup', label: 'Router Setup' },
     ]
   },
