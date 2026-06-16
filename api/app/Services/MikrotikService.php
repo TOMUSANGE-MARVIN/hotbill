@@ -176,6 +176,50 @@ class MikrotikService
         return $this->command('/ip/hotspot/active/print');
     }
 
+    /**
+     * Per-user cumulative usage on the hotspot (download/upload bytes + total
+     * uptime), flagged with who is currently online. Source for usage analytics.
+     *
+     * @return array<int, array{username:string,bytes_in:int,bytes_out:int,uptime_seconds:int,active:bool}>
+     */
+    public function getHotspotUsageSnapshot(): array
+    {
+        $users = $this->rows($this->command('/ip/hotspot/user/print'));
+        $active = $this->rows($this->command('/ip/hotspot/active/print'));
+
+        $online = [];
+        foreach ($active as $a) {
+            if (!empty($a['user'])) $online[$a['user']] = true;
+        }
+
+        $out = [];
+        foreach ($users as $u) {
+            $name = $u['name'] ?? null;
+            if (!$name || $name === 'default-trial') continue;
+            $out[] = [
+                'username' => $name,
+                'bytes_in' => (int) ($u['bytes-in'] ?? 0),
+                'bytes_out' => (int) ($u['bytes-out'] ?? 0),
+                'uptime_seconds' => $this->parseDuration($u['uptime'] ?? '0s'),
+                'active' => isset($online[$name]),
+            ];
+        }
+        return $out;
+    }
+
+    /** Parse a RouterOS duration like "1w2d3h4m5s" into seconds. */
+    private function parseDuration(string $s): int
+    {
+        $units = ['w' => 604800, 'd' => 86400, 'h' => 3600, 'm' => 60, 's' => 1];
+        $total = 0;
+        if (preg_match_all('/(\d+)([wdhms])/', $s, $m, PREG_SET_ORDER)) {
+            foreach ($m as $part) {
+                $total += (int) $part[1] * $units[$part[2]];
+            }
+        }
+        return $total;
+    }
+
     public function addHotspotUser(string $username, string $password, ?string $profile = null): array
     {
         $attrs = [

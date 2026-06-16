@@ -161,6 +161,9 @@ class RouterController extends Controller
             'recorded_at' => now(),
         ]);
 
+        // Pull real per-customer hotspot usage in the background (queue worker).
+        \App\Jobs\CollectHotspotUsageJob::dispatch($router->id);
+
         return response()->json(['status' => 'ok']);
     }
 
