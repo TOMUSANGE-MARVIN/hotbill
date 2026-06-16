@@ -279,11 +279,32 @@ class MikrotikService
             '=password=' . $password,
             '=server=' . $server,
         ];
-        if ($rateLimit && $rateLimit !== '0/0') $attrs[] = '=rate-limit=' . $rateLimit;
+        // RouterOS hotspot users don't take rate-limit directly — it lives on a
+        // user-profile, so create/reuse one for this speed and assign it.
+        if ($rateLimit && $rateLimit !== '0/0') {
+            $attrs[] = '=profile=' . $this->ensureHotspotUserProfile($rateLimit);
+        }
         if ($limitUptime) $attrs[] = '=limit-uptime=' . $limitUptime;
         if ($limitBytesTotal) $attrs[] = '=limit-bytes-total=' . $limitBytesTotal;
 
         $this->command('/ip/hotspot/user/add', $attrs);
+    }
+
+    /**
+     * Ensure a hotspot user-profile exists that enforces the given rate-limit,
+     * returning its name. Profiles are keyed by the rate so they're reused.
+     */
+    private function ensureHotspotUserProfile(string $rateLimit): string
+    {
+        $name = 'hb-' . str_replace(['/', ' '], ['-', ''], $rateLimit);
+        $existing = $this->rows($this->command('/ip/hotspot/user/profile/print', ['?name=' . $name]));
+        if (empty($existing)) {
+            $this->command('/ip/hotspot/user/profile/add', [
+                '=name=' . $name,
+                '=rate-limit=' . $rateLimit,
+            ]);
+        }
+        return $name;
     }
 
     /**
