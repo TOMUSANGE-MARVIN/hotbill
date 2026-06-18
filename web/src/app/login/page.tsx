@@ -18,8 +18,10 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
+      const { useAuthStore } = await import('@/store/auth')
       await login(email, password)
-      router.push('/')
+      const user = useAuthStore.getState().user
+      router.push(user?.role === 'super_admin' ? '/admin' : '/')
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Invalid credentials')
     } finally {

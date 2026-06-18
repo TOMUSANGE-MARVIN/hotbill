@@ -3,11 +3,10 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
-import { AdminGuard } from '../guard'
 import { format } from 'date-fns'
 
 export default function AdminTransactionsPage() {
-  return <AdminGuard><TransactionsList /></AdminGuard>
+  return <TransactionsList />
 }
 
 function TransactionsList() {

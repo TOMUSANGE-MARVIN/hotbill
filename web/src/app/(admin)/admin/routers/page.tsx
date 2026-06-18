@@ -2,12 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
-import { AdminGuard } from '../guard'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Wifi, WifiOff, Cpu } from 'lucide-react'
 
 export default function AdminRoutersPage() {
-  return <AdminGuard><RoutersList /></AdminGuard>
+  return <RoutersList />
 }
 
 function RoutersList() {
@@ -69,9 +68,7 @@ function RoutersList() {
                   </td>
                   <td className="px-4 py-3 text-gray-700">{r.active_users ?? 0}</td>
                   <td className="px-4 py-3 text-xs text-gray-400">
-                    {r.last_seen_at
-                      ? formatDistanceToNow(new Date(r.last_seen_at), { addSuffix: true })
-                      : '—'}
+                    {r.last_seen_at ? formatDistanceToNow(new Date(r.last_seen_at), { addSuffix: true }) : '—'}
                   </td>
                 </tr>
               ))}

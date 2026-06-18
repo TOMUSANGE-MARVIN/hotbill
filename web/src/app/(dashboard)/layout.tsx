@@ -7,14 +7,15 @@ import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { token } = useAuthStore()
+  const { token, user } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
-    if (!token) router.push('/login')
-  }, [token, router])
+    if (!token) { router.push('/login'); return }
+    if (user?.role === 'super_admin') router.push('/admin')
+  }, [token, user, router])
 
-  if (!token) return null
+  if (!token || user?.role === 'super_admin') return null
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">

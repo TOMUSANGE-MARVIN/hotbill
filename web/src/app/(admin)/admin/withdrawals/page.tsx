@@ -4,12 +4,11 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
-import { AdminGuard } from '../guard'
 import { CheckCircle, XCircle, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function WithdrawalsPage() {
-  return <AdminGuard><WithdrawalsList /></AdminGuard>
+  return <WithdrawalsList />
 }
 
 const STATUS_OPTIONS = ['', 'pending', 'processing', 'completed', 'failed'] as const

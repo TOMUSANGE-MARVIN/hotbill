@@ -3,8 +3,6 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatCurrency, formatBytes } from '@/lib/utils'
-import { useAuthStore } from '@/store/auth'
-import { AdminGuard } from './guard'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
@@ -12,10 +10,6 @@ import { format } from 'date-fns'
 import { Building2, Router as RouterIcon, Users, Database, Wallet, TrendingUp, Banknote, ShieldCheck } from 'lucide-react'
 
 export default function AdminOverviewPage() {
-  return <AdminGuard><Overview /></AdminGuard>
-}
-
-function Overview() {
   const { data, isLoading } = useQuery({
     queryKey: ['admin-overview'],
     queryFn: () => api.get('/admin/overview').then((r) => r.data),
@@ -29,19 +23,16 @@ function Overview() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="text-green-600" size={22} />
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Platform Admin</h1>
-          <p className="text-sm text-gray-500">System-wide insights across all operators.</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
+        <p className="text-sm text-gray-500">System-wide insights across all operators.</p>
       </div>
 
       {/* Revenue row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={TrendingUp} label="Platform Revenue" value={formatCurrency(f.platform_revenue ?? 0)} accent />
         <Stat icon={Banknote} label="GMV (gross sales)" value={formatCurrency(f.gmv ?? 0)} />
-        <Stat icon={Wallet} label="Operator Wallets (liability)" value={formatCurrency(f.operator_wallet_liability ?? 0)} />
+        <Stat icon={Wallet} label="Operator Wallets" value={formatCurrency(f.operator_wallet_liability ?? 0)} />
         <Stat icon={Banknote} label="Gateway Fees" value={formatCurrency(f.gateway_fees ?? 0)} />
       </div>
 

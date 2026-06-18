@@ -4,12 +4,11 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
-import { AdminGuard } from '../guard'
 import { Building2, CheckCircle, XCircle, ChevronDown } from 'lucide-react'
 import { format } from 'date-fns'
 
 export default function TenantsPage() {
-  return <AdminGuard><TenantsList /></AdminGuard>
+  return <TenantsList />
 }
 
 function TenantsList() {
