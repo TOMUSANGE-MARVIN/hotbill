@@ -41,7 +41,7 @@ export default function RegisterPage() {
       const { token } = res.data
       localStorage.setItem('hotbill_token', token)
       await login(form.email, form.password)
-      router.push('/')
+      router.push('/dashboard')
     } catch (err: any) {
       const errors = err.response?.data?.errors
       if (errors) {

@@ -6,6 +6,7 @@ import {
   Shield, Globe, Settings, CloudCog, Monitor, Bell, Lock,
   Smartphone, ArrowUpRight, Check
 } from 'lucide-react'
+import { loginUrl } from '@/lib/site'
 
 const featureGroups = [
   {
@@ -163,7 +164,7 @@ export default function FeaturesPage() {
             Start your free trial and provision your first router in under 60 seconds.
           </p>
           <Link
-            href="https://hotbill.marvwebdesign.com/login"
+            href={loginUrl}
             className="inline-flex items-center gap-2 bg-purple hover:bg-purple-dark text-white px-7 py-3.5 rounded-btn text-sm font-semibold transition-colors"
           >
             Start Free Trial <ArrowUpRight size={16} />

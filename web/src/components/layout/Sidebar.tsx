@@ -50,13 +50,16 @@ const navItems = [
   },
 ]
 
+// All dashboard routes live under /dashboard; build absolute paths from the nav data.
+const to = (href: string) => (href === '/' ? '/dashboard' : `/dashboard${href}`)
+
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const { tenant, logout } = useAuthStore()
   const [expanded, setExpanded] = useState<string[]>(() =>
     navItems
       .filter((item): item is typeof item & { children: { href: string; label: string }[] } => 'children' in item)
-      .filter((item) => item.children.some((child) => pathname === child.href))
+      .filter((item) => item.children.some((child) => pathname === to(child.href)))
       .map((item) => item.label)
   )
 
@@ -108,10 +111,10 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                     {(item.children ?? []).map((child) => (
                       <Link
                         key={child.href}
-                        href={child.href}
+                        href={to(child.href)}
                         className={cn(
                           'block px-3 py-1.5 rounded-md text-xs',
-                          pathname === child.href
+                          pathname === to(child.href)
                             ? 'bg-green-50 text-green-700 font-medium'
                             : 'text-gray-500 hover:bg-gray-50'
                         )}
@@ -126,11 +129,11 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           }
 
           const Icon = item.icon
-          const active = pathname === item.href
+          const active = pathname === to(item.href)
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={to(item.href)}
               className={cn(
                 'flex items-center gap-2 px-3 py-2 rounded-md text-sm',
                 active

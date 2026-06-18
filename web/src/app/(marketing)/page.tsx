@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { ArrowUpRight, Play } from 'lucide-react'
 import RotatingBadge from '@/components/landing/RotatingBadge'
 import StatCounter from '@/components/landing/StatCounter'
+import { loginUrl } from '@/lib/site'
 
 export default function HomePage() {
   return (
@@ -76,9 +77,8 @@ function Hero() {
                   width: '4rem',
                   height: '8.2em',
                   shapeOutside: 'inset(3.4em 0 0 0)',
-                  WebkitShapeOutside: 'inset(3.4em 0 0 0)',
                   shapeMargin: '0.5rem',
-                }}
+                } as React.CSSProperties}
               />
               <p className="text-sm text-navy/60 leading-relaxed">
                 A specialized platform that helps ISPs deploy, manage and bill their hotspot
@@ -104,7 +104,7 @@ function Hero() {
                 WebkitMaskComposite: 'source-in',
                 maskComposite: 'intersect',
                 filter: 'drop-shadow(0 30px 55px rgba(79,74,215,0.32))',
-              }}
+              } as React.CSSProperties}
             >
               <Image
                 src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&h=620&fit=crop"
@@ -123,7 +123,7 @@ function Hero() {
 
             {/* Get Started button nestled in the bottom-right concave cutout */}
             <Link
-              href="https://hotbill.marvwebdesign.com/login"
+              href={loginUrl}
               className="absolute bottom-0 right-0 translate-x-[2px] translate-y-[18px] z-20 inline-flex items-center gap-2 bg-purple hover:bg-purple-dark text-white text-sm font-semibold px-7 py-4 rounded-btn shadow-[0_14px_30px_rgba(79,74,215,0.4)] transition-colors"
             >
               Get Started <ArrowUpRight size={16} />

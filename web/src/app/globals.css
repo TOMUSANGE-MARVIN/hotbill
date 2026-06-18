@@ -12,6 +12,43 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* ── Marketing (landing) design tokens ───────────────────────────── */
+@theme {
+  --color-navy: #00012A;
+  --color-purple: #4F4AD7;
+  --color-purple-light: #6B66E3;
+  --color-purple-dark: #3F3ABF;
+  --color-lightgray: #EFEFEF;
+
+  --radius-card: 12px;
+  --radius-btn: 8px;
+  --radius-pill: 999px;
+}
+
+@layer utilities {
+  .container-1200 {
+    max-width: 1200px;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .container-1200 { padding-inline: 2rem; }
+  }
+  .text-balance { text-wrap: balance; }
+  .animate-marquee { animation: marquee 22s linear infinite; }
+  .animate-spinSlow { animation: spinSlow 8s linear infinite; }
+  .marquee-track:hover { animation-play-state: paused; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes spinSlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

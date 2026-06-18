@@ -58,7 +58,7 @@ export default function WalletPage() {
             Withdraw
           </button>
           {!data?.payout_phone && (
-            <Link href="/settings" className="text-green-100 text-xs underline">Set payout number</Link>
+            <Link href="/dashboard/settings" className="text-green-100 text-xs underline">Set payout number</Link>
           )}
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function WalletPage() {
               {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2">{error}</div>}
               <p className="text-sm text-gray-500">
                 Sent to <span className="font-medium text-gray-800">{data?.payout_phone ?? '—'}</span>.{' '}
-                {!data?.payout_phone && <Link href="/settings" className="text-green-600 underline">Set a number</Link>}
+                {!data?.payout_phone && <Link href="/dashboard/settings" className="text-green-600 underline">Set a number</Link>}
               </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount ({currency})</label>

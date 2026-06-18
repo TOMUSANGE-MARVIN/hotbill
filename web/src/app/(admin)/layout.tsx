@@ -13,7 +13,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!token) { router.push('/login'); return }
-    if (user && user.role !== 'super_admin') router.push('/')
+    if (user && user.role !== 'super_admin') router.push('/dashboard')
   }, [token, user, router])
 
   if (!token || !user || user.role !== 'super_admin') return null
