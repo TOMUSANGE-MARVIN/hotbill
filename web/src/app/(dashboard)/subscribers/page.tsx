@@ -90,7 +90,8 @@ export default function SubscribersPage() {
 
       {/* Table */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[600px]">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
               <th className="text-left px-5 py-3 font-medium text-gray-500">Username</th>
@@ -145,6 +146,7 @@ export default function SubscribersPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Add modal */}
@@ -159,15 +161,15 @@ export default function SubscribersPage() {
               onSubmit={(e) => { e.preventDefault(); addSub.mutate(form) }}
               className="p-6 space-y-4"
             >
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <F label="Username" value={form.username} onChange={(v) => setForm({ ...form, username: v })} required />
                 <F label="Full Name" value={form.full_name} onChange={(v) => setForm({ ...form, full_name: v })} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <F label="Phone" value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} />
                 <F label="Password (auto if empty)" value={form.password} onChange={(v) => setForm({ ...form, password: v })} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                   <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}

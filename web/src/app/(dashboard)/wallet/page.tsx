@@ -73,7 +73,8 @@ export default function WalletPage() {
       {/* Transactions */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 font-semibold text-gray-800">Transaction History</div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[500px]">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50 text-gray-500">
               <th className="text-left px-5 py-2.5 font-medium">Date</th>
@@ -112,6 +113,7 @@ export default function WalletPage() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Withdraw modal */}

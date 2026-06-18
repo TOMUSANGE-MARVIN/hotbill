@@ -71,7 +71,8 @@ export default function VouchersPage() {
 
       {tab === 'batches' && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[560px]">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Batch Name</th>
@@ -111,6 +112,7 @@ export default function VouchersPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -122,7 +124,8 @@ export default function VouchersPage() {
               placeholder="Search code..." className="w-full border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm" />
           </div>
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[500px]">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
                   <th className="text-left px-5 py-3 font-medium text-gray-500">Code</th>
@@ -148,6 +151,7 @@ export default function VouchersPage() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
       )}
@@ -173,7 +177,7 @@ export default function VouchersPage() {
                   {packages.map((p: any) => <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price, currency)}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Quantity</label>
                   <input type="number" min="1" max="5000" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: +e.target.value })}

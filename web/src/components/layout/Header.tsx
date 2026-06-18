@@ -1,23 +1,23 @@
 'use client'
 
 import { useAuthStore } from '@/store/auth'
-import { Sun, Moon, Bell, User } from 'lucide-react'
-import { useState } from 'react'
+import { Bell, User, Menu } from 'lucide-react'
 
-export default function Header() {
+export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user } = useAuthStore()
-  const [dark, setDark] = useState(false)
 
   return (
-    <header className="h-14 bg-white border-b border-gray-200 px-6 flex items-center justify-between shrink-0">
-      <div />
+    <header className="h-14 bg-white border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between shrink-0">
+      <button
+        className="md:hidden p-1.5 rounded-md text-gray-500 hover:bg-gray-100"
+        onClick={onMenuClick}
+      >
+        <Menu size={20} />
+      </button>
+
+      <div className="hidden md:block" />
+
       <div className="flex items-center gap-3">
-        <button
-          onClick={() => setDark(!dark)}
-          className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100"
-        >
-          {dark ? <Moon size={16} /> : <Sun size={16} />}
-        </button>
         <button className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 relative">
           <Bell size={16} />
         </button>
@@ -25,7 +25,7 @@ export default function Header() {
           <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
             <User size={14} className="text-white" />
           </div>
-          <span className="text-sm font-medium text-gray-700">{user?.name}</span>
+          <span className="hidden sm:block text-sm font-medium text-gray-700">{user?.name}</span>
         </div>
       </div>
     </header>

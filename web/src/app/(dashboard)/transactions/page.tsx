@@ -74,7 +74,8 @@ export default function TransactionsPage() {
 
       {tab === 'list' && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Ref</th>
@@ -109,12 +110,13 @@ export default function TransactionsPage() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
       {tab === 'summary' && summary && (
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { label: 'Gross Sales', value: summary.gross_sales },
               { label: 'Net Sales', value: summary.net_sales },

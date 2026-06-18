@@ -33,7 +33,8 @@ function RoutersList() {
 
       {isLoading ? <Spinner /> : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {['Router', 'Operator', 'Model', 'ROS', 'Status', 'CPU', 'Active Users', 'Last Seen'].map((h) => (
@@ -77,6 +78,7 @@ function RoutersList() {
               )}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

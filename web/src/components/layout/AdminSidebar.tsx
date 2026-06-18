@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import {
   ShieldCheck, LayoutDashboard, Building2, Wallet,
-  CreditCard, Router as RouterIcon, LogOut, ChevronDown,
+  CreditCard, Router as RouterIcon, LogOut, X,
 } from 'lucide-react'
 
 const navItems = [
@@ -17,14 +17,14 @@ const navItems = [
   { href: '/admin/routers', label: 'All Routers', icon: RouterIcon },
 ]
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const { user, logout } = useAuthStore()
 
   return (
-    <aside className="w-56 bg-gray-900 flex flex-col h-full">
+    <aside className="w-64 bg-gray-900 flex flex-col h-full">
       {/* Logo */}
-      <div className="p-4 border-b border-gray-800">
+      <div className="p-4 border-b border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
             <ShieldCheck size={14} className="text-white" />
@@ -34,6 +34,9 @@ export default function AdminSidebar() {
             <p className="text-xs text-green-400 font-medium">Platform Admin</p>
           </div>
         </div>
+        <button onClick={onClose} className="md:hidden p-1 text-gray-500 hover:text-gray-300">
+          <X size={18} />
+        </button>
       </div>
 
       {/* Nav */}

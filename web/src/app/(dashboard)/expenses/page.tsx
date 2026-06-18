@@ -50,7 +50,7 @@ export default function ExpensesPage() {
 
       {/* Summary cards */}
       {summary && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4">
             <p className="text-sm text-gray-500">Total</p>
             <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(summary.total, currency)}</p>
@@ -74,7 +74,8 @@ export default function ExpensesPage() {
       )}
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[480px]">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
               <th className="text-left px-5 py-3 font-medium text-gray-500">Description</th>
@@ -102,6 +103,7 @@ export default function ExpensesPage() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
 
       {showAdd && (
@@ -117,7 +119,7 @@ export default function ExpensesPage() {
                 <input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} required
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
                   <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}
