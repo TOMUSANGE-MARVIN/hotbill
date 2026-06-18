@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->statefulApi();
 
+        $middleware->alias([
+            'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
+        ]);
+
         $middleware->trustHosts(at: fn () => [
             'localhost',
             '127.0.0.1',

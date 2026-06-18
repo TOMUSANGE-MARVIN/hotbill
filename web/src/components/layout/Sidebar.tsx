@@ -7,7 +7,8 @@ import { useAuthStore } from '@/store/auth'
 import {
   LayoutDashboard, Router, BarChart3, TrendingDown,
   ShoppingCart, Users, Package, CreditCard, UserCheck,
-  Ticket, MonitorSmartphone, Megaphone, Settings, ChevronDown, LogOut, Wallet
+  Ticket, MonitorSmartphone, Megaphone, Settings, ChevronDown, LogOut, Wallet,
+  ShieldCheck
 } from 'lucide-react'
 import { useState } from 'react'
 
@@ -50,11 +51,26 @@ const navItems = [
   },
 ]
 
+const adminItems = [
+  {
+    label: 'Admin', icon: ShieldCheck,
+    children: [
+      { href: '/admin', label: 'Overview' },
+      { href: '/admin/tenants', label: 'Tenants' },
+      { href: '/admin/withdrawals', label: 'Withdrawals' },
+      { href: '/admin/transactions', label: 'Transactions' },
+      { href: '/admin/routers', label: 'All Routers' },
+    ]
+  },
+]
+
 export default function Sidebar() {
   const pathname = usePathname()
-  const { tenant, logout } = useAuthStore()
+  const { tenant, user, logout } = useAuthStore()
+  const isSuperAdmin = user?.role === 'super_admin'
+  const allItems = [...navItems, ...(isSuperAdmin ? adminItems : [])]
   const [expanded, setExpanded] = useState<string[]>(() =>
-    navItems
+    allItems
       .filter((item): item is typeof item & { children: { href: string; label: string }[] } => 'children' in item)
       .filter((item) => item.children.some((child) => pathname === child.href))
       .map((item) => item.label)
@@ -84,7 +100,14 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
-        {navItems.map((item) => {
+        {isSuperAdmin && (
+          <div className="px-3 pt-2 pb-1">
+            <span className="text-xs font-semibold text-green-600 uppercase tracking-wide flex items-center gap-1">
+              <ShieldCheck size={11} /> Platform Admin
+            </span>
+          </div>
+        )}
+        {allItems.map((item) => {
           if ('children' in item) {
             const isOpen = expanded.includes(item.label)
             const Icon = item.icon

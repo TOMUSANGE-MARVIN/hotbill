@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\ExpenseController;
+use App\Http\Controllers\Api\Admin\PlatformController;
 use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\PortalController;
 use App\Http\Controllers\Api\RadiusController;
@@ -112,4 +113,16 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Campaigns
     Route::apiResource('campaigns', CampaignController::class)->except('show', 'update');
     Route::post('campaigns/{campaign}/send', [CampaignController::class, 'send']);
+
+    // ── Platform super-admin (cross-tenant) ──────────────────
+    Route::prefix('admin')->middleware('platform.admin')->group(function () {
+        Route::get('overview', [PlatformController::class, 'overview']);
+        Route::get('tenants', [PlatformController::class, 'tenants']);
+        Route::patch('tenants/{tenant}', [PlatformController::class, 'updateTenant']);
+        Route::get('withdrawals', [PlatformController::class, 'withdrawals']);
+        Route::post('withdrawals/{transaction}/release', [PlatformController::class, 'releaseWithdrawal']);
+        Route::post('withdrawals/{transaction}/fail', [PlatformController::class, 'failWithdrawal']);
+        Route::get('transactions', [PlatformController::class, 'transactions']);
+        Route::get('routers', [PlatformController::class, 'routers']);
+    });
 });
