@@ -7,14 +7,23 @@ import AdminSidebar from '@/components/layout/AdminSidebar'
 import { Menu } from 'lucide-react'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { token, user } = useAuthStore()
+  const { token, user, hasHydrated } = useAuthStore()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
+    if (!hasHydrated) return // wait for persisted session before redirecting
     if (!token) { router.push('/login'); return }
     if (user && user.role !== 'super_admin') router.push('/dashboard')
-  }, [token, user, router])
+  }, [hasHydrated, token, user, router])
+
+  if (!hasHydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 text-sm text-gray-400">
+        Loading…
+      </div>
+    )
+  }
 
   if (!token || !user || user.role !== 'super_admin') return null
 

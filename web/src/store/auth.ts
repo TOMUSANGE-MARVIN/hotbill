@@ -42,6 +42,8 @@ interface AuthState {
   token: string | null
   businesses: Business[]
   activeBusinessId: number | null
+  hasHydrated: boolean
+  setHasHydrated: (v: boolean) => void
   login: (email: string, password: string) => Promise<void>
   logout: () => void
   setUser: (user: User) => void
@@ -58,6 +60,8 @@ export const useAuthStore = create<AuthState>()(
       token: null,
       businesses: [],
       activeBusinessId: null,
+      hasHydrated: false,
+      setHasHydrated: (v) => set({ hasHydrated: v }),
 
       login: async (email, password) => {
         const res = await api.post('/auth/login', { email, password })
@@ -110,6 +114,9 @@ export const useAuthStore = create<AuthState>()(
         businesses: s.businesses,
         activeBusinessId: s.activeBusinessId,
       }),
+      // Flag when the persisted session has loaded so route guards don't bounce
+      // to /login during the brief pre-hydration window (was logging users out on refresh).
+      onRehydrateStorage: () => (state) => state?.setHasHydrated(true),
     }
   )
 )

@@ -7,14 +7,25 @@ import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { token, user } = useAuthStore()
+  const { token, user, hasHydrated } = useAuthStore()
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
+    if (!hasHydrated) return // wait for the persisted session to load before deciding
     if (!token) { router.push('/login'); return }
     if (user?.role === 'super_admin') router.push('/admin')
-  }, [token, user, router])
+  }, [hasHydrated, token, user, router])
+
+  // Don't render or redirect until the persisted auth state has hydrated,
+  // otherwise a refresh briefly sees token=null and bounces to /login.
+  if (!hasHydrated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50 text-sm text-gray-400">
+        Loading…
+      </div>
+    )
+  }
 
   if (!token || user?.role === 'super_admin') return null
 
