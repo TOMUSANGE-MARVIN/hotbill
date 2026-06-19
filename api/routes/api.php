@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AgentController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BusinessController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\Admin\PlatformController;
@@ -47,11 +48,16 @@ Route::prefix('v1')->group(function () {
 });
 
 // ── Authenticated (Sanctum) ──────────────────────────────
-Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+Route::prefix('v1')->middleware(['auth:sanctum', 'business'])->group(function () {
 
     // Auth
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // Businesses (multi-location): list, create, set default fallback
+    Route::get('businesses', [BusinessController::class, 'index']);
+    Route::post('businesses', [BusinessController::class, 'store']);
+    Route::post('businesses/{tenant}/activate', [BusinessController::class, 'activate']);
 
     // Dashboard & Analytics
     Route::get('analytics/dashboard', [AnalyticsController::class, 'dashboard']);

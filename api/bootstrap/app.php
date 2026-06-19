@@ -20,6 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'platform.admin' => \App\Http\Middleware\EnsurePlatformAdmin::class,
+            'business' => \App\Http\Middleware\ResolveBusiness::class,
         ]);
 
         $middleware->trustHosts(at: fn () => [

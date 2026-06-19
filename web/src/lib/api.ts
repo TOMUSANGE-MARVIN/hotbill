@@ -9,6 +9,9 @@ api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('hotbill_token')
     if (token) config.headers.Authorization = `Bearer ${token}`
+    // Active business (multi-location) — scopes every request to the selected business.
+    const businessId = localStorage.getItem('hotbill_business')
+    if (businessId) config.headers['X-Business-Id'] = businessId
   }
   return config
 })

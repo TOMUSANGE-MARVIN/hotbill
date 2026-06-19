@@ -40,9 +40,13 @@ class AuthController extends Controller
             'role' => 'admin',
         ]);
 
+        // Membership for the first business (multi-location support).
+        $user->tenants()->attach($tenant->id, ['role' => 'admin']);
+
         return response()->json([
             'user' => $user,
             'tenant' => $tenant,
+            'businesses' => BusinessController::businessesFor($request->merge([])->setUserResolver(fn () => $user)),
             'token' => $user->createToken('api')->plainTextToken,
         ], 201);
     }
@@ -67,6 +71,7 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'tenant' => $user->tenant,
+            'businesses' => BusinessController::businessesFor($request->setUserResolver(fn () => $user)),
             'token' => $user->createToken('api')->plainTextToken,
         ]);
     }
@@ -79,6 +84,12 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        return response()->json($request->user()->load('tenant'));
+        $user = $request->user()->load('tenant');
+
+        return response()->json([
+            'user' => $user,
+            'tenant' => $user->tenant,
+            'businesses' => BusinessController::businessesFor($request),
+        ]);
     }
 }

@@ -10,6 +10,7 @@ import {
   Ticket, MonitorSmartphone, Megaphone, Settings, ChevronDown, LogOut, Wallet, X
 } from 'lucide-react'
 import { useState } from 'react'
+import BusinessSwitcher from './BusinessSwitcher'
 
 const navItems = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -55,7 +56,7 @@ const to = (href: string) => (href === '/' ? '/dashboard' : `/dashboard${href}`)
 
 export default function Sidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
-  const { tenant, logout } = useAuthStore()
+  const { logout } = useAuthStore()
   const [expanded, setExpanded] = useState<string[]>(() =>
     navItems
       .filter((item): item is typeof item & { children: { href: string; label: string }[] } => 'children' in item)
@@ -72,20 +73,20 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
       {/* Logo */}
-      <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
-            <span className="text-white text-xs font-bold">H</span>
+      <div className="p-4 border-b border-gray-100 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">H</span>
+            </div>
+            <span className="font-bold text-gray-900 text-lg">HotBill</span>
           </div>
-          <span className="font-bold text-gray-900 text-lg">HotBill</span>
+          <button onClick={onClose} className="md:hidden p-1 text-gray-400 hover:text-gray-600">
+            <X size={18} />
+          </button>
         </div>
-        <button onClick={onClose} className="md:hidden p-1 text-gray-400 hover:text-gray-600">
-          <X size={18} />
-        </button>
-        <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-          <span className="w-2 h-2 rounded-full bg-brand-400 inline-block" />
-          {tenant?.name ?? 'Loading...'}
-        </div>
+        {/* Active business + switcher, shown above the Dashboard link */}
+        <BusinessSwitcher />
       </div>
 
       {/* Nav */}
