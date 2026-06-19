@@ -30,10 +30,17 @@ class BusinessController extends Controller
         $user = $request->user();
         $home = $user->tenant; // inherit sensible defaults from the current business
 
+        $slug = Str::slug($data['name']) . '-' . substr(md5(microtime()), 0, 6);
+
+        // tenants.email is unique, so we can't reuse the user's address (it already
+        // belongs to their first business). Tag it with the unique slug — still the
+        // user's mailbox, still unique.
+        $email = Str::beforeLast($user->email, '@') . '+' . $slug . '@' . Str::afterLast($user->email, '@');
+
         $tenant = Tenant::create([
             'name' => $data['name'],
-            'slug' => Str::slug($data['name']) . '-' . substr(md5(microtime()), 0, 6),
-            'email' => $user->email,
+            'slug' => $slug,
+            'email' => $email,
             'phone' => $user->phone,
             'currency' => $home->currency ?? 'UGX',
             'timezone' => $home->timezone ?? 'Africa/Kampala',
