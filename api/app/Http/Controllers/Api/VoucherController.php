@@ -19,6 +19,9 @@ class VoucherController extends Controller
 
     public function batches(Request $request): JsonResponse
     {
+        // Settle expiry first so the per-batch used/remaining counts are accurate.
+        Voucher::expireStale($request->user()->tenant_id);
+
         $batches = VoucherBatch::where('tenant_id', $request->user()->tenant_id)
             ->with('package', 'agent')
             ->withCount(['vouchers', 'vouchers as used_vouchers_count' => fn ($q) => $q->where('status', '!=', 'unused')])
@@ -54,6 +57,9 @@ class VoucherController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        // Lazily settle expiry so the listing never shows an expired voucher as active.
+        Voucher::expireStale($request->user()->tenant_id);
+
         $query = Voucher::where('tenant_id', $request->user()->tenant_id)
             ->with('package', 'batch');
 

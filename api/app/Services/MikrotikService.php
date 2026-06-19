@@ -560,7 +560,13 @@ class MikrotikService
         $profileName = $bridge . '-profile';
         // http-pap is required so the external HotBill portal can auto-login a
         // client with a plain-password POST (CHAP nonces aren't available off-router).
-        $loginBy = 'http-pap,http-chap,cookie';
+        //
+        // NB: cookie login is deliberately excluded. With `cookie` enabled, MikroTik
+        // re-authenticates a returning device straight from its stored cookie WITHOUT
+        // asking RADIUS — so a 3-hour voucher would keep working until the cookie
+        // expired (days later). Dropping cookie forces every reconnect back through
+        // RADIUS, which enforces the voucher's real remaining time.
+        $loginBy = 'http-pap,http-chap';
         $existingProfile = $this->rows($this->command('/ip/hotspot/profile/print', ['?name=' . $profileName]));
         if (empty($existingProfile)) {
             $this->command('/ip/hotspot/profile/add', [

@@ -18,6 +18,25 @@ class Voucher extends Model
         'price' => 'decimal:2',
     ];
 
+    /**
+     * Flip any redeemed ("active") vouchers whose validity window has passed to
+     * "expired". Cheap, idempotent bulk update — call it before reading vouchers
+     * so listings/exports/filters reflect real expiry without a cron.
+     */
+    public static function expireStale(int $tenantId): void
+    {
+        static::where('tenant_id', $tenantId)
+            ->where('status', 'active')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->update(['status' => 'expired']);
+    }
+
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
