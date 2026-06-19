@@ -19,6 +19,20 @@ class RouterController extends Controller
             ->latest()
             ->get();
 
+        // Only report live metrics for routers that have sent a recent heartbeat.
+        // A router that stopped reporting is offline — never show its last-known
+        // CPU / users / memory / uptime as if they were current.
+        $routers->each(function (Router $r) {
+            if (! $r->isOnline()) {
+                $r->status = 'offline';
+                $r->cpu_load = null;
+                $r->free_memory = null;
+                $r->total_memory = null;
+                $r->uptime = null;
+                $r->active_users = 0;
+            }
+        });
+
         return response()->json($routers);
     }
 

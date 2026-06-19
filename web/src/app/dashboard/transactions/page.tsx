@@ -66,7 +66,7 @@ export default function TransactionsPage() {
         {(['list', 'summary'] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className={cn('px-4 py-2 text-sm font-medium border-b-2 -mb-px capitalize',
-              tab === t ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500')}>
+              tab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500')}>
             {t}
           </button>
         ))}
@@ -95,7 +95,7 @@ export default function TransactionsPage() {
                   <td className="px-5 py-3 text-gray-700">{tx.subscriber?.full_name ?? tx.subscriber?.username ?? '—'}</td>
                   <td className="px-5 py-3 font-medium">{formatCurrency(tx.amount, currency)}</td>
                   <td className="px-5 py-3 text-gray-500">{formatCurrency(tx.commission, currency)}</td>
-                  <td className="px-5 py-3 text-green-600 font-medium">{formatCurrency(tx.net_amount, currency)}</td>
+                  <td className="px-5 py-3 text-brand-600 font-medium">{formatCurrency(tx.net_amount, currency)}</td>
                   <td className="px-5 py-3">
                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{methodLabel[tx.method] ?? tx.method}</span>
                   </td>

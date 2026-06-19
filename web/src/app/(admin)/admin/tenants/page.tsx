@@ -113,7 +113,7 @@ function StatusToggle({ active, onChange }: { active: boolean; onChange: (v: boo
   return (
     <button
       onClick={() => onChange(!active)}
-      className={`flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${active ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}
+      className={`flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${active ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-red-600'}`}
     >
       {active ? <CheckCircle size={12} /> : <XCircle size={12} />}
       {active ? 'Active' : 'Suspended'}
@@ -122,5 +122,5 @@ function StatusToggle({ active, onChange }: { active: boolean; onChange: (v: boo
 }
 
 function Spinner() {
-  return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+  return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
 }

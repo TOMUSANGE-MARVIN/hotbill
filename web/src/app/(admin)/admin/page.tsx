@@ -16,7 +16,7 @@ export default function AdminOverviewPage() {
     refetchInterval: 60000,
   })
 
-  if (isLoading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+  if (isLoading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
 
   const f = data?.finance ?? {}
   const series = (data?.revenue_series ?? []).map((r: any) => ({ date: r.date, revenue: Number(r.revenue) }))
@@ -55,15 +55,15 @@ export default function AdminOverviewPage() {
             <AreaChart data={series}>
               <defs>
                 <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#16a34a" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#16a34a" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#4F4AD7" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#4F4AD7" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => format(new Date(v), 'MMM dd')} minTickGap={30} />
               <YAxis tick={{ fontSize: 11 }} width={70} tickFormatter={(v) => formatCurrency(v)} />
               <Tooltip formatter={(v: any) => formatCurrency(v)} labelFormatter={(l) => format(new Date(l), 'EEE, MMM d')} />
-              <Area type="monotone" dataKey="revenue" stroke="#16a34a" fill="url(#rev)" name="Commission" />
+              <Area type="monotone" dataKey="revenue" stroke="#4F4AD7" fill="url(#rev)" name="Commission" />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -74,13 +74,13 @@ export default function AdminOverviewPage() {
 
 function Stat({ icon: Icon, label, value, sub, accent }: { icon: any; label: string; value: string; sub?: string; accent?: boolean }) {
   return (
-    <div className={`rounded-xl border p-5 ${accent ? 'bg-green-600 border-green-600 text-white' : 'bg-white border-gray-200'}`}>
+    <div className={`rounded-xl border p-5 ${accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-gray-200'}`}>
       <div className="flex items-center justify-between">
-        <span className={`text-sm ${accent ? 'text-green-100' : 'text-gray-500'}`}>{label}</span>
-        <Icon size={16} className={accent ? 'text-green-200' : 'text-gray-400'} />
+        <span className={`text-sm ${accent ? 'text-brand-100' : 'text-gray-500'}`}>{label}</span>
+        <Icon size={16} className={accent ? 'text-brand-200' : 'text-gray-400'} />
       </div>
       <p className={`text-2xl font-bold mt-2 ${accent ? 'text-white' : 'text-gray-900'}`}>{value}</p>
-      {sub && <p className={`text-xs mt-1 ${accent ? 'text-green-100' : 'text-gray-400'}`}>{sub}</p>}
+      {sub && <p className={`text-xs mt-1 ${accent ? 'text-brand-100' : 'text-gray-400'}`}>{sub}</p>}
     </div>
   )
 }

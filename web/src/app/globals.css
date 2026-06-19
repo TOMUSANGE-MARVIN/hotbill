@@ -20,6 +20,18 @@
   --color-purple-dark: #3F3ABF;
   --color-lightgray: #EFEFEF;
 
+  /* Brand scale (600 = #4F4AD7) — replaces the old green accent app-wide */
+  --color-brand-50: #EFEFFE;
+  --color-brand-100: #E1E0FC;
+  --color-brand-200: #C7C5F7;
+  --color-brand-300: #A6A2EF;
+  --color-brand-400: #807AE5;
+  --color-brand-500: #5B57DD;
+  --color-brand-600: #4F4AD7;
+  --color-brand-700: #3F3ABF;
+  --color-brand-800: #342F9B;
+  --color-brand-900: #2A2679;
+
   --radius-card: 12px;
   --radius-btn: 8px;
   --radius-pill: 999px;

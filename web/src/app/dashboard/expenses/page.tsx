@@ -43,7 +43,7 @@ export default function ExpensesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
         <button onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
+          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-700">
           <Plus size={16} /> Add Expense
         </button>
       </div>
@@ -141,7 +141,7 @@ export default function ExpensesPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAdd(false)} className="flex-1 border border-gray-200 rounded-lg py-2 text-sm">Cancel</button>
-                <button type="submit" disabled={add.isPending} className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm">
+                <button type="submit" disabled={add.isPending} className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm">
                   {add.isPending ? 'Saving...' : 'Add Expense'}
                 </button>
               </div>

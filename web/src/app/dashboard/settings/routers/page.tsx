@@ -79,7 +79,7 @@ export default function RoutersSettingsPage() {
         </div>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700"
         >
           <Plus size={16} /> Add Router
         </button>
@@ -102,8 +102,8 @@ export default function RoutersSettingsPage() {
               <tr key={router.id} className="hover:bg-gray-50">
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-2.5">
-                    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', router.status === 'online' ? 'bg-green-50' : 'bg-gray-100')}>
-                      {router.status === 'online' ? <Wifi size={15} className="text-green-500" /> : <WifiOff size={15} className="text-gray-400" />}
+                    <div className={cn('w-8 h-8 rounded-lg flex items-center justify-center', router.status === 'online' ? 'bg-brand-50' : 'bg-gray-100')}>
+                      {router.status === 'online' ? <Wifi size={15} className="text-brand-500" /> : <WifiOff size={15} className="text-gray-400" />}
                     </div>
                     <div>
                       <p className="font-medium text-gray-900">{router.name}</p>
@@ -155,7 +155,7 @@ export default function RoutersSettingsPage() {
             <Field label="API Password" type="password" value={form.api_password} onChange={(v) => setForm({ ...form, api_password: v })} />
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowAdd(false)} className="flex-1 border border-gray-200 rounded-lg py-2 text-sm">Cancel</button>
-              <button type="submit" disabled={addRouter.isPending} className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm">
+              <button type="submit" disabled={addRouter.isPending} className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm">
                 {addRouter.isPending ? 'Adding...' : 'Add Router'}
               </button>
             </div>
@@ -179,7 +179,7 @@ export default function RoutersSettingsPage() {
         <Modal title={`Install Script — ${scriptRouter.name}`} onClose={() => setScriptRouter(null)}>
           <p className="text-xs text-gray-500 mb-3">Paste this into your MikroTik terminal (New Terminal). It provisions the API user, RADIUS, WireGuard tunnel, and heartbeat.</p>
           <div className="relative">
-            <pre className="bg-gray-900 text-green-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap font-mono">{scriptRouter.script}</pre>
+            <pre className="bg-gray-900 text-brand-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap font-mono">{scriptRouter.script}</pre>
             <button onClick={copyScript} className="absolute top-2 right-2 p-1.5 bg-gray-700 rounded text-white hover:bg-gray-600">
               {copied ? <Check size={13} /> : <Copy size={13} />}
             </button>
@@ -261,7 +261,7 @@ function RenameForm({ initial, pending, onSubmit }: { initial: string; pending: 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(name) }} className="space-y-4">
       <Field label="Router Name" value={name} onChange={setName} required />
-      <button type="submit" disabled={pending || !name.trim()} className="w-full bg-green-600 text-white rounded-lg py-2 text-sm disabled:opacity-50">
+      <button type="submit" disabled={pending || !name.trim()} className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm disabled:opacity-50">
         {pending ? 'Saving...' : 'Save'}
       </button>
     </form>
@@ -274,7 +274,7 @@ function PasswordForm({ pending, onSubmit }: { pending: boolean; onSubmit: (pw: 
     <form onSubmit={(e) => { e.preventDefault(); onSubmit(pw) }} className="space-y-4">
       <p className="text-xs text-gray-500">Sets a new password for the router&apos;s <code className="bg-gray-100 px-1 rounded">admin</code> user. Applied live over the secure tunnel.</p>
       <Field label="New Password" type="password" value={pw} onChange={setPw} required />
-      <button type="submit" disabled={pending || pw.length < 4} className="w-full bg-green-600 text-white rounded-lg py-2 text-sm disabled:opacity-50">
+      <button type="submit" disabled={pending || pw.length < 4} className="w-full bg-brand-600 text-white rounded-lg py-2 text-sm disabled:opacity-50">
         {pending ? 'Updating...' : 'Update Password'}
       </button>
     </form>
@@ -306,7 +306,7 @@ function Field({ label, value, onChange, type = 'text', required = false }: {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         required={required}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
       />
     </div>
   )

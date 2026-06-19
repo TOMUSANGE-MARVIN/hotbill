@@ -22,7 +22,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
           <Bell size={16} />
         </button>
         <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
-          <div className="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center">
             <User size={14} className="text-white" />
           </div>
           <span className="hidden sm:block text-sm font-medium text-gray-700">{user?.name}</span>

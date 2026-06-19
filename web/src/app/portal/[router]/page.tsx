@@ -99,7 +99,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
           <button
             key={p.id}
             onClick={() => setSelected(p)}
-            className={`w-full text-left rounded-xl border p-4 transition ${selected?.id === p.id ? 'border-green-500 ring-2 ring-green-100 bg-green-50/40' : 'border-gray-200 hover:border-gray-300'}`}
+            className={`w-full text-left rounded-xl border p-4 transition ${selected?.id === p.id ? 'border-brand-500 ring-2 ring-brand-100 bg-brand-50/40' : 'border-gray-200 hover:border-gray-300'}`}
           >
             <div className="flex items-center justify-between">
               <div>
@@ -109,7 +109,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
                   {p.data_limit_mb ? ` · ${(p.data_limit_mb / 1024).toFixed(1)} GB` : ' · Unlimited data'}
                 </p>
               </div>
-              <span className="font-bold text-green-600 whitespace-nowrap">
+              <span className="font-bold text-brand-600 whitespace-nowrap">
                 {data?.currency} {Number(p.price).toLocaleString()}
               </span>
             </div>
@@ -148,13 +148,13 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
               onChange={(e) => setPhone(e.target.value)}
               inputMode="tel"
               placeholder={provider === 'mtn' ? '077XXXXXXX / 078XXXXXXX' : '070XXXXXXX / 075XXXXXXX'}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
           <button
             onClick={pay}
             disabled={paying || !phone.trim()}
-            className="w-full bg-green-600 text-white rounded-lg py-3 text-sm font-semibold hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-brand-600 text-white rounded-lg py-3 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {paying ? <><Loader2 size={16} className="animate-spin" /> Starting payment…</> : `Pay ${data?.currency} ${Number(selected.price).toLocaleString()}`}
           </button>
@@ -171,7 +171,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
             value={voucher}
             onChange={(e) => setVoucher(e.target.value.toUpperCase())}
             placeholder="Enter voucher code"
-            className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm font-mono uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
           <button
             onClick={redeem}
@@ -214,7 +214,7 @@ function Verify({ reference }: { reference: string }) {
           <XCircle className="mx-auto text-red-500 mb-3" size={40} />
           <p className="font-semibold text-gray-900">Payment not completed</p>
           <p className="text-sm text-gray-500 mt-1">Your payment didn&apos;t go through. Please try again.</p>
-          <button onClick={() => history.back()} className="mt-4 text-green-600 text-sm font-medium">← Back to packages</button>
+          <button onClick={() => history.back()} className="mt-4 text-brand-600 text-sm font-medium">← Back to packages</button>
         </div>
       </Shell>
     )
@@ -224,7 +224,7 @@ function Verify({ reference }: { reference: string }) {
     return (
       <Shell>
         <div className="text-center py-10">
-          <Loader2 className="mx-auto animate-spin text-green-600 mb-3" size={40} />
+          <Loader2 className="mx-auto animate-spin text-brand-600 mb-3" size={40} />
           <p className="font-semibold text-gray-900">Confirming your payment…</p>
           <p className="text-sm text-gray-500 mt-1">This can take a few moments after you approve on your phone.</p>
         </div>
@@ -250,7 +250,7 @@ function Connected({ data }: { data: any }) {
   return (
     <Shell>
       <div className="text-center py-6">
-        <CheckCircle2 className="mx-auto text-green-500 mb-3" size={44} />
+        <CheckCircle2 className="mx-auto text-brand-500 mb-3" size={44} />
         <p className="font-semibold text-gray-900 text-lg">You&apos;re connected!</p>
         {data.package && <p className="text-sm text-gray-500 mt-1">{data.package} is now active.</p>}
 
@@ -261,7 +261,7 @@ function Connected({ data }: { data: any }) {
               <input type="hidden" name="username" value={data.username} />
               <input type="hidden" name="password" value={data.password} />
               <input type="hidden" name="dst" value="https://www.google.com" />
-              <button type="submit" className="mt-3 bg-green-600 text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-green-700">
+              <button type="submit" className="mt-3 bg-brand-600 text-white rounded-lg px-5 py-2.5 text-sm font-semibold hover:bg-brand-700">
                 Connect Now
               </button>
             </form>
@@ -280,10 +280,10 @@ function Connected({ data }: { data: any }) {
 
 function Shell({ org, children }: { org?: string; children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-brand-50 to-white flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-xl border border-gray-100 p-6">
         <div className="flex items-center gap-2 mb-5">
-          <div className="w-9 h-9 rounded-full bg-green-500 flex items-center justify-center text-white">
+          <div className="w-9 h-9 rounded-full bg-brand-500 flex items-center justify-center text-white">
             <Wifi size={18} />
           </div>
           <div>

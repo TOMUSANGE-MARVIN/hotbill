@@ -49,7 +49,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </button>
           <span className="text-sm font-medium text-gray-300 md:ml-0 ml-2">Platform Admin</span>
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full bg-green-600 flex items-center justify-center">
+            <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center">
               <span className="text-white text-xs font-bold">{user.name?.[0] ?? 'A'}</span>
             </div>
             <span className="hidden sm:block text-sm text-gray-300">{user.name}</span>

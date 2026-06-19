@@ -68,7 +68,7 @@ export default function RemoteAccessPage() {
             <button
               onClick={() => run.mutate()}
               disabled={!routerId || !command || run.isPending}
-              className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 hover:bg-green-700"
+              className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50 hover:bg-brand-700"
             >
               <Play size={14} />
               {run.isPending ? 'Running...' : 'Run'}
@@ -86,7 +86,7 @@ export default function RemoteAccessPage() {
               <Terminal size={14} className="text-gray-400" />
               <span className="text-xs text-gray-500">Output</span>
             </div>
-            <pre className="bg-gray-900 text-green-400 text-xs rounded-lg p-4 overflow-x-auto font-mono whitespace-pre-wrap">
+            <pre className="bg-gray-900 text-brand-400 text-xs rounded-lg p-4 overflow-x-auto font-mono whitespace-pre-wrap">
               {JSON.stringify(output, null, 2)}
             </pre>
           </div>

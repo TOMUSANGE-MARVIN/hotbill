@@ -50,7 +50,7 @@ export default function VouchersPage() {
         <h1 className="text-2xl font-bold text-gray-900">Vouchers</h1>
         <button
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700"
         >
           <Plus size={16} /> Generate Batch
         </button>
@@ -62,7 +62,7 @@ export default function VouchersPage() {
             key={t}
             onClick={() => setTab(t)}
             className={cn('px-4 py-2 text-sm font-medium border-b-2 -mb-px capitalize',
-              tab === t ? 'border-green-600 text-green-600' : 'border-transparent text-gray-500')}
+              tab === t ? 'border-brand-600 text-brand-600' : 'border-transparent text-gray-500')}
           >
             {t}
           </button>
@@ -89,7 +89,7 @@ export default function VouchersPage() {
                 <tr key={batch.id} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-medium text-gray-800">
                     <div className="flex items-center gap-2">
-                      <Ticket size={14} className="text-green-500" />
+                      <Ticket size={14} className="text-brand-500" />
                       {batch.name}
                     </div>
                   </td>
@@ -97,7 +97,7 @@ export default function VouchersPage() {
                   <td className="px-5 py-3 text-gray-600">{batch.quantity}</td>
                   <td className="px-5 py-3 text-gray-600">{batch.used_count}</td>
                   <td className="px-5 py-3">
-                    <span className="text-green-600 font-medium">{batch.quantity - batch.used_count}</span>
+                    <span className="text-brand-600 font-medium">{batch.quantity - batch.used_count}</span>
                   </td>
                   <td className="px-5 py-3">{formatCurrency(batch.unit_price, currency)}</td>
                   <td className="px-5 py-3">
@@ -196,7 +196,7 @@ export default function VouchersPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="flex-1 border border-gray-200 rounded-lg py-2 text-sm">Cancel</button>
-                <button type="submit" disabled={createBatch.isPending} className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm">
+                <button type="submit" disabled={createBatch.isPending} className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm">
                   {createBatch.isPending ? 'Generating...' : 'Generate'}
                 </button>
               </div>

@@ -26,7 +26,7 @@ function RoutersList() {
           <p className="text-sm text-gray-500 mt-0.5">Every router across all operators.</p>
         </div>
         <div className="text-right">
-          <div className="text-2xl font-bold text-green-700">{online}/{data.length}</div>
+          <div className="text-2xl font-bold text-brand-700">{online}/{data.length}</div>
           <div className="text-xs text-gray-400">online</div>
         </div>
       </div>
@@ -47,7 +47,7 @@ function RoutersList() {
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div className="font-medium text-gray-900 flex items-center gap-1.5">
-                      {r.status === 'online' ? <Wifi size={13} className="text-green-500" /> : <WifiOff size={13} className="text-gray-300" />}
+                      {r.status === 'online' ? <Wifi size={13} className="text-brand-500" /> : <WifiOff size={13} className="text-gray-300" />}
                       {r.name}
                     </div>
                   </td>
@@ -55,7 +55,7 @@ function RoutersList() {
                   <td className="px-4 py-3 text-gray-500 text-xs">{r.model ?? '—'}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs font-mono">{r.ros_version ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.status === 'online' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.status === 'online' ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-500'}`}>
                       {r.status}
                     </span>
                   </td>
@@ -86,5 +86,5 @@ function RoutersList() {
 }
 
 function Spinner() {
-  return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+  return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
 }

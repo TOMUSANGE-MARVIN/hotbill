@@ -58,7 +58,7 @@ export default function SubscribersPage() {
         <h1 className="text-2xl font-bold text-gray-900">Subscribers</h1>
         <button
           onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700"
+          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700"
         >
           <Plus size={16} /> Add Subscriber
         </button>
@@ -132,7 +132,7 @@ export default function SubscribersPage() {
                     ) : (
                       <button
                         onClick={() => activateSub.mutate(sub.id)}
-                        className="p-1.5 rounded hover:bg-green-50 text-green-600" title="Activate"
+                        className="p-1.5 rounded hover:bg-brand-50 text-brand-600" title="Activate"
                       >
                         <UserCheck size={13} />
                       </button>
@@ -201,7 +201,7 @@ export default function SubscribersPage() {
               </div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAdd(false)} className="flex-1 border border-gray-200 rounded-lg py-2 text-sm">Cancel</button>
-                <button type="submit" disabled={addSub.isPending} className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm">
+                <button type="submit" disabled={addSub.isPending} className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm">
                   {addSub.isPending ? 'Adding...' : 'Add Subscriber'}
                 </button>
               </div>
@@ -218,7 +218,7 @@ function F({ label, value, onChange, required = false }: { label: string; value:
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
       <input value={value} onChange={(e) => onChange(e.target.value)} required={required}
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500" />
     </div>
   )
 }

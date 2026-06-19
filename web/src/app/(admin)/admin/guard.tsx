@@ -14,7 +14,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         <ShieldAlert className="text-red-400 mb-3" size={40} />
         <h2 className="text-lg font-semibold text-gray-900">Platform admin only</h2>
         <p className="text-sm text-gray-500 mt-1">You don&apos;t have access to this area.</p>
-        <Link href="/" className="text-green-600 text-sm mt-4">← Back to dashboard</Link>
+        <Link href="/" className="text-brand-600 text-sm mt-4">← Back to dashboard</Link>
       </div>
     )
   }

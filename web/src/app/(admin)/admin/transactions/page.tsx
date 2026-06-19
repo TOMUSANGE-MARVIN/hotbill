@@ -34,7 +34,7 @@ function TransactionsList() {
         </div>
         <div className="flex gap-4 text-right">
           <div>
-            <div className="text-xl font-bold text-green-700">+{formatCurrency(totals.credits)}</div>
+            <div className="text-xl font-bold text-brand-700">+{formatCurrency(totals.credits)}</div>
             <div className="text-xs text-gray-400">Credits</div>
           </div>
           <div>
@@ -60,7 +60,7 @@ function TransactionsList() {
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{t.tenant?.name ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${t.type === 'credit' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${t.type === 'credit' ? 'bg-brand-50 text-brand-700' : 'bg-red-50 text-red-600'}`}>
                       {t.type === 'credit' ? '+' : '−'}{t.type}
                     </span>
                   </td>
@@ -83,5 +83,5 @@ function TransactionsList() {
 }
 
 function Spinner() {
-  return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+  return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
 }

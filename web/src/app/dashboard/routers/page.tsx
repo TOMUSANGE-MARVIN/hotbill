@@ -51,7 +51,7 @@ export default function RouterObservabilityPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
   }
@@ -62,7 +62,7 @@ export default function RouterObservabilityPage() {
         <h1 className="text-2xl font-bold text-gray-900">Router Observability</h1>
         <div className="bg-white rounded-xl border border-gray-200 p-12 text-center text-gray-400">
           No routers yet.{' '}
-          <Link href="/dashboard/settings/routers" className="text-green-600 hover:underline">
+          <Link href="/dashboard/settings/routers" className="text-brand-600 hover:underline">
             Add one in Settings → Routers
           </Link>
           .
@@ -71,7 +71,7 @@ export default function RouterObservabilityPage() {
     )
   }
 
-  const online = router.status === 'online'
+  const online = router.is_online ?? (router.status === 'online')
   const memPct =
     router.total_memory > 0
       ? Math.round(((router.total_memory - router.free_memory) / router.total_memory) * 1000) / 10
@@ -83,7 +83,7 @@ export default function RouterObservabilityPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <Activity className="text-green-600" size={22} />
+            <Activity className="text-brand-600" size={22} />
             <h1 className="text-2xl font-bold text-gray-900">Router Observability</h1>
           </div>
           <p className="text-sm text-gray-500 mt-1">
@@ -98,7 +98,7 @@ export default function RouterObservabilityPage() {
               <select
                 value={router.id}
                 onChange={(e) => setSelectedId(Number(e.target.value))}
-                className="appearance-none border border-gray-200 rounded-lg pl-3 pr-9 py-2 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="appearance-none border border-gray-200 rounded-lg pl-3 pr-9 py-2 text-sm font-medium bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
               >
                 {routers.map((r: any) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
@@ -110,7 +110,7 @@ export default function RouterObservabilityPage() {
 
           {/* Status */}
           <div className="flex items-center gap-2 text-sm">
-            <span className={cn('flex items-center gap-1.5 font-medium', online ? 'text-green-600' : 'text-gray-400')}>
+            <span className={cn('flex items-center gap-1.5 font-medium', online ? 'text-brand-600' : 'text-gray-400')}>
               {online ? <Wifi size={15} /> : <WifiOff size={15} />}
               {online ? 'Online' : 'Offline'}
             </span>
@@ -139,8 +139,8 @@ export default function RouterObservabilityPage() {
             <AreaChart data={series}>
               <defs>
                 <linearGradient id="cpuFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#16a34a" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#16a34a" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#4F4AD7" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#4F4AD7" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="memFill" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#6366f1" stopOpacity={0.25} />
@@ -152,7 +152,7 @@ export default function RouterObservabilityPage() {
               <YAxis tick={{ fontSize: 11 }} domain={[0, 100]} unit="%" />
               <Tooltip labelFormatter={(l) => format(new Date(l), 'MMM d, HH:mm')} />
               <Legend />
-              <Area type="monotone" dataKey="cpu" stroke="#16a34a" fill="url(#cpuFill)" name="CPU %" />
+              <Area type="monotone" dataKey="cpu" stroke="#4F4AD7" fill="url(#cpuFill)" name="CPU %" />
               <Area type="monotone" dataKey="memory" stroke="#6366f1" fill="url(#memFill)" name="Memory %" />
             </AreaChart>
           </ResponsiveContainer>

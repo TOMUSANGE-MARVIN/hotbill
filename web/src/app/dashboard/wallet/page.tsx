@@ -36,29 +36,29 @@ export default function WalletPage() {
   const txns = data?.transactions ?? []
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+    return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
   }
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-gray-900">Wallet</h1>
 
-      {notice && <div className="bg-green-50 text-green-700 text-sm rounded-lg px-4 py-3">{notice}</div>}
+      {notice && <div className="bg-brand-50 text-brand-700 text-sm rounded-lg px-4 py-3">{notice}</div>}
 
       {/* Balance card */}
-      <div className="bg-gradient-to-br from-green-600 to-green-700 rounded-2xl p-6 text-white max-w-md">
-        <div className="flex items-center gap-2 text-green-100 text-sm"><Wallet size={16} /> Available Balance</div>
+      <div className="bg-gradient-to-br from-brand-600 to-brand-700 rounded-2xl p-6 text-white max-w-md">
+        <div className="flex items-center gap-2 text-brand-100 text-sm"><Wallet size={16} /> Available Balance</div>
         <p className="text-4xl font-bold mt-2">{formatCurrency(balance, currency)}</p>
         <div className="flex items-center gap-3 mt-5">
           <button
             onClick={() => { setShowWithdraw(true); setError(null) }}
             disabled={balance <= 0}
-            className="bg-white text-green-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-green-50 disabled:opacity-60"
+            className="bg-white text-brand-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-50 disabled:opacity-60"
           >
             Withdraw
           </button>
           {!data?.payout_phone && (
-            <Link href="/dashboard/settings" className="text-green-100 text-xs underline">Set payout number</Link>
+            <Link href="/dashboard/settings" className="text-brand-100 text-xs underline">Set payout number</Link>
           )}
         </div>
       </div>
@@ -91,18 +91,18 @@ export default function WalletPage() {
                 <td className="px-5 py-3 text-gray-700">
                   <span className="flex items-center gap-2">
                     {t.type === 'credit'
-                      ? <ArrowDownLeft size={14} className="text-green-500" />
+                      ? <ArrowDownLeft size={14} className="text-brand-500" />
                       : <ArrowUpRight size={14} className="text-gray-400" />}
                     {t.description ?? (t.source === 'sale' ? 'Hotspot sale' : 'Withdrawal')}
                   </span>
                 </td>
                 <td className="px-5 py-3">
                   <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
-                    t.status === 'completed' ? 'bg-green-50 text-green-600'
+                    t.status === 'completed' ? 'bg-brand-50 text-brand-600'
                     : t.status === 'failed' ? 'bg-red-50 text-red-600'
                     : 'bg-amber-50 text-amber-600')}>{t.status}</span>
                 </td>
-                <td className={cn('px-5 py-3 text-right font-medium', t.type === 'credit' ? 'text-green-600' : 'text-gray-700')}>
+                <td className={cn('px-5 py-3 text-right font-medium', t.type === 'credit' ? 'text-brand-600' : 'text-gray-700')}>
                   {t.type === 'credit' ? '+' : '−'}{formatCurrency(t.amount, currency)}
                 </td>
                 <td className="px-5 py-3 text-right text-gray-400">{formatCurrency(t.balance_after, currency)}</td>
@@ -128,7 +128,7 @@ export default function WalletPage() {
               {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2">{error}</div>}
               <p className="text-sm text-gray-500">
                 Sent to <span className="font-medium text-gray-800">{data?.payout_phone ?? '—'}</span>.{' '}
-                {!data?.payout_phone && <Link href="/dashboard/settings" className="text-green-600 underline">Set a number</Link>}
+                {!data?.payout_phone && <Link href="/dashboard/settings" className="text-brand-600 underline">Set a number</Link>}
               </p>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Amount ({currency})</label>
@@ -138,7 +138,7 @@ export default function WalletPage() {
                   onChange={(e) => setAmount(e.target.value)}
                   min={data?.min_withdrawal}
                   max={balance}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
                 <p className="text-xs text-gray-400 mt-1">
                   Min {formatCurrency(data?.min_withdrawal ?? 0, currency)} · Available {formatCurrency(balance, currency)}
@@ -147,7 +147,7 @@ export default function WalletPage() {
               <button
                 onClick={() => withdraw.mutate(Number(amount))}
                 disabled={withdraw.isPending || !amount || !data?.payout_phone}
-                className="w-full bg-green-600 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-green-700 disabled:opacity-50"
+                className="w-full bg-brand-600 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
               >
                 {withdraw.isPending ? 'Processing…' : 'Withdraw'}
               </button>

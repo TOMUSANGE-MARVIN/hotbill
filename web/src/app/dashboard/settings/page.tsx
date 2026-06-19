@@ -20,7 +20,7 @@ export default function SettingsPage() {
           <h2 className="font-semibold text-gray-800 mb-4">Account</h2>
           <div className="space-y-3 text-sm">
             <Row label="Organization" value={tenant?.name ?? '—'} />
-            <Row label="Plan" value={<span className="px-2 py-0.5 bg-green-50 text-green-700 rounded text-xs capitalize">{tenant?.plan}</span>} />
+            <Row label="Plan" value={<span className="px-2 py-0.5 bg-brand-50 text-brand-700 rounded text-xs capitalize">{tenant?.plan}</span>} />
             <Row label="Currency" value={tenant?.currency ?? 'UGX'} />
             <Row label="Admin Email" value={user?.email ?? '—'} />
           </div>
@@ -120,13 +120,13 @@ function PayoutSettings() {
             onChange={(e) => setPhone(e.target.value)}
             inputMode="tel"
             placeholder="07XXXXXXXX"
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
           <select value={provider} onChange={(e) => setProvider(e.target.value)}
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500">
+            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500">
             <option value="mtn">MTN MoMo</option>
             <option value="airtel">Airtel Money</option>
           </select>
@@ -134,10 +134,10 @@ function PayoutSettings() {
       </div>
       <div className="flex items-center gap-3 mt-4">
         <button onClick={() => save.mutate()} disabled={save.isPending}
-          className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50">
+          className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-50">
           {save.isPending ? 'Saving…' : 'Save'}
         </button>
-        {saved && <span className="text-green-600 text-sm">Saved</span>}
+        {saved && <span className="text-brand-600 text-sm">Saved</span>}
       </div>
     </div>
   )

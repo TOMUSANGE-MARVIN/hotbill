@@ -134,12 +134,12 @@ function StepIndicator({ step }: { step: number }) {
           <div
             className={cn(
               'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0',
-              step > n ? 'bg-green-500 text-white' : step === n ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400'
+              step > n ? 'bg-brand-500 text-white' : step === n ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-400'
             )}
           >
             {step > n ? <Check size={15} /> : n}
           </div>
-          {idx < 2 && <div className={cn('w-16 h-0.5 mx-1', step > n + 0.5 ? 'bg-green-500' : 'bg-gray-200')} />}
+          {idx < 2 && <div className={cn('w-16 h-0.5 mx-1', step > n + 0.5 ? 'bg-brand-500' : 'bg-gray-200')} />}
         </div>
       ))}
     </div>
@@ -174,7 +174,7 @@ function Step1({ script, copied, onCopy, isOnline, onContinue }: {
             Copy this command and paste it into your MikroTik RouterOS terminal (Winbox &gt; New Terminal).
           </p>
           <div className="relative">
-            <pre className="bg-gray-900 text-green-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+            <pre className="bg-gray-900 text-brand-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
               {script}
             </pre>
             <button
@@ -198,7 +198,7 @@ function Step1({ script, copied, onCopy, isOnline, onContinue }: {
         <div className="flex items-center gap-2 text-sm text-gray-500">
           {isOnline ? (
             <>
-              <CheckCircle2 size={15} className="text-green-500" /> Router connected
+              <CheckCircle2 size={15} className="text-brand-500" /> Router connected
             </>
           ) : (
             <>
@@ -229,7 +229,7 @@ function Step2({ method, setMethod, onBack, onContinue }: {
   return (
     <div className="bg-white rounded-xl border border-gray-200">
       <div className="flex items-start gap-3 p-6 border-b border-gray-100">
-        <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center text-green-600 shrink-0">
+        <div className="w-9 h-9 rounded-lg bg-brand-50 flex items-center justify-center text-brand-600 shrink-0">
           <SettingsIcon size={18} />
         </div>
         <div>
@@ -248,7 +248,7 @@ function Step2({ method, setMethod, onBack, onContinue }: {
         >
           <div className="flex items-center justify-between">
             <span className="font-semibold text-gray-900">Automatic Deployment</span>
-            <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded">RECOMMENDED</span>
+            <span className="text-[10px] font-bold bg-brand-100 text-brand-700 px-2 py-0.5 rounded">RECOMMENDED</span>
           </div>
           <p className="text-sm text-gray-500 mt-1">
             Use our interactive visual Topology Designer to map your ports, bridges, Hotspot, and PPPoE
@@ -334,7 +334,7 @@ function ManualPanel({ onBack, onFinish }: { onBack: () => void; onFinish: () =>
         <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
           <ArrowLeft size={15} /> Back
         </button>
-        <button onClick={onFinish} className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700">
+        <button onClick={onFinish} className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700">
           Done
         </button>
       </div>
@@ -568,7 +568,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                 y1={line.y1}
                 x2={line.x2}
                 y2={line.y2}
-                stroke="#22c55e"
+                stroke="#4F4AD7"
                 strokeWidth={2}
                 strokeDasharray="4 3"
               />
@@ -599,7 +599,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                     isWan
                       ? 'border-gray-200 opacity-50 cursor-not-allowed bg-gray-50'
                       : 'cursor-grab hover:border-gray-400',
-                    wireless && active && !isWan ? 'border-green-400 ring-1 ring-green-200' : 'border-gray-200'
+                    wireless && active && !isWan ? 'border-brand-400 ring-1 ring-brand-200' : 'border-gray-200'
                   )}
                   title={
                     isWan
@@ -614,7 +614,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                       WAN
                     </span>
                   )}
-                  <Icon size={20} className={cn('mx-auto mb-1', wireless && active && !isWan ? 'text-green-500' : 'text-gray-400')} />
+                  <Icon size={20} className={cn('mx-auto mb-1', wireless && active && !isWan ? 'text-brand-500' : 'text-gray-400')} />
                   <p className="text-xs font-medium text-gray-700">{iface.name}</p>
                   {isWan
                     ? <p className="text-[10px] text-gray-400">locked</p>
@@ -635,11 +635,11 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => handleDrop(bridge.id, e)}
                 onDoubleClick={() => setConfigBridgeId(bridge.id)}
-                className="w-72 bg-white rounded-lg border-2 border-dashed border-green-300 p-4"
+                className="w-72 bg-white rounded-lg border-2 border-dashed border-brand-300 p-4"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Layers size={15} className="text-green-600" />
+                    <Layers size={15} className="text-brand-600" />
                     <span className="font-semibold text-sm text-gray-900">{bridge.name}</span>
                   </div>
                   <button
@@ -662,7 +662,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                   <span
                     className={cn(
                       'text-[10px] px-2 py-0.5 rounded-full font-medium',
-                      bridge.hotspotEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      bridge.hotspotEnabled ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'
                     )}
                   >
                     {bridge.hotspotEnabled ? 'Hotspot' : 'No Hotspot'}
@@ -670,7 +670,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                   <span
                     className={cn(
                       'text-[10px] px-2 py-0.5 rounded-full font-medium',
-                      bridge.pppoeEnabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
+                      bridge.pppoeEnabled ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'
                     )}
                   >
                     {bridge.pppoeEnabled ? 'PPPoE' : 'No PPPoE'}
@@ -696,7 +696,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
 
                 {bridge.status === 'deployed' ? (
                   <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
+                    <span className="flex items-center gap-1 text-xs text-brand-600 font-medium">
                       <CheckCircle2 size={14} /> Deployed
                     </span>
                     <button
@@ -742,7 +742,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
         <button
           onClick={onFinish}
           disabled={!anyDeployed}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-40"
+          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-brand-700 disabled:opacity-40"
         >
           Finish Setup <ArrowRight size={15} />
         </button>
@@ -773,7 +773,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                   <input
                     value={bridge.gatewayIp}
                     onChange={(e) => updateBridge(bridge.id, { gatewayIp: e.target.value })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                   />
                 </div>
                 <div>
@@ -781,7 +781,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                   <select
                     value={bridge.subnetPrefix}
                     onChange={(e) => updateBridge(bridge.id, { subnetPrefix: Number(e.target.value) })}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
                     {SUBNET_OPTIONS.map((o) => (
                       <option key={o.prefix} value={o.prefix}>
@@ -831,7 +831,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                   <button
                     onClick={() => setConfigBridgeId(null)}
                     disabled={bridge.ports.length === 0}
-                    className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm disabled:opacity-40"
+                    className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm disabled:opacity-40"
                   >
                     Save
                   </button>
@@ -854,7 +854,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
             run this command in your MikroTik terminal to finish wiring up RADIUS and the captive portal.
           </p>
           <div className="relative mb-3">
-            <pre className="bg-gray-900 text-green-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
+            <pre className="bg-gray-900 text-brand-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
               {scriptModal.script}
             </pre>
             <button
@@ -909,7 +909,7 @@ function Toggle({ checked, onChange, disabled }: { checked: boolean; onChange: (
       onClick={() => !disabled && onChange(!checked)}
       className={cn(
         'w-9 h-5 rounded-full transition-colors relative shrink-0',
-        checked ? 'bg-green-500' : 'bg-gray-200',
+        checked ? 'bg-brand-500' : 'bg-gray-200',
         disabled && 'cursor-not-allowed opacity-60'
       )}
     >

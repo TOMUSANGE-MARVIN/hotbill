@@ -35,28 +35,28 @@ export default function AnalyticsPage() {
   })
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+    return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
   }
 
   const o = data?.overview ?? {}
   const series = (data?.data_over_time ?? []) as { date: string; bytes: number }[]
   const topUsers = data?.top_users ?? []
   const perPackage = (data?.data_per_package ?? []) as { package: string; bytes: number }[]
-  const barColors = ['#16a34a', '#0ea5e9', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6']
+  const barColors = ['#4F4AD7', '#0ea5e9', '#f59e0b', '#6366f1', '#ec4899', '#14b8a6']
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Database className="text-green-600" size={22} />
+          <Database className="text-brand-600" size={22} />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Usage Analytics</h1>
             <p className="text-sm text-gray-500">Measured from real hotspot sessions on your routers.</p>
           </div>
         </div>
         <select value={days} onChange={(e) => setDays(Number(e.target.value))}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500">
+          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
           {RANGES.map((r) => <option key={r.days} value={r.days}>{r.label}</option>)}
         </select>
       </div>
@@ -80,15 +80,15 @@ export default function AnalyticsPage() {
             <AreaChart data={series}>
               <defs>
                 <linearGradient id="dataFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#16a34a" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#16a34a" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#4F4AD7" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#4F4AD7" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(v) => format(new Date(v), 'MMM dd')} minTickGap={30} />
               <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => formatBytes(v)} width={70} />
               <Tooltip formatter={(v: any) => formatBytes(v)} labelFormatter={(l) => format(new Date(l), 'EEE, MMM d')} />
-              <Area type="monotone" dataKey="bytes" stroke="#16a34a" fill="url(#dataFill)" name="Data" />
+              <Area type="monotone" dataKey="bytes" stroke="#4F4AD7" fill="url(#dataFill)" name="Data" />
             </AreaChart>
           </ResponsiveContainer>
         )}
@@ -165,7 +165,7 @@ function OverviewCard({ icon: Icon, label, value, sub, delta }: { icon: any; lab
       <p className="text-2xl font-bold text-gray-900 mt-2">{value}</p>
       <p className="text-xs text-gray-400 mt-1">{sub}</p>
       {delta != null && (
-        <p className={`text-xs mt-2 flex items-center gap-1 ${delta >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+        <p className={`text-xs mt-2 flex items-center gap-1 ${delta >= 0 ? 'text-brand-600' : 'text-red-500'}`}>
           {delta >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
           {delta >= 0 ? '+' : ''}{delta}% vs last period
         </p>

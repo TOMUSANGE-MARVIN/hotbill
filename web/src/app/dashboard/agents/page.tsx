@@ -29,7 +29,7 @@ export default function AgentsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Agents</h1>
         <button onClick={() => setShowAdd(true)}
-          className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
+          className="flex items-center gap-2 bg-brand-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-brand-700">
           <Plus size={16} /> Add Agent
         </button>
       </div>
@@ -38,8 +38,8 @@ export default function AgentsPage() {
         {agents.map((agent: any) => (
           <div key={agent.id} className="bg-white rounded-xl border border-gray-200 p-5">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                <UserCheck size={18} className="text-green-600" />
+              <div className="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center">
+                <UserCheck size={18} className="text-brand-600" />
               </div>
               <div>
                 <p className="font-semibold text-gray-900">{agent.name}</p>
@@ -49,7 +49,7 @@ export default function AgentsPage() {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Balance</span>
-                <span className="font-semibold text-green-600">{formatCurrency(agent.balance, currency)}</span>
+                <span className="font-semibold text-brand-600">{formatCurrency(agent.balance, currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Total Sales</span>
@@ -94,7 +94,7 @@ export default function AgentsPage() {
               ))}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowAdd(false)} className="flex-1 border border-gray-200 rounded-lg py-2 text-sm">Cancel</button>
-                <button type="submit" disabled={add.isPending} className="flex-1 bg-green-600 text-white rounded-lg py-2 text-sm">
+                <button type="submit" disabled={add.isPending} className="flex-1 bg-brand-600 text-white rounded-lg py-2 text-sm">
                   {add.isPending ? 'Adding...' : 'Add Agent'}
                 </button>
               </div>

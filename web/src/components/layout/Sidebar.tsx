@@ -74,7 +74,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
       {/* Logo */}
       <div className="p-4 border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-green-500 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
             <span className="text-white text-xs font-bold">H</span>
           </div>
           <span className="font-bold text-gray-900 text-lg">HotBill</span>
@@ -83,7 +83,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
           <X size={18} />
         </button>
         <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-          <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+          <span className="w-2 h-2 rounded-full bg-brand-400 inline-block" />
           {tenant?.name ?? 'Loading...'}
         </div>
       </div>
@@ -115,7 +115,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
                         className={cn(
                           'block px-3 py-1.5 rounded-md text-xs',
                           pathname === to(child.href)
-                            ? 'bg-green-50 text-green-700 font-medium'
+                            ? 'bg-brand-50 text-brand-700 font-medium'
                             : 'text-gray-500 hover:bg-gray-50'
                         )}
                       >
@@ -137,7 +137,7 @@ export default function Sidebar({ onClose }: { onClose?: () => void }) {
               className={cn(
                 'flex items-center gap-2 px-3 py-2 rounded-md text-sm',
                 active
-                  ? 'bg-green-50 text-green-700 font-medium'
+                  ? 'bg-brand-50 text-brand-700 font-medium'
                   : 'text-gray-600 hover:bg-gray-50'
               )}
             >

@@ -39,10 +39,11 @@ class AnalyticsController extends Controller
         $agentCommission = (clone $salesBase)->whereNotNull('agent_id')->sum('commission');
         $mmCommission = (clone $salesBase)->whereIn('method', ['mtn_momo', 'airtel_money'])->sum('commission');
 
-        // System insights
+        // System insights — "live" figures only count routers reporting right now.
         $routers = Router::where('tenant_id', $tenantId)->get();
-        $activeUsers = $routers->sum('active_users');
-        $avgCpu = $routers->avg('cpu_load');
+        $onlineRouters = $routers->filter(fn (Router $r) => $r->isOnline());
+        $activeUsers = $onlineRouters->sum('active_users');
+        $avgCpu = $onlineRouters->avg('cpu_load');
         $totalDataGb = round($routers->sum('data_rx') / (1024 ** 3), 1);
 
         // Subscribers

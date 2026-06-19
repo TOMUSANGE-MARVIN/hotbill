@@ -54,7 +54,7 @@ function WithdrawalsList() {
           <button
             key={s || 'all'}
             onClick={() => setStatus(s)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize ${status === s ? 'bg-green-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize ${status === s ? 'bg-brand-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
           >
             {s || 'All'}
           </button>
@@ -90,7 +90,7 @@ function WithdrawalsList() {
                         <button
                           onClick={() => release.mutate(w.id)}
                           disabled={release.isPending}
-                          className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50"
+                          className="flex items-center gap-1 text-xs px-2 py-1 rounded-md bg-brand-50 text-brand-700 hover:bg-brand-100 disabled:opacity-50"
                         >
                           {release.isPending ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}
                           Paid out
@@ -123,7 +123,7 @@ function WithdrawalsList() {
 const STATUS_COLORS: Record<string, string> = {
   pending: 'bg-yellow-50 text-yellow-700',
   processing: 'bg-blue-50 text-blue-700',
-  completed: 'bg-green-50 text-green-700',
+  completed: 'bg-brand-50 text-brand-700',
   failed: 'bg-red-50 text-red-600',
 }
 
@@ -136,5 +136,5 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function Spinner() {
-  return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin" /></div>
+  return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
 }
