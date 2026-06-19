@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import {
   ReactFlow, Background, Controls, Panel, Handle, Position, MarkerType,
-  useNodesState, useEdgesState, BackgroundVariant,
+  ConnectionLineType, useNodesState, useEdgesState, BackgroundVariant,
   type Node, type Edge, type Connection, type NodeProps, type NodeTypes,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -522,9 +522,9 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
         <div>
           <p className="text-sm font-medium text-gray-700 mb-1">Controls</p>
           <p className="text-xs text-gray-500">
-            Drag a wire from a port&apos;s dot to a bridge to connect it — each physical port can belong to
-            only one bridge. Drag nodes to rearrange the canvas. Double-click a wireless port to activate it,
-            and click a connected port&apos;s tag to disconnect it.
+            Drag from the blue dot at the bottom of a port onto a bridge to connect it — each physical port can
+            belong to only one bridge. Drag a bridge card to rearrange it. Double-click a wireless port to
+            activate it, and click a connected port&apos;s tag to disconnect it.
           </p>
         </div>
 
@@ -740,7 +740,8 @@ function PortNode({ data }: NodeProps) {
         <Handle
           type="source"
           position={Position.Bottom}
-          className="!w-2.5 !h-2.5 !bg-brand-500 !border-2 !border-white"
+          title="Drag from here to a bridge"
+          className="!-bottom-2.5 !h-5 !w-5 !rounded-full !bg-brand-500 !border-2 !border-white !shadow cursor-crosshair hover:!bg-brand-600 transition-colors"
         />
       )}
     </div>
@@ -854,6 +855,8 @@ function TopologyCanvas({
         id: `port-${iface.name}`,
         type: 'port',
         position: posById.get(`port-${iface.name}`) ?? { x: 24 + i * 140, y: 24 },
+        // Ports stay put — you connect them by dragging the handle, not the card.
+        draggable: false,
         data: { iface, onToggle: onToggleInterface } as unknown as Record<string, unknown>,
       }))
       const bridgeNodes: Node[] = bridges.map((bridge, i) => ({
@@ -925,6 +928,8 @@ function TopologyCanvas({
         fitView
         fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
         defaultEdgeOptions={{ type: 'smoothstep' }}
+        connectionLineType={ConnectionLineType.SmoothStep}
+        connectionLineStyle={{ stroke: '#4F4AD7', strokeWidth: 2 }}
         proOptions={{ hideAttribution: true }}
         className="bg-gray-50"
       >
