@@ -1,7 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import {
+  ReactFlow, Background, Controls, Panel, Handle, Position, MarkerType,
+  useNodesState, useEdgesState, BackgroundVariant,
+  type Node, type Edge, type Connection, type NodeProps, type NodeTypes,
+} from '@xyflow/react'
+import '@xyflow/react/dist/style.css'
 import api from '@/lib/api'
 import { cn } from '@/lib/utils'
 import {
@@ -354,11 +360,6 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
   const [scriptModal, setScriptModal] = useState<{ bridgeName: string; script: string } | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const ifaceRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const bridgeRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const [lines, setLines] = useState<{ key: string; x1: number; y1: number; x2: number; y2: number }[]>([])
-
   useEffect(() => {
     let cancelled = false
     setScanning(true)
@@ -388,39 +389,6 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
     }
   }, [routerId])
 
-  const recomputeLines = useCallback(() => {
-    const container = containerRef.current
-    if (!container) return
-    const containerRect = container.getBoundingClientRect()
-    const next: typeof lines = []
-
-    bridges.forEach((bridge) => {
-      const bridgeEl = bridgeRefs.current[bridge.id]
-      if (!bridgeEl) return
-      const bRect = bridgeEl.getBoundingClientRect()
-      bridge.ports.forEach((port) => {
-        const ifaceEl = ifaceRefs.current[port]
-        if (!ifaceEl) return
-        const iRect = ifaceEl.getBoundingClientRect()
-        next.push({
-          key: `${bridge.id}-${port}`,
-          x1: iRect.left + iRect.width / 2 - containerRect.left,
-          y1: iRect.bottom - containerRect.top,
-          x2: bRect.left + bRect.width / 2 - containerRect.left,
-          y2: bRect.top - containerRect.top,
-        })
-      })
-    })
-
-    setLines(next)
-  }, [bridges])
-
-  useLayoutEffect(() => {
-    recomputeLines()
-    window.addEventListener('resize', recomputeLines)
-    return () => window.removeEventListener('resize', recomputeLines)
-  }, [recomputeLines, interfaces])
-
   const toggleInterface = useMutation({
     mutationFn: ({ name, enabled }: { name: string; enabled: boolean }) =>
       api.post(`/routers/${routerId}/interfaces/toggle`, { name, enabled }),
@@ -435,21 +403,22 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
     toggleInterface.mutate({ name: iface.name, enabled: willEnable })
   }
 
-  const handleDrop = (bridgeId: string, e: React.DragEvent) => {
-    e.preventDefault()
-    const portName = e.dataTransfer.getData('text/plain')
-    if (!portName) return
-    // Never allow the WAN/uplink onto a bridge.
-    if (interfaces.find((i) => i.name === portName)?.is_wan) return
-    setBridges((prev) =>
-      prev.map((b) => {
-        if (b.id === bridgeId) {
-          return b.ports.includes(portName) ? b : { ...b, ports: [...b.ports, portName] }
-        }
-        return { ...b, ports: b.ports.filter((p) => p !== portName) }
-      })
-    )
-  }
+  // Wire a port onto a bridge — a port belongs to exactly one bridge, and the
+  // WAN uplink can never be bridged (it would cut the router's internet).
+  const connectPort = useCallback(
+    (bridgeId: string, portName: string) => {
+      if (interfaces.find((i) => i.name === portName)?.is_wan) return
+      setBridges((prev) =>
+        prev.map((b) => {
+          if (b.id === bridgeId) {
+            return b.ports.includes(portName) ? b : { ...b, ports: [...b.ports, portName] }
+          }
+          return { ...b, ports: b.ports.filter((p) => p !== portName) }
+        })
+      )
+    },
+    [interfaces]
+  )
 
   const disconnectPort = (bridgeId: string, portName: string) => {
     setBridges((prev) =>
@@ -553,186 +522,24 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
         <div>
           <p className="text-sm font-medium text-gray-700 mb-1">Controls</p>
           <p className="text-xs text-gray-500">
-            Drag connections between ports and bridges. Each physical port can only belong to one bridge.
-            Double-click a wireless port to activate it. Click a connected port&apos;s tag to disconnect it.
+            Drag a wire from a port&apos;s dot to a bridge to connect it — each physical port can belong to
+            only one bridge. Drag nodes to rearrange the canvas. Double-click a wireless port to activate it,
+            and click a connected port&apos;s tag to disconnect it.
           </p>
         </div>
 
         {/* Designer canvas */}
-        <div ref={containerRef} className="relative rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4">
-          <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            {lines.map((line) => (
-              <line
-                key={line.key}
-                x1={line.x1}
-                y1={line.y1}
-                x2={line.x2}
-                y2={line.y2}
-                stroke="#4F4AD7"
-                strokeWidth={2}
-                strokeDasharray="4 3"
-              />
-            ))}
-          </svg>
-
-          {/* Interface row */}
-          <div className="relative flex flex-wrap gap-3 mb-8">
-            {interfaces.map((iface) => {
-              const Icon = isWireless(iface.type) ? Wifi : Cable
-              const wireless = isWireless(iface.type)
-              const active = !iface.disabled
-              const isWan = !!iface.is_wan
-              return (
-                <div
-                  key={iface.name}
-                  ref={(el) => {
-                    ifaceRefs.current[iface.name] = el
-                  }}
-                  draggable={!isWan}
-                  onDragStart={(e) => {
-                    if (isWan) { e.preventDefault(); return }
-                    e.dataTransfer.setData('text/plain', iface.name)
-                  }}
-                  onDoubleClick={() => { if (!isWan) handleDoubleClickInterface(iface) }}
-                  className={cn(
-                    'relative w-24 px-3 py-3 rounded-lg border bg-white text-center select-none transition-colors',
-                    isWan
-                      ? 'border-gray-200 opacity-50 cursor-not-allowed bg-gray-50'
-                      : 'cursor-grab hover:border-gray-400',
-                    wireless && active && !isWan ? 'border-brand-400 ring-1 ring-brand-200' : 'border-gray-200'
-                  )}
-                  title={
-                    isWan
-                      ? 'WAN / internet uplink — locked. Bridging it would cut the router’s internet.'
-                      : wireless
-                      ? 'Double-click to toggle wireless'
-                      : 'Drag onto a bridge to connect'
-                  }
-                >
-                  {isWan && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold bg-amber-400 text-white px-1.5 py-0.5 rounded">
-                      WAN
-                    </span>
-                  )}
-                  <Icon size={20} className={cn('mx-auto mb-1', wireless && active && !isWan ? 'text-brand-500' : 'text-gray-400')} />
-                  <p className="text-xs font-medium text-gray-700">{iface.name}</p>
-                  {isWan
-                    ? <p className="text-[10px] text-gray-400">locked</p>
-                    : wireless && <p className="text-[10px] text-gray-400">{active ? 'active' : 'inactive'}</p>}
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Bridges */}
-          <div className="relative flex flex-wrap gap-4">
-            {bridges.map((bridge) => (
-              <div
-                key={bridge.id}
-                ref={(el) => {
-                  bridgeRefs.current[bridge.id] = el
-                }}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => handleDrop(bridge.id, e)}
-                onDoubleClick={() => setConfigBridgeId(bridge.id)}
-                className="w-72 bg-white rounded-lg border-2 border-dashed border-brand-300 p-4"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <Layers size={15} className="text-brand-600" />
-                    <span className="font-semibold text-sm text-gray-900">{bridge.name}</span>
-                  </div>
-                  <button
-                    onClick={() => setConfigBridgeId(bridge.id)}
-                    className="p-1 rounded hover:bg-gray-100 text-gray-400"
-                    title="Configure bridge"
-                  >
-                    <SettingsIcon size={14} />
-                  </button>
-                </div>
-
-                <div className="text-xs text-gray-500 mb-2">
-                  Gateway IP:{' '}
-                  <span className="font-mono text-gray-700">
-                    {bridge.gatewayIp}/{bridge.subnetPrefix}
-                  </span>
-                </div>
-
-                <div className="flex gap-1.5 mb-3">
-                  <span
-                    className={cn(
-                      'text-[10px] px-2 py-0.5 rounded-full font-medium',
-                      bridge.hotspotEnabled ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'
-                    )}
-                  >
-                    {bridge.hotspotEnabled ? 'Hotspot' : 'No Hotspot'}
-                  </span>
-                  <span
-                    className={cn(
-                      'text-[10px] px-2 py-0.5 rounded-full font-medium',
-                      bridge.pppoeEnabled ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500'
-                    )}
-                  >
-                    {bridge.pppoeEnabled ? 'PPPoE' : 'No PPPoE'}
-                  </span>
-                </div>
-
-                {bridge.ports.length === 0 ? (
-                  <p className="text-[11px] text-gray-400 italic mb-3">Drag ports here to connect them to this bridge</p>
-                ) : (
-                  <div className="flex flex-wrap gap-1 mb-3">
-                    {bridge.ports.map((p) => (
-                      <button
-                        key={p}
-                        onClick={() => disconnectPort(bridge.id, p)}
-                        className="text-[10px] bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-600 px-2 py-0.5 rounded-full"
-                        title="Click to disconnect"
-                      >
-                        {p} ×
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {bridge.status === 'deployed' ? (
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1 text-xs text-brand-600 font-medium">
-                      <CheckCircle2 size={14} /> Deployed
-                    </span>
-                    <button
-                      onClick={() => setScriptModal({ bridgeName: bridge.name, script: bridge.bootstrapScript ?? '' })}
-                      className="text-xs text-gray-600 hover:underline"
-                    >
-                      View setup script
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleDeploy(bridge)}
-                    disabled={bridge.ports.length === 0 || bridge.status === 'deploying'}
-                    className="w-full bg-gray-900 text-white text-xs font-medium rounded-lg py-2 disabled:opacity-40 flex items-center justify-center gap-2"
-                  >
-                    {bridge.status === 'deploying' ? (
-                      <>
-                        <Loader2 size={13} className="animate-spin" /> Deploying bridge...
-                      </>
-                    ) : (
-                      'Deploy Bridge'
-                    )}
-                  </button>
-                )}
-                {bridge.status === 'failed' && <p className="text-[11px] text-red-500 mt-2">{bridge.error}</p>}
-              </div>
-            ))}
-
-            <button
-              onClick={addBridge}
-              className="w-72 flex items-center justify-center gap-2 border-2 border-dashed border-gray-200 rounded-lg p-4 text-sm text-gray-400 hover:border-gray-300 hover:text-gray-600 min-h-[120px]"
-            >
-              <Plus size={15} /> Add New Bridge
-            </button>
-          </div>
-        </div>
+        <TopologyCanvas
+          interfaces={interfaces}
+          bridges={bridges}
+          onConnectPort={connectPort}
+          onDisconnectPort={disconnectPort}
+          onToggleInterface={handleDoubleClickInterface}
+          onConfigureBridge={setConfigBridgeId}
+          onDeployBridge={handleDeploy}
+          onViewScript={(b) => setScriptModal({ bridgeName: b.name, script: b.bootstrapScript ?? '' })}
+          onAddBridge={addBridge}
+        />
       </div>
 
       <div className="flex items-center justify-between p-6 border-t border-gray-100">
@@ -880,6 +687,258 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
           </button>
         </Modal>
       )}
+    </div>
+  )
+}
+
+// ── React Flow topology canvas ─────────────────────────────────
+
+type PortNodeData = { iface: IfaceInfo; onToggle: (iface: IfaceInfo) => void }
+type BridgeNodeData = {
+  bridge: BridgeDraft
+  onConfigure: (id: string) => void
+  onDisconnectPort: (bridgeId: string, port: string) => void
+  onDeploy: (bridge: BridgeDraft) => void
+  onViewScript: (bridge: BridgeDraft) => void
+}
+
+function PortNode({ data }: NodeProps) {
+  const { iface, onToggle } = data as unknown as PortNodeData
+  const wireless = isWireless(iface.type)
+  const active = !iface.disabled
+  const isWan = !!iface.is_wan
+  const Icon = wireless ? Wifi : Cable
+  return (
+    <div
+      onDoubleClick={() => { if (!isWan) onToggle(iface) }}
+      className={cn(
+        'relative w-24 px-3 py-3 rounded-lg border bg-white text-center select-none shadow-sm',
+        isWan
+          ? 'border-gray-200 opacity-60 bg-gray-50'
+          : 'border-gray-200 hover:border-gray-400',
+        wireless && active && !isWan && 'border-brand-400 ring-1 ring-brand-200'
+      )}
+      title={
+        isWan
+          ? 'WAN / internet uplink — locked. Bridging it would cut the router’s internet.'
+          : wireless
+          ? 'Double-click to toggle wireless'
+          : 'Drag the dot onto a bridge to connect'
+      }
+    >
+      {isWan && (
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold bg-amber-400 text-white px-1.5 py-0.5 rounded">
+          WAN
+        </span>
+      )}
+      <Icon size={20} className={cn('mx-auto mb-1', wireless && active && !isWan ? 'text-brand-500' : 'text-gray-400')} />
+      <p className="text-xs font-medium text-gray-700">{iface.name}</p>
+      {isWan
+        ? <p className="text-[10px] text-gray-400">locked</p>
+        : wireless && <p className="text-[10px] text-gray-400">{active ? 'active' : 'inactive'}</p>}
+      {!isWan && (
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          className="!w-2.5 !h-2.5 !bg-brand-500 !border-2 !border-white"
+        />
+      )}
+    </div>
+  )
+}
+
+function BridgeNode({ data }: NodeProps) {
+  const { bridge, onConfigure, onDisconnectPort, onDeploy, onViewScript } = data as unknown as BridgeNodeData
+  return (
+    <div className="w-72 bg-white rounded-lg border-2 border-dashed border-brand-300 p-4 shadow-sm">
+      <Handle type="target" position={Position.Top} className="!w-3 !h-3 !bg-brand-500 !border-2 !border-white" />
+
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Layers size={15} className="text-brand-600" />
+          <span className="font-semibold text-sm text-gray-900">{bridge.name}</span>
+        </div>
+        <button
+          onClick={() => onConfigure(bridge.id)}
+          className="nodrag p-1 rounded hover:bg-gray-100 text-gray-400"
+          title="Configure bridge"
+        >
+          <SettingsIcon size={14} />
+        </button>
+      </div>
+
+      <div className="text-xs text-gray-500 mb-2">
+        Gateway IP:{' '}
+        <span className="font-mono text-gray-700">{bridge.gatewayIp}/{bridge.subnetPrefix}</span>
+      </div>
+
+      <div className="flex gap-1.5 mb-3">
+        <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-medium', bridge.hotspotEnabled ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500')}>
+          {bridge.hotspotEnabled ? 'Hotspot' : 'No Hotspot'}
+        </span>
+        <span className={cn('text-[10px] px-2 py-0.5 rounded-full font-medium', bridge.pppoeEnabled ? 'bg-brand-100 text-brand-700' : 'bg-gray-100 text-gray-500')}>
+          {bridge.pppoeEnabled ? 'PPPoE' : 'No PPPoE'}
+        </span>
+      </div>
+
+      {bridge.ports.length === 0 ? (
+        <p className="text-[11px] text-gray-400 italic mb-3">Connect ports by dragging a wire here</p>
+      ) : (
+        <div className="flex flex-wrap gap-1 mb-3">
+          {bridge.ports.map((p) => (
+            <button
+              key={p}
+              onClick={() => onDisconnectPort(bridge.id, p)}
+              className="nodrag text-[10px] bg-gray-100 hover:bg-red-50 hover:text-red-600 text-gray-600 px-2 py-0.5 rounded-full"
+              title="Click to disconnect"
+            >
+              {p} ×
+            </button>
+          ))}
+        </div>
+      )}
+
+      {bridge.status === 'deployed' ? (
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1 text-xs text-brand-600 font-medium">
+            <CheckCircle2 size={14} /> Deployed
+          </span>
+          <button onClick={() => onViewScript(bridge)} className="nodrag text-xs text-gray-600 hover:underline">
+            View setup script
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => onDeploy(bridge)}
+          disabled={bridge.ports.length === 0 || bridge.status === 'deploying'}
+          className="nodrag w-full bg-gray-900 text-white text-xs font-medium rounded-lg py-2 disabled:opacity-40 flex items-center justify-center gap-2"
+        >
+          {bridge.status === 'deploying' ? (
+            <><Loader2 size={13} className="animate-spin" /> Deploying bridge...</>
+          ) : (
+            'Deploy Bridge'
+          )}
+        </button>
+      )}
+      {bridge.status === 'failed' && <p className="text-[11px] text-red-500 mt-2">{bridge.error}</p>}
+    </div>
+  )
+}
+
+const nodeTypes: NodeTypes = { port: PortNode, bridge: BridgeNode }
+
+function TopologyCanvas({
+  interfaces, bridges,
+  onConnectPort, onDisconnectPort, onToggleInterface,
+  onConfigureBridge, onDeployBridge, onViewScript, onAddBridge,
+}: {
+  interfaces: IfaceInfo[]
+  bridges: BridgeDraft[]
+  onConnectPort: (bridgeId: string, port: string) => void
+  onDisconnectPort: (bridgeId: string, port: string) => void
+  onToggleInterface: (iface: IfaceInfo) => void
+  onConfigureBridge: (id: string) => void
+  onDeployBridge: (bridge: BridgeDraft) => void
+  onViewScript: (bridge: BridgeDraft) => void
+  onAddBridge: () => void
+}) {
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([])
+
+  // Rebuild node data when the topology changes, preserving any positions the
+  // user has dragged the nodes to.
+  useEffect(() => {
+    setNodes((prev) => {
+      const posById = new Map(prev.map((n) => [n.id, n.position]))
+      const portNodes: Node[] = interfaces.map((iface, i) => ({
+        id: `port-${iface.name}`,
+        type: 'port',
+        position: posById.get(`port-${iface.name}`) ?? { x: 24 + i * 140, y: 24 },
+        data: { iface, onToggle: onToggleInterface } as unknown as Record<string, unknown>,
+      }))
+      const bridgeNodes: Node[] = bridges.map((bridge, i) => ({
+        id: bridge.id,
+        type: 'bridge',
+        position: posById.get(bridge.id) ?? { x: 24 + i * 340, y: 320 },
+        data: {
+          bridge,
+          onConfigure: onConfigureBridge,
+          onDisconnectPort,
+          onDeploy: onDeployBridge,
+          onViewScript,
+        } as unknown as Record<string, unknown>,
+      }))
+      return [...portNodes, ...bridgeNodes]
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interfaces, bridges])
+
+  // Edges mirror each bridge's connected ports.
+  useEffect(() => {
+    const next: Edge[] = []
+    bridges.forEach((b) =>
+      b.ports.forEach((p) =>
+        next.push({
+          id: `e-${b.id}-${p}`,
+          source: `port-${p}`,
+          target: b.id,
+          animated: true,
+          style: { stroke: '#4F4AD7', strokeWidth: 2 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: '#4F4AD7' },
+        })
+      )
+    )
+    setEdges(next)
+  }, [bridges, setEdges])
+
+  const onConnect = useCallback(
+    (c: Connection) => {
+      if (!c.source || !c.target || !c.source.startsWith('port-')) return
+      onConnectPort(c.target, c.source.replace('port-', ''))
+    },
+    [onConnectPort]
+  )
+
+  const isValidConnection = useCallback(
+    (c: Connection | Edge) => {
+      const source = (c as Connection).source
+      const target = (c as Connection).target
+      if (!source || !target || !source.startsWith('port-')) return false
+      const iface = interfaces.find((i) => i.name === source.replace('port-', ''))
+      if (!iface || iface.is_wan) return false
+      return bridges.some((b) => b.id === target)
+    },
+    [interfaces, bridges]
+  )
+
+  return (
+    <div className="h-[480px] rounded-lg border border-dashed border-gray-200 bg-gray-50 overflow-hidden">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        isValidConnection={isValidConnection}
+        zoomOnDoubleClick={false}
+        fitView
+        fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
+        defaultEdgeOptions={{ type: 'smoothstep' }}
+        proOptions={{ hideAttribution: true }}
+        className="bg-gray-50"
+      >
+        <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="#d4d4d8" />
+        <Controls showInteractive={false} className="!shadow-sm" />
+        <Panel position="top-right">
+          <button
+            onClick={onAddBridge}
+            className="flex items-center gap-2 bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:border-gray-300"
+          >
+            <Plus size={15} /> Add Bridge
+          </button>
+        </Panel>
+      </ReactFlow>
     </div>
   )
 }

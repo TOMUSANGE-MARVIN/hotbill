@@ -57,6 +57,22 @@ export default function PackagesPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['packages'] }),
   })
 
+  const toggleActive = useMutation({
+    mutationFn: ({ id, is_active }: { id: number; is_active: boolean }) =>
+      api.put(`/packages/${id}`, { is_active }),
+    // optimistic update so the switch flips instantly
+    onMutate: async ({ id, is_active }) => {
+      await qc.cancelQueries({ queryKey: ['packages'] })
+      const prev = qc.getQueryData<any[]>(['packages'])
+      qc.setQueryData<any[]>(['packages'], (old) =>
+        (old ?? []).map((p) => (p.id === id ? { ...p, is_active } : p))
+      )
+      return { prev }
+    },
+    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(['packages'], ctx.prev),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['packages'] }),
+  })
+
   const set = (patch: Partial<typeof blankForm>) => setForm((f: any) => ({ ...f, ...patch }))
 
   const openNew = () => { setEditing(null); setForm(blankForm); setAdvanced(false); setShowAdd(true) }
@@ -190,6 +206,7 @@ export default function PackagesPage() {
                 <th className="px-5 py-3">Duration</th>
                 <th className="px-5 py-3">Data Cap</th>
                 <th className="px-5 py-3">Subscribers</th>
+                <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -215,6 +232,17 @@ export default function PackagesPage() {
                   <td className="px-5 py-3 text-gray-600">{pkg.data_limit_mb ? `${(pkg.data_limit_mb / 1024).toFixed(1)} GB` : 'Unlimited'}</td>
                   <td className="px-5 py-3 text-gray-700">{pkg.subscribers_count ?? 0}</td>
                   <td className="px-5 py-3">
+                    <div className="flex items-center gap-2">
+                      <Toggle
+                        on={pkg.is_active}
+                        onChange={(val) => toggleActive.mutate({ id: pkg.id, is_active: val })}
+                      />
+                      <span className={`text-xs font-medium ${pkg.is_active ? 'text-brand-600' : 'text-gray-400'}`}>
+                        {pkg.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => openEdit(pkg)} className="p-1.5 hover:bg-gray-100 rounded text-gray-400 hover:text-gray-700"><Pencil size={14} /></button>
                       <button onClick={() => del.mutate(pkg.id)} className="p-1.5 hover:bg-red-50 rounded text-gray-400 hover:text-red-500"><Trash2 size={14} /></button>
@@ -224,7 +252,7 @@ export default function PackagesPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={9} className="px-5 py-12 text-center text-sm text-gray-400">
                     {packages.length === 0 ? 'No packages yet. Create your first one.' : 'No packages match your filters.'}
                   </td>
                 </tr>
@@ -329,6 +357,26 @@ export default function PackagesPage() {
 }
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500'
+
+function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => onChange(!on)}
+      className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+        on ? 'bg-brand-600' : 'bg-gray-300'
+      }`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+          on ? 'translate-x-4' : 'translate-x-0.5'
+        }`}
+      />
+    </button>
+  )
+}
 
 function Label({ text, children, small }: { text: string; children: React.ReactNode; small?: boolean }) {
   return (
