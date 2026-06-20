@@ -53,6 +53,34 @@
   .animate-marquee-slow { animation: marquee 50s linear infinite; }
   .animate-spinSlow { animation: spinSlow 8s linear infinite; }
   .marquee-track:hover { animation-play-state: paused; }
+
+  /* Scroll reveal — re-triggers every time the element enters the viewport.
+     Smooth fade + rise (no bounce), driven by a transition so it eases both
+     in and out. Per-element stagger comes from inline transition-delay. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.8s ease-out, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    will-change: transform, opacity;
+  }
+  .reveal-in { opacity: 1; transform: translateY(0); }
+
+  /* Compatible-with brand icons: slide in from the left one by one, hold,
+     then slide back out — looping forever. Stagger via inline animationDelay. */
+  .compat-icon { animation: compatSlide 7s ease-in-out infinite both; }
+}
+
+@keyframes compatSlide {
+  0%   { opacity: 0; transform: translateX(-32px); }
+  12%  { opacity: 1; transform: translateX(0); }
+  68%  { opacity: 1; transform: translateX(0); }
+  82%  { opacity: 0; transform: translateX(-32px); }
+  100% { opacity: 0; transform: translateX(-32px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .compat-icon { animation: none; }
 }
 
 @keyframes marquee {

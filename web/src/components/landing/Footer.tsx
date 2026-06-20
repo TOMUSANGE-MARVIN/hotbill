@@ -45,7 +45,7 @@ export default function Footer() {
                 <span className="text-lg font-extrabold tracking-tight">HOTBILL</span>
               </Link>
               <p className="text-sm text-white/55 max-w-[200px] leading-relaxed">
-                Smart hotspot, seamless billing — making connectivity profitable for every ISP.
+                Smart hotspot, seamless billing, making connectivity profitable for every ISP.
               </p>
             </div>
 

@@ -3,11 +3,12 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
+import Reveal from '@/components/landing/Reveal'
 
 const featured = {
   category: 'Product',
   title: 'How HotBill Cut Hotspot Setup Time From Days to 60 Seconds',
-  excerpt: 'A deep dive into our one-click MikroTik provisioning script — how it configures RADIUS, hotspot, firewall and VPN automatically, and why it changes the economics of running an ISP.',
+  excerpt: 'A deep dive into our one-click MikroTik provisioning script, how it configures RADIUS, hotspot, firewall and VPN automatically, and why it changes the economics of running an ISP.',
   image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=900&h=560&fit=crop',
   author: 'Marvin Tomusange',
   date: 'Jun 12, 2026',
@@ -27,7 +28,7 @@ const posts = [
   {
     category: 'Engineering',
     title: 'Reaching Routers Behind NAT With WireGuard',
-    excerpt: 'How we built a secure tunnel so HotBill can manage routers with no public IP — from anywhere.',
+    excerpt: 'How we built a secure tunnel so HotBill can manage routers with no public IP, from anywhere.',
     image: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=500&h=340&fit=crop',
     author: 'Patrick Mugisha',
     date: 'Jun 3, 2026',
@@ -54,7 +55,7 @@ const posts = [
   {
     category: 'Product',
     title: 'Reading Your Revenue Dashboard Like a Pro',
-    excerpt: 'Turn raw numbers into decisions — spot churn, find your best packages, and plug revenue leaks.',
+    excerpt: 'Turn raw numbers into decisions, spot churn, find your best packages, and plug revenue leaks.',
     image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=500&h=340&fit=crop',
     author: 'Marvin Tomusange',
     date: 'May 15, 2026',
@@ -78,7 +79,7 @@ export default function BlogsPage() {
     <>
       {/* Hero */}
       <section className="bg-lightgray py-24 lg:py-28">
-        <div className="container-1200 text-center">
+        <Reveal className="container-1200 text-center">
           <span className="inline-block border border-purple/40 rounded-pill px-5 py-1.5 text-xs font-medium text-navy mb-6">
             Blogs
           </span>
@@ -88,12 +89,12 @@ export default function BlogsPage() {
           <p className="text-lg text-navy/60 max-w-2xl mx-auto">
             Guides, engineering notes and growth stories to help you run a more profitable hotspot business.
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* Featured */}
       <section className="bg-white py-20 lg:py-24">
-        <div className="container-1200">
+        <Reveal className="container-1200">
           <Link href="#" className="group grid lg:grid-cols-2 gap-10 lg:gap-12 items-center">
             <div className="rounded-card overflow-hidden border border-black/[0.06]">
               <Image src={featured.image} alt={featured.title} width={900} height={560} className="w-full group-hover:scale-105 transition-transform duration-500" />
@@ -115,7 +116,7 @@ export default function BlogsPage() {
               </div>
             </div>
           </Link>
-        </div>
+        </Reveal>
       </section>
 
       {/* Category filter + grid */}
@@ -135,8 +136,9 @@ export default function BlogsPage() {
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
-            {posts.map((post) => (
-              <Link key={post.title} href="#" className="group bg-white rounded-card border border-black/[0.08] overflow-hidden flex flex-col hover:-translate-y-1 transition-transform duration-200">
+            {posts.map((post, i) => (
+              <Reveal key={post.title} delay={(i % 3) * 90} className="flex">
+              <Link href="#" className="group bg-white rounded-card border border-black/[0.08] overflow-hidden flex flex-col hover:-translate-y-1 transition-transform duration-200 w-full">
                 <div className="relative aspect-[3/2] overflow-hidden bg-lightgray">
                   <Image src={post.image} alt={post.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   <span className="absolute top-3 left-3 bg-white/90 backdrop-blur text-navy text-[11px] font-semibold px-3 py-1 rounded-pill">
@@ -152,6 +154,7 @@ export default function BlogsPage() {
                   </div>
                 </div>
               </Link>
+              </Reveal>
             ))}
           </div>
         </div>
@@ -159,14 +162,14 @@ export default function BlogsPage() {
 
       {/* Newsletter CTA */}
       <section className="bg-navy py-20 lg:py-24 text-center">
-        <div className="container-1200">
+        <Reveal className="container-1200">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-3">Never miss an update</h2>
           <p className="text-white/60 max-w-md mx-auto mb-8">Get new guides and product news in your inbox. No spam, unsubscribe anytime.</p>
           <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto" onSubmit={(e) => e.preventDefault()}>
             <input type="email" required placeholder="you@company.com" className="flex-1 rounded-btn px-4 py-3 text-sm text-navy bg-white outline-none" />
             <button type="submit" className="bg-purple hover:bg-purple-dark text-white px-6 py-3 rounded-btn text-sm font-semibold transition-colors">Subscribe</button>
           </form>
-        </div>
+        </Reveal>
       </section>
     </>
   )

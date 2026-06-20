@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Mail, Phone, MapPin, Clock, Send, MessageSquare, Headphones, FileText } from 'lucide-react'
+import Reveal from '@/components/landing/Reveal'
 
 const contactInfo = [
   { icon: Mail, label: 'Email', value: 'hello@hotbill.io', href: 'mailto:hello@hotbill.io' },
@@ -30,7 +31,7 @@ export default function ContactPage() {
   return (
     <>
       <section className="bg-lightgray py-24 lg:py-28">
-        <div className="container-1200 text-center">
+        <Reveal className="container-1200 text-center">
           <span className="inline-block border border-purple/40 rounded-pill px-5 py-1.5 text-xs font-medium text-navy mb-6">
             Contact Us
           </span>
@@ -40,13 +41,13 @@ export default function ContactPage() {
           <p className="text-lg text-navy/60 max-w-2xl mx-auto">
             Have a question, need a demo, or want to discuss enterprise pricing? We&apos;d love to hear from you.
           </p>
-        </div>
+        </Reveal>
       </section>
 
       <section className="bg-white py-20 lg:py-24">
         <div className="container-1200">
           <div className="grid lg:grid-cols-5 gap-12 lg:gap-16">
-            <div className="lg:col-span-3">
+            <Reveal className="lg:col-span-3">
               <div className="bg-white rounded-card border border-black/[0.08] p-6 lg:p-10">
                 {submitted ? (
                   <div className="text-center py-16">
@@ -97,9 +98,9 @@ export default function ContactPage() {
                   </>
                 )}
               </div>
-            </div>
+            </Reveal>
 
-            <div className="lg:col-span-2 space-y-8">
+            <Reveal delay={120} className="lg:col-span-2 space-y-8">
               <div>
                 <h3 className="font-bold text-lg text-navy mb-5">Contact Information</h3>
                 <div className="space-y-4">
@@ -122,27 +123,29 @@ export default function ContactPage() {
                   <p className="text-xs text-navy/45">Kampala, Uganda</p>
                 </div>
               </div>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
       <section className="bg-lightgray py-16 lg:py-20">
         <div className="container-1200">
-          <div className="text-center mb-12">
+          <Reveal className="text-center mb-12">
             <h2 className="text-2xl font-bold text-navy mb-2">Other ways to get help</h2>
             <p className="text-sm text-navy/55">Choose the support channel that works best for you.</p>
-          </div>
+          </Reveal>
           <div className="grid sm:grid-cols-3 gap-6">
-            {supportOptions.map((option) => (
-              <div key={option.title} className="bg-white rounded-card border border-black/[0.08] p-6 text-center group hover:-translate-y-1 transition-transform duration-200">
-                <span className="inline-flex w-12 h-12 bg-purple/10 rounded-btn items-center justify-center mb-4">
-                  <option.icon size={22} className="text-purple" />
-                </span>
-                <h3 className="font-bold text-navy mb-1">{option.title}</h3>
-                <p className="text-sm text-navy/55 mb-4">{option.description}</p>
-                <button className="text-purple text-sm font-semibold hover:underline transition-colors">{option.cta} →</button>
-              </div>
+            {supportOptions.map((option, i) => (
+              <Reveal key={option.title} delay={i * 90}>
+                <div className="bg-white rounded-card border border-black/[0.08] p-6 text-center group hover:-translate-y-1 transition-transform duration-200 h-full">
+                  <span className="inline-flex w-12 h-12 bg-purple/10 rounded-btn items-center justify-center mb-4">
+                    <option.icon size={22} className="text-purple" />
+                  </span>
+                  <h3 className="font-bold text-navy mb-1">{option.title}</h3>
+                  <p className="text-sm text-navy/55 mb-4">{option.description}</p>
+                  <button className="text-purple text-sm font-semibold hover:underline transition-colors">{option.cta} →</button>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>

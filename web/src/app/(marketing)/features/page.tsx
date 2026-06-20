@@ -7,13 +7,14 @@ import {
   Smartphone, ArrowUpRight, Check
 } from 'lucide-react'
 import { loginUrl } from '@/lib/site'
+import Reveal from '@/components/landing/Reveal'
 
 const featureGroups = [
   {
     id: 'routers',
     badge: 'Router Management',
     title: 'Complete MikroTik Router Control',
-    description: 'Auto-discover, provision, and monitor all your routers from a single dashboard. No SSH, no Winbox — just click and go.',
+    description: 'Auto-discover, provision, and monitor all your routers from a single dashboard. No SSH, no Winbox, just click and go.',
     image: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=700&h=450&fit=crop',
     features: [
       'One-click router provisioning with auto RADIUS setup',
@@ -28,7 +29,7 @@ const featureGroups = [
     id: 'billing',
     badge: 'Automated Billing',
     title: 'Collect Payments on Autopilot',
-    description: 'Mobile money, card payments, and vouchers — all automated. Your customers pay, get instant internet, and you earn while you sleep.',
+    description: 'Mobile money, card payments, and vouchers, all automated. Your customers pay, get instant internet, and you earn while you sleep.',
     image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=700&h=450&fit=crop',
     features: [
       'PesaPal integration (MTN MoMo, Airtel Money, cards)',
@@ -74,7 +75,7 @@ const featureGroups = [
 const extraFeatures = [
   { icon: Shield, title: 'Multi-Tenant Architecture', desc: 'Isolated environments for each ISP operator with dedicated billing and settings.' },
   { icon: Lock, title: 'Enterprise Security', desc: 'Role-based access control, encrypted credentials, and secure API authentication.' },
-  { icon: Smartphone, title: 'Mobile Responsive', desc: 'Manage your entire ISP business from your phone — dashboard, billing, and all.' },
+  { icon: Smartphone, title: 'Mobile Responsive', desc: 'Manage your entire ISP business from your phone, dashboard, billing, and all.' },
   { icon: Bell, title: 'Smart Notifications', desc: 'Get alerted when routers go offline, payments fail, or subscribers churn.' },
   { icon: Globe, title: 'Custom Branding', desc: 'White-label captive portal with your logo, colors, and domain name.' },
   { icon: CloudCog, title: 'REST API', desc: 'Full API access for integrations, custom apps, and automation workflows.' },
@@ -86,7 +87,7 @@ export default function FeaturesPage() {
   return (
     <>
       <section className="bg-lightgray py-24 lg:py-28">
-        <div className="container-1200 text-center">
+        <Reveal className="container-1200 text-center">
           <span className="inline-block border border-purple/40 rounded-pill px-5 py-1.5 text-xs font-medium text-navy mb-6">
             Services
           </span>
@@ -95,9 +96,9 @@ export default function FeaturesPage() {
             <span className="text-purple">by operators</span>
           </h1>
           <p className="text-lg text-navy/60 max-w-2xl mx-auto leading-relaxed">
-            Every feature is designed to solve the real challenges of running a hotspot business — from router management to payment collection.
+            Every feature is designed to solve the real challenges of running a hotspot business, from router management to payment collection.
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {featureGroups.map((group, i) => (
@@ -108,7 +109,7 @@ export default function FeaturesPage() {
         >
           <div className="container-1200">
             <div className={`grid lg:grid-cols-2 gap-12 lg:gap-20 items-center`}>
-              <div className={i % 2 === 1 ? 'lg:order-2' : ''}>
+              <Reveal className={i % 2 === 1 ? 'lg:order-2' : ''}>
                 <span className="inline-block border border-purple/40 text-purple text-xs font-semibold px-4 py-1.5 rounded-pill mb-5">
                   {group.badge}
                 </span>
@@ -124,12 +125,12 @@ export default function FeaturesPage() {
                     </li>
                   ))}
                 </ul>
-              </div>
-              <div className={i % 2 === 1 ? 'lg:order-1' : ''}>
+              </Reveal>
+              <Reveal delay={120} className={i % 2 === 1 ? 'lg:order-1' : ''}>
                 <div className="rounded-card overflow-hidden border border-black/[0.06] shadow-[0_20px_50px_rgba(0,1,42,0.1)]">
                   <Image src={group.image} alt={group.title} width={700} height={450} className="w-full" />
                 </div>
-              </div>
+              </Reveal>
             </div>
           </div>
         </section>
@@ -137,28 +138,30 @@ export default function FeaturesPage() {
 
       <section className="bg-white py-20 lg:py-28">
         <div className="container-1200">
-          <div className="text-center mb-16">
+          <Reveal className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">And so much more</h2>
             <p className="text-navy/60 max-w-xl mx-auto">
               Every detail is crafted to help you run a more efficient ISP business.
             </p>
-          </div>
+          </Reveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {extraFeatures.map((f) => (
-              <div key={f.title} className="p-6 rounded-card border border-black/[0.08] bg-white hover:-translate-y-1 transition-transform duration-200">
-                <span className="inline-flex items-center justify-center w-11 h-11 rounded-btn bg-purple/10 mb-4">
-                  <f.icon size={20} className="text-purple" />
-                </span>
-                <h3 className="font-bold text-sm text-navy mb-1">{f.title}</h3>
-                <p className="text-xs text-navy/55 leading-relaxed">{f.desc}</p>
-              </div>
+            {extraFeatures.map((f, i) => (
+              <Reveal key={f.title} delay={(i % 4) * 80}>
+                <div className="p-6 rounded-card border border-black/[0.08] bg-white hover:-translate-y-1 transition-transform duration-200 h-full">
+                  <span className="inline-flex items-center justify-center w-11 h-11 rounded-btn bg-purple/10 mb-4">
+                    <f.icon size={20} className="text-purple" />
+                  </span>
+                  <h3 className="font-bold text-sm text-navy mb-1">{f.title}</h3>
+                  <p className="text-xs text-navy/55 leading-relaxed">{f.desc}</p>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
       <section className="bg-navy py-20 lg:py-24 text-center">
-        <div className="container-1200">
+        <Reveal className="container-1200">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to see it in action?</h2>
           <p className="text-white/60 max-w-lg mx-auto mb-8">
             Start your free trial and provision your first router in under 60 seconds.
@@ -169,7 +172,7 @@ export default function FeaturesPage() {
           >
             Start Free Trial <ArrowUpRight size={16} />
           </Link>
-        </div>
+        </Reveal>
       </section>
     </>
   )
