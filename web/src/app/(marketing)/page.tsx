@@ -15,6 +15,7 @@ export default function HomePage() {
       <DarkVideo />
       <Marquee />
       <Services />
+      <Gallery />
       <TrustedBy />
       <Projects />
       <Founder />
@@ -262,6 +263,81 @@ function Services() {
             )
           })}
         </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─────────────────── SECTION 4.5 — PRODUCT GALLERY ─────────────────── */
+const galleryTop = [
+  { src: '/gallery/dashboard.png', label: 'Dashboard' },
+  { src: '/gallery/usage-analytics.png', label: 'Usage Analytics' },
+  { src: '/gallery/transactions.png', label: 'Transactions' },
+  { src: '/gallery/wallet.png', label: 'Wallet & Payouts' },
+  { src: '/gallery/subscribers.png', label: 'Subscribers' },
+]
+const galleryBottom = [
+  { src: '/gallery/packages.png', label: 'Packages' },
+  { src: '/gallery/vouchers.png', label: 'Vouchers' },
+  { src: '/gallery/agents.png', label: 'Agents' },
+  { src: '/gallery/routers.png', label: 'Router Monitoring' },
+  { src: '/gallery/router-setup.png', label: 'Automatic Router Setup' },
+]
+
+function GalleryCard({ src, label }: { src: string; label: string }) {
+  return (
+    <figure className="group relative shrink-0 w-[300px] sm:w-[400px] lg:w-[460px] aspect-[1919/927] rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-navy">
+      <Image
+        src={src}
+        alt={`HotBill — ${label}`}
+        fill
+        sizes="(max-width: 640px) 300px, (max-width: 1024px) 400px, 460px"
+        className="object-cover object-top"
+      />
+      <figcaption className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-navy/90 to-transparent px-4 py-3 text-sm font-medium text-white">
+        {label}
+      </figcaption>
+    </figure>
+  )
+}
+
+function GalleryRow({ items, reverse = false }: { items: typeof galleryTop; reverse?: boolean }) {
+  // Duplicate the row so the -50% translate loops seamlessly.
+  const loop = [...items, ...items]
+  return (
+    <div className="flex gap-5 w-max">
+      <div className={`flex gap-5 marquee-track ${reverse ? 'animate-marquee-reverse' : 'animate-marquee-slow'}`}>
+        {loop.map((it, i) => (
+          <GalleryCard key={`${it.src}-${i}`} {...it} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Gallery() {
+  return (
+    <section className="bg-navy py-24 lg:py-28 overflow-hidden">
+      <div className="container-1200 mb-12">
+        {/* Header pill (dark variant of the Services header) */}
+        <div className="flex items-center gap-0 max-w-3xl mx-auto lg:mx-0">
+          <span className="shrink-0 border border-white/30 rounded-pill px-6 py-3 text-sm font-medium text-white bg-navy -mr-4 z-10">
+            Product
+          </span>
+          <div className="flex-1 border border-white/20 rounded-pill px-8 py-3 pl-12">
+            <h2 className="text-2xl lg:text-3xl font-medium text-white">A look inside HotBill</h2>
+          </div>
+        </div>
+      </div>
+
+      {/* Two rows scrolling in opposite directions */}
+      <div className="relative space-y-5">
+        <GalleryRow items={galleryTop} />
+        <GalleryRow items={galleryBottom} reverse />
+
+        {/* Edge fades so cards melt into the section */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-16 sm:w-32 bg-gradient-to-r from-navy to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-16 sm:w-32 bg-gradient-to-l from-navy to-transparent" />
       </div>
     </section>
   )

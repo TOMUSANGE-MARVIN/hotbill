@@ -48,6 +48,9 @@
   }
   .text-balance { text-wrap: balance; }
   .animate-marquee { animation: marquee 22s linear infinite; }
+  /* Same track, scrolling the other way — used by the second gallery row. */
+  .animate-marquee-reverse { animation: marquee 40s linear infinite reverse; }
+  .animate-marquee-slow { animation: marquee 50s linear infinite; }
   .animate-spinSlow { animation: spinSlow 8s linear infinite; }
   .marquee-track:hover { animation-play-state: paused; }
 }
