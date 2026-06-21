@@ -13,6 +13,7 @@ use App\Models\SubscriberSession;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends Controller
@@ -25,6 +26,19 @@ class AnalyticsController extends Controller
 
         $range = [$start . ' 00:00:00', $end . ' 23:59:59'];
 
+        // These aggregates scan growing tables on every dashboard load, so cache
+        // the assembled payload for a short window (per tenant + date range).
+        $payload = Cache::remember(
+            "dashboard:{$tenantId}:{$start}:{$end}",
+            60,
+            fn () => $this->buildDashboard($tenantId, $range)
+        );
+
+        return response()->json($payload);
+    }
+
+    private function buildDashboard(int $tenantId, array $range): array
+    {
         // Sales summary
         $salesBase = Transaction::where('tenant_id', $tenantId)
             ->where('status', 'completed')
@@ -68,7 +82,7 @@ class AnalyticsController extends Controller
             ->orderBy('date')
             ->get();
 
-        return response()->json([
+        return [
             'net_sales' => $netSales,
             'gross_sales' => $grossSales,
             'commission' => $commission,
@@ -84,7 +98,7 @@ class AnalyticsController extends Controller
             'account_credit' => 0, // prepaid balance — extend later
             'recent_sales' => $recentSales,
             'daily' => $daily,
-        ]);
+        ];
     }
 
     /**

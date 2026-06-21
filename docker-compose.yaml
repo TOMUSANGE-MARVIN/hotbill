@@ -35,6 +35,18 @@ services:
     volumes:
       - wg_data:/etc/wireguard
 
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
   api:
     build:
       context: ./api
@@ -45,39 +57,7 @@ services:
     depends_on:
       mariadb:
         condition: service_healthy
-      wireguard:
-        condition: service_started
-    volumes:
-      - wg_data:/var/wireguard
-    environment:
-      APP_NAME: ${APP_NAME:-HotBill}
-      APP_ENV: ${APP_ENV:-production}
-      APP_KEY: ${APP_KEY}
-      APP_DEBUG: ${APP_DEBUG:-false}
-      APP_URL: ${APP_URL:-http://localhost:8000}
-      DB_CONNECTION: mysql
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_DATABASE: ${DB_DATABASE:-hotbill}
-      DB_USERNAME: ${DB_USERNAME:-hotbill}
-      DB_PASSWORD: ${DB_PASSWORD:-hotbill_secret}
-      SESSION_DRIVER: database
-      QUEUE_CONNECTION: database
-      CACHE_STORE: database
-      RUN_MIGRATIONS: "true"
-    ports:
-      - "8090:80"
-
-  queue:
-    build:
-      context: ./api
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    command: ["php", "artisan", "queue:work", "--sleep=3", "--tries=3"]
-    cap_add:
-      - NET_ADMIN
-    depends_on:
-      mariadb:
+      redis:
         condition: service_healthy
       wireguard:
         condition: service_started
@@ -95,9 +75,51 @@ services:
       DB_DATABASE: ${DB_DATABASE:-hotbill}
       DB_USERNAME: ${DB_USERNAME:-hotbill}
       DB_PASSWORD: ${DB_PASSWORD:-hotbill_secret}
-      SESSION_DRIVER: database
-      QUEUE_CONNECTION: database
-      CACHE_STORE: database
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
+      RUN_MIGRATIONS: "true"
+    ports:
+      - "8090:80"
+
+  queue:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["php", "artisan", "queue:work", "redis", "--sleep=3", "--tries=3", "--max-time=3600"]
+    cap_add:
+      - NET_ADMIN
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      wireguard:
+        condition: service_started
+    volumes:
+      - wg_data:/var/wireguard
+    environment:
+      APP_NAME: ${APP_NAME:-HotBill}
+      APP_ENV: ${APP_ENV:-production}
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      DB_CONNECTION: mysql
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_DATABASE: ${DB_DATABASE:-hotbill}
+      DB_USERNAME: ${DB_USERNAME:-hotbill}
+      DB_PASSWORD: ${DB_PASSWORD:-hotbill_secret}
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      CACHE_STORE: redis
 
   web:
     build:
@@ -114,3 +136,4 @@ services:
 volumes:
   db_data:
   wg_data:
+  redis_data:
