@@ -24,7 +24,7 @@ const navItems = [
     label: 'Sales', icon: ShoppingCart,
     children: [
       { href: '/transactions', label: 'Transactions' },
-      { href: '/transactions/summary', label: 'Summary' },
+      { href: '/transactions?tab=summary', label: 'Summary' },
     ]
   },
   {

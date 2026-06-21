@@ -15,7 +15,12 @@ const methodLabel: Record<string, string> = {
 export default function TransactionsPage() {
   const { tenant } = useAuthStore()
   const currency = tenant?.currency ?? 'UGX'
-  const [tab, setTab] = useState<'list' | 'summary'>('list')
+  // Open straight to the Summary tab when linked as /transactions?tab=summary.
+  const [tab, setTab] = useState<'list' | 'summary'>(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'summary'
+      ? 'summary'
+      : 'list'
+  )
   const [filters, setFilters] = useState({
     start_date: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
     end_date: format(new Date(), 'yyyy-MM-dd'),
