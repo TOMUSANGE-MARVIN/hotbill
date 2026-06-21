@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ArrowUpRight, Play } from 'lucide-react'
+import { ArrowUpRight } from 'lucide-react'
 import RotatingBadge from '@/components/landing/RotatingBadge'
 import StatCounter from '@/components/landing/StatCounter'
 import Reveal from '@/components/landing/Reveal'
@@ -165,18 +165,15 @@ function DarkVideo() {
       {/* Video card breaks into the next (light) section */}
       <div className="container-1200 relative -mb-28 lg:-mb-40">
         <Reveal className="relative rounded-[16px] overflow-hidden aspect-video bg-white/5">
-          <Image
-            src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&h=675&fit=crop"
-            alt="HotBill team"
-            fill
-            className="object-cover"
+          <video
+            src="/network-video.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-navy/20" />
-          <button className="absolute inset-0 flex items-center justify-center" aria-label="Play video">
-            <span className="w-16 h-16 lg:w-20 lg:h-20 rounded-full bg-navy text-white flex items-center justify-center shadow-xl hover:scale-105 transition-transform">
-              <Play size={26} fill="currentColor" className="ml-1" />
-            </span>
-          </button>
         </Reveal>
         <div className="absolute -top-10 right-4 lg:right-8 z-10 hidden sm:block">
           <RotatingBadge text="EXPLORE · MORE · " variant="purple" size={120} />
@@ -324,7 +321,7 @@ const galleryBottom = [
 
 function GalleryCard({ src, label }: { src: string; label: string }) {
   return (
-    <figure className="group relative shrink-0 w-[300px] sm:w-[400px] lg:w-[460px] aspect-[1919/927] rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl bg-navy">
+    <figure className="group relative shrink-0 w-[300px] sm:w-[400px] lg:w-[460px] aspect-[1919/927] overflow-hidden ring-1 ring-white/10 shadow-2xl bg-navy">
       <Image
         src={src}
         alt={`HotBill ${label}`}

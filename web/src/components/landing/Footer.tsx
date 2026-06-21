@@ -1,8 +1,9 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Power, Phone, Mail } from 'lucide-react'
+import { Phone, Mail } from 'lucide-react'
 
 const footerLinks = [
   { label: 'How it works', href: '/features' },
@@ -39,9 +40,7 @@ export default function Footer() {
             {/* Left — brand */}
             <div>
               <Link href="/" className="flex items-center gap-2.5 mb-4">
-                <span className="w-8 h-8 rounded-full bg-purple flex items-center justify-center">
-                  <Power size={16} className="text-white" strokeWidth={2.5} />
-                </span>
+                <Image src="/hotbill-logo.png" alt="HotBill" width={176} height={107} className="h-8 w-auto object-contain" />
                 <span className="text-lg font-extrabold tracking-tight">HOTBILL</span>
               </Link>
               <p className="text-sm text-white/55 max-w-[200px] leading-relaxed">
@@ -75,10 +74,11 @@ export default function Footer() {
           {/* Bottom bar */}
           <div className="border-t border-white/15 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/55">
-              <span className="flex items-center gap-2"><Phone size={13} /> +256 700 000 000</span>
+              <a href="tel:+256705240647" className="flex items-center gap-2 hover:text-white transition-colors"><Phone size={13} /> +256 705 240 647</a>
+              <a href="tel:+256761700498" className="flex items-center gap-2 hover:text-white transition-colors"><Phone size={13} /> +256 761 700 498</a>
               <span className="flex items-center gap-2"><Mail size={13} /> hello@hotbill.io</span>
             </div>
-            <p className="text-sm text-white/55">Copyright © 2025 All rights reserved</p>
+            <p className="text-sm text-white/55">Copyright © {new Date().getFullYear()} All rights reserved</p>
           </div>
         </div>
       </div>

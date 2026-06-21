@@ -68,11 +68,11 @@ export default function ContactPage() {
                       <div className="grid sm:grid-cols-2 gap-5">
                         <div>
                           <label className="block text-sm font-medium text-navy mb-1.5">Full Name</label>
-                          <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="John Doe" className={inputCls} />
+                          <input type="text" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Nakato Wamala" className={inputCls} />
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-navy mb-1.5">Email</label>
-                          <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="john@company.com" className={inputCls} />
+                          <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="nakato.wamala@gmail.com" className={inputCls} />
                         </div>
                       </div>
                       <div>

@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Power } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 
 const links = [
   { href: '/about', label: 'About Us' },
@@ -37,10 +38,8 @@ export default function Navbar() {
         }`}
       >
         <div className="flex items-center justify-between h-14 pl-5 pr-2.5">
-          <Link href="/" className="flex items-center gap-2.5">
-            <span className="w-8 h-8 rounded-full bg-purple flex items-center justify-center">
-              <Power size={16} className="text-white" strokeWidth={2.5} />
-            </span>
+          <Link href="/" className="flex items-center gap-2">
+            <Image src="/hotbill-logo.png" alt="HotBill" width={176} height={107} priority className="h-8 w-auto object-contain" />
             <span className="text-base font-extrabold tracking-tight text-navy">HOTBILL</span>
           </Link>
 
