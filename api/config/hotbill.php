@@ -3,7 +3,7 @@
 return [
     'radius_api_secret' => env('RADIUS_API_SECRET', ''),
     // Public-facing captive-portal web URL (the Next.js app), used for PesaPal return links.
-    'portal_url' => rtrim(env('PORTAL_URL', 'https://hotbill.marvwebdesign.com'), '/'),
+    'portal_url' => rtrim(env('PORTAL_URL', 'https://hotbill.app'), '/'),
     'platform' => [
         // HotBill's per-transaction commission on each hotspot sale (% of gross).
         'commission_percent' => (float) env('PLATFORM_COMMISSION_PERCENT', 3),
