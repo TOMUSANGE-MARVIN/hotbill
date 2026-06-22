@@ -13,6 +13,12 @@ const footerLinks = [
   { label: 'FAQs', href: '/faqs' },
 ]
 
+const legalLinks = [
+  { label: 'Privacy Policy', href: '/privacy-policy' },
+  { label: 'Terms & Conditions', href: '/terms' },
+  { label: 'Return & Refund Policy', href: '/refund-policy' },
+]
+
 function FacebookIcon() {
   return <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.07C24 5.4 18.63 0 12 0S0 5.4 0 12.07c0 6.03 4.39 11.03 10.13 11.93v-8.44H7.08v-3.49h3.05V9.41c0-3.02 1.79-4.69 4.53-4.69 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.96.93-1.96 1.89v2.25h3.33l-.53 3.49h-2.8V24C19.61 23.1 24 18.1 24 12.07z" /></svg>
 }
@@ -71,12 +77,21 @@ export default function Footer() {
             </div>
           </div>
 
+          {/* Legal links */}
+          <div className="border-t border-white/15 mt-10 pt-6 flex flex-wrap gap-x-8 gap-y-3">
+            {legalLinks.map((l) => (
+              <Link key={l.label} href={l.href} className="text-sm text-white/70 hover:text-white transition-colors">
+                {l.label}
+              </Link>
+            ))}
+          </div>
+
           {/* Bottom bar */}
-          <div className="border-t border-white/15 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="mt-6 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-white/55">
               <a href="tel:+256705240647" className="flex items-center gap-2 hover:text-white transition-colors"><Phone size={13} /> +256 705 240 647</a>
               <a href="tel:+256761700498" className="flex items-center gap-2 hover:text-white transition-colors"><Phone size={13} /> +256 761 700 498</a>
-              <span className="flex items-center gap-2"><Mail size={13} /> hello@hotbill.io</span>
+              <a href="mailto:info@hotbill.app" className="flex items-center gap-2 hover:text-white transition-colors"><Mail size={13} /> info@hotbill.app</a>
             </div>
             <p className="text-sm text-white/55">Copyright © {new Date().getFullYear()} All rights reserved</p>
           </div>

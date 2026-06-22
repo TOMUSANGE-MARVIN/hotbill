@@ -5,7 +5,7 @@ import { Mail, Phone, MapPin, Clock, Send, MessageSquare, Headphones, FileText }
 import Reveal from '@/components/landing/Reveal'
 
 const contactInfo = [
-  { icon: Mail, label: 'Email', value: 'hello@hotbill.io', href: 'mailto:hello@hotbill.io' },
+  { icon: Mail, label: 'Email', value: 'info@hotbill.app', href: 'mailto:info@hotbill.app' },
   { icon: Phone, label: 'Phone', value: '+256 700 000 000', href: 'tel:+256700000000' },
   { icon: MapPin, label: 'Office', value: 'Kampala, Uganda', href: '#' },
   { icon: Clock, label: 'Support Hours', value: 'Mon-Fri, 8am-6pm EAT', href: '#' },
