@@ -29,13 +29,15 @@ class PayoutService
     public function send(Tenant $tenant, WalletTransaction $withdrawal): string
     {
         if (!$this->isEnabled()) {
-            Log::info('Payout queued (disbursement API not enabled)', [
+            Log::info('Payout queued for manual release (disbursement API not enabled)', [
                 'tenant_id' => $tenant->id,
                 'withdrawal_id' => $withdrawal->id,
                 'amount' => $withdrawal->amount,
                 'phone' => $tenant->payout_phone,
             ]);
-            return 'processing';
+            // Leave as 'pending' so it appears in the admin withdrawal-requests
+            // queue for manual payout + release.
+            return 'pending';
         }
 
         // TODO: integrate PesaPal Payouts / MTN MoMo / Airtel disbursement here.

@@ -50,9 +50,11 @@ class WalletController extends Controller
             return response()->json(['message' => 'Amount exceeds your available balance.'], 422);
         }
 
-        // Reserve the funds immediately with a ledger debit, then attempt the payout.
+        // Reserve the funds immediately with a ledger debit (status 'pending'),
+        // then attempt the payout. With auto-disbursement off, it stays 'pending'
+        // for the admin to release manually after sending the money.
         $withdrawal = $tenant->postWallet('debit', $amount, 'withdrawal', [
-            'status' => 'processing',
+            'status' => 'pending',
             'description' => 'Withdrawal to ' . $tenant->payout_phone,
             'meta' => ['phone' => $tenant->payout_phone, 'provider' => $tenant->payout_provider],
         ]);
@@ -63,7 +65,7 @@ class WalletController extends Controller
         return response()->json([
             'message' => $status === 'completed'
                 ? 'Withdrawal sent to ' . $tenant->payout_phone
-                : 'Withdrawal received and is being processed.',
+                : 'Withdrawal request submitted — pending approval.',
             'status' => $status,
             'balance' => (float) $tenant->fresh()->wallet_balance,
         ]);
