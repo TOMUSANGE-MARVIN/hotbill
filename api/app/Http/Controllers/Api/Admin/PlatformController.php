@@ -27,19 +27,43 @@ class PlatformController extends Controller
 
         $paidOrders = PortalOrder::where('status', 'paid');
 
-        $platformRevenue = (float) (clone $paidOrders)->sum('platform_fee');
+        // Revenue source 1 — commission on online hotspot sales (stored per order).
+        $hotspotRevenue = (float) (clone $paidOrders)->sum('platform_fee');
         $gatewayFees = (float) (clone $paidOrders)->sum('gateway_fee');
         $gmv = (float) (clone $paidOrders)->sum('amount');
         $operatorEarnings = (float) (clone $paidOrders)->sum('operator_net');
 
-        $periodRevenue = (float) PortalOrder::where('status', 'paid')
-            ->whereBetween('paid_at', [$from, $to])->sum('platform_fee');
+        // Revenue source 2 — commission on redeemed vouchers (stored on the txn).
+        $voucherTxns = Transaction::where('type', 'voucher')->where('status', 'completed');
+        $voucherRevenue = (float) (clone $voucherTxns)->sum('commission');
+        $voucherCount = (clone $voucherTxns)->count();
 
-        // platform revenue per day
-        $revenueSeries = PortalOrder::where('status', 'paid')
+        $platformRevenue = round($hotspotRevenue + $voucherRevenue, 2);
+
+        // Period (selected range) figures, per source.
+        $periodHotspot = (float) PortalOrder::where('status', 'paid')
+            ->whereBetween('paid_at', [$from, $to])->sum('platform_fee');
+        $periodVoucher = (float) Transaction::where('type', 'voucher')->where('status', 'completed')
+            ->whereBetween('paid_at', [$from, $to])->sum('commission');
+        $periodRevenue = round($periodHotspot + $periodVoucher, 2);
+
+        // Daily series merged from both sources so the chart shows total + split.
+        $hotspotByDay = PortalOrder::where('status', 'paid')
             ->whereBetween('paid_at', [$from, $to])
-            ->selectRaw('DATE(paid_at) as date, SUM(platform_fee) as revenue, COUNT(*) as orders')
-            ->groupBy('date')->orderBy('date')->get();
+            ->selectRaw('DATE(paid_at) as date, SUM(platform_fee) as amount')
+            ->groupBy('date')->get()->keyBy('date');
+        $voucherByDay = Transaction::where('type', 'voucher')->where('status', 'completed')
+            ->whereBetween('paid_at', [$from, $to])
+            ->selectRaw('DATE(paid_at) as date, SUM(commission) as amount')
+            ->groupBy('date')->get()->keyBy('date');
+
+        $revenueSeries = $hotspotByDay->keys()->merge($voucherByDay->keys())
+            ->unique()->sort()->values()
+            ->map(function ($date) use ($hotspotByDay, $voucherByDay) {
+                $h = (float) ($hotspotByDay[$date]->amount ?? 0);
+                $v = (float) ($voucherByDay[$date]->amount ?? 0);
+                return ['date' => $date, 'hotspot' => $h, 'voucher' => $v, 'revenue' => round($h + $v, 2)];
+            });
 
         $pendingWithdrawals = WalletTransaction::where('type', 'debit')
             ->where('source', 'withdrawal')
@@ -63,6 +87,22 @@ class PlatformController extends Controller
                 'operator_earnings' => $operatorEarnings,
                 'period_revenue' => $periodRevenue,
                 'operator_wallet_liability' => (float) Tenant::sum('wallet_balance'),
+            ],
+            // Where platform revenue comes from — all-time and within the range.
+            'revenue_by_source' => [
+                [
+                    'source' => 'hotspot',
+                    'label' => 'Hotspot sales',
+                    'amount' => $hotspotRevenue,
+                    'period' => $periodHotspot,
+                ],
+                [
+                    'source' => 'voucher',
+                    'label' => 'Voucher commission',
+                    'amount' => $voucherRevenue,
+                    'period' => $periodVoucher,
+                    'count' => $voucherCount,
+                ],
             ],
             'withdrawals' => [
                 'pending_count' => (clone $pendingWithdrawals)->count(),

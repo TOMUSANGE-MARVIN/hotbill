@@ -7,7 +7,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { format } from 'date-fns'
-import { Building2, Router as RouterIcon, Users, Database, Wallet, TrendingUp, Banknote, ShieldCheck } from 'lucide-react'
+import { Building2, Router as RouterIcon, Users, Database, Wallet, TrendingUp, Banknote, ShieldCheck, Ticket, Wifi } from 'lucide-react'
 
 export default function AdminOverviewPage() {
   const { data, isLoading } = useQuery({
@@ -43,6 +43,36 @@ export default function AdminOverviewPage() {
         <Stat icon={Users} label="Customers" value={String(data?.customers ?? 0)} />
         <Stat icon={Database} label="Data Served" value={formatBytes(data?.data_bytes ?? 0)} />
         <Stat icon={Wallet} label="Pending Payouts" value={formatCurrency(data?.withdrawals?.pending_amount ?? 0)} sub={`${data?.withdrawals?.pending_count ?? 0} request(s)`} />
+      </div>
+
+      {/* Revenue by source */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 className="font-semibold text-gray-800 mb-1">Where revenue comes from</h2>
+        <p className="text-xs text-gray-400 mb-4">Commission earned by source · all-time and selected range.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {(data?.revenue_by_source ?? []).map((s: any) => {
+            const total = Number(f.platform_revenue ?? 0)
+            const pct = total > 0 ? Math.round((Number(s.amount) / total) * 100) : 0
+            return (
+              <div key={s.source} className="rounded-lg border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    {s.source === 'voucher'
+                      ? <Ticket size={15} className="text-brand-500" />
+                      : <Wifi size={15} className="text-brand-500" />}
+                    {s.label}
+                  </span>
+                  <span className="text-xs text-gray-400">{pct}% of total</span>
+                </div>
+                <p className="text-xl font-bold text-gray-900 mt-2">{formatCurrency(s.amount ?? 0)}</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {formatCurrency(s.period ?? 0)} this range
+                  {s.source === 'voucher' && s.count != null ? ` · ${s.count} voucher(s)` : ''}
+                </p>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       {/* Revenue chart */}

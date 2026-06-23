@@ -12,7 +12,7 @@ class TransactionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Transaction::where('tenant_id', $request->user()->tenant_id)
-            ->with('subscriber', 'agent', 'package');
+            ->with('subscriber', 'agent', 'package', 'voucher');
 
         if ($request->start_date) $query->whereDate('paid_at', '>=', $request->start_date);
         if ($request->end_date) $query->whereDate('paid_at', '<=', $request->end_date);

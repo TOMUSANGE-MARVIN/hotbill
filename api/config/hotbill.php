@@ -7,6 +7,9 @@ return [
     'platform' => [
         // HotBill's per-transaction commission on each hotspot sale (% of gross).
         'commission_percent' => (float) env('PLATFORM_COMMISSION_PERCENT', 3),
+        // HotBill's commission on each voucher redeemed (% of voucher value),
+        // debited from the operator's wallet when the voucher is used.
+        'voucher_commission_percent' => (float) env('VOUCHER_COMMISSION_PERCENT', 2),
         // Minimum operator wallet withdrawal.
         'min_withdrawal' => (float) env('PLATFORM_MIN_WITHDRAWAL', 1000),
         // Auto-payouts require a disbursement API (PesaPal Payouts / MTN / Airtel).

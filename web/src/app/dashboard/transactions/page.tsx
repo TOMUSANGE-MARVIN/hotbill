@@ -97,9 +97,19 @@ export default function TransactionsPage() {
               {txList.map((tx: any) => (
                 <tr key={tx.id} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-mono text-xs text-gray-500">{tx.reference}</td>
-                  <td className="px-5 py-3 text-gray-700">{tx.subscriber?.full_name ?? tx.subscriber?.username ?? '—'}</td>
+                  <td className="px-5 py-3 text-gray-700">
+                    <div>{tx.subscriber?.full_name ?? tx.subscriber?.username ?? '—'}</div>
+                    {tx.voucher?.code && (
+                      <div className="text-xs text-gray-400 font-mono">Voucher {tx.voucher.code}</div>
+                    )}
+                  </td>
                   <td className="px-5 py-3 font-medium">{formatCurrency(tx.amount, currency)}</td>
-                  <td className="px-5 py-3 text-gray-500">{formatCurrency(tx.commission, currency)}</td>
+                  <td className="px-5 py-3 text-gray-500">
+                    {formatCurrency(tx.commission, currency)}
+                    {Number(tx.commission) > 0 && tx.meta?.commission_percent != null && (
+                      <span className="text-xs text-gray-400"> ({tx.meta.commission_percent}%)</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3 text-brand-600 font-medium">{formatCurrency(tx.net_amount, currency)}</td>
                   <td className="px-5 py-3">
                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{methodLabel[tx.method] ?? tx.method}</span>

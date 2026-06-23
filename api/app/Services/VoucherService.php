@@ -84,20 +84,49 @@ class VoucherService
             'expires_at' => $expiresAt,
         ]);
 
-        // Record transaction
-        Transaction::create([
+        // Platform commission: a % of the voucher value, taken when the voucher is
+        // used. Debited from the operator's wallet (may go negative — settled later).
+        $commissionPercent = (float) config('hotbill.platform.voucher_commission_percent');
+        $value = (float) $voucher->price;
+        $commission = round($value * $commissionPercent / 100, 2);
+        $net = round($value - $commission, 2);
+
+        // Record the sale transaction (shows the voucher and the fee deducted).
+        $transaction = Transaction::create([
             'tenant_id' => $voucher->tenant_id,
             'subscriber_id' => $subscriber->id,
             'voucher_id' => $voucher->id,
             'package_id' => $package->id,
             'type' => 'voucher',
             'method' => 'cash',
-            'amount' => $voucher->price,
-            'commission' => 0,
-            'net_amount' => $voucher->price,
+            'amount' => $value,
+            'commission' => $commission,
+            'net_amount' => $net,
             'status' => 'completed',
             'paid_at' => now(),
+            'notes' => "Voucher {$voucher->code} redeemed",
+            'meta' => [
+                'voucher_code' => $voucher->code,
+                'commission_percent' => $commissionPercent,
+            ],
         ]);
+
+        // Deduct the commission from the operator wallet and log it on the ledger
+        // so it is auditable both on the operator's wallet and in platform revenue.
+        if ($commission > 0) {
+            $voucher->tenant->postWallet('debit', $commission, 'voucher_commission', [
+                'reference' => $transaction->reference,
+                'status' => 'completed',
+                'description' => "Platform fee {$commissionPercent}% — voucher {$voucher->code}",
+                'meta' => [
+                    'voucher_id' => $voucher->id,
+                    'voucher_code' => $voucher->code,
+                    'voucher_value' => $value,
+                    'commission_percent' => $commissionPercent,
+                    'transaction_id' => $transaction->id,
+                ],
+            ]);
+        }
 
         // Sync to RADIUS
         $radius->syncSubscriber($subscriber);
