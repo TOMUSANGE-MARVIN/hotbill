@@ -32,6 +32,9 @@ export default function TransactionsPage() {
     queryKey: ['transactions', filters],
     queryFn: () => api.get('/transactions', { params: filters }).then((r) => r.data),
     enabled: tab === 'list',
+    // Captive-portal sales happen outside this browser, so keep the list fresh.
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
   })
 
   const { data: summary } = useQuery({
