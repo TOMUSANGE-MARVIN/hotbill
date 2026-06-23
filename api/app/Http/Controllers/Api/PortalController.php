@@ -345,7 +345,7 @@ HTML;
         ]);
 
         // Credit the operator's logical wallet with their net earnings.
-        $order->tenant?->postWallet('credit', $operatorNet, 'sale', [
+        $walletTxn = $order->tenant?->postWallet('credit', $operatorNet, 'sale', [
             'reference' => $order->merchant_reference,
             'description' => 'Hotspot sale: ' . ($package->name ?? 'package'),
             'meta' => [
@@ -356,6 +356,9 @@ HTML;
             ],
         ]);
 
+        // The fee charged to the operator on this sale (gateway + platform).
+        $fee = round($gatewayFee + $platformFee, 2);
+
         Transaction::create([
             'tenant_id' => $order->tenant_id,
             'package_id' => $order->package_id,
@@ -363,13 +366,19 @@ HTML;
             'type' => 'subscription',
             'method' => $this->mapMethod($status['payment_method'] ?? ''),
             'amount' => $order->amount,
-            'net_amount' => $order->amount,
+            'commission' => $fee,
+            'net_amount' => $operatorNet,
             'currency' => $order->currency,
             'status' => 'completed',
             'external_reference' => $order->pesapal_tracking_id,
             'phone' => $order->phone,
             'notes' => 'Captive portal hotspot purchase',
             'paid_at' => now(),
+            'meta' => [
+                'gateway_fee' => $gatewayFee,
+                'platform_fee' => $platformFee,
+                'balance_after' => $walletTxn ? (float) $walletTxn->balance_after : null,
+            ],
         ]);
     }
 

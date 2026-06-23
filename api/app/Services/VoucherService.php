@@ -114,7 +114,7 @@ class VoucherService
         // Deduct the commission from the operator wallet and log it on the ledger
         // so it is auditable both on the operator's wallet and in platform revenue.
         if ($commission > 0) {
-            $voucher->tenant->postWallet('debit', $commission, 'voucher_commission', [
+            $walletTxn = $voucher->tenant->postWallet('debit', $commission, 'voucher_commission', [
                 'reference' => $transaction->reference,
                 'status' => 'completed',
                 'description' => "Platform fee {$commissionPercent}% — voucher {$voucher->code}",
@@ -125,6 +125,14 @@ class VoucherService
                     'commission_percent' => $commissionPercent,
                     'transaction_id' => $transaction->id,
                 ],
+            ]);
+
+            // Record the resulting wallet balance on the sale so the transactions
+            // list shows the balance for that specific sale.
+            $transaction->update([
+                'meta' => array_merge($transaction->meta ?? [], [
+                    'balance_after' => (float) $walletTxn->balance_after,
+                ]),
             ]);
         }
 

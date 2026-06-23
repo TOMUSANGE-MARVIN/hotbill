@@ -88,6 +88,7 @@ export default function TransactionsPage() {
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Amount</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Commission</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Net</th>
+                <th className="text-left px-5 py-3 font-medium text-gray-500">Balance</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Method</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Status</th>
                 <th className="text-left px-5 py-3 font-medium text-gray-500">Date</th>
@@ -111,6 +112,9 @@ export default function TransactionsPage() {
                     )}
                   </td>
                   <td className="px-5 py-3 text-brand-600 font-medium">{formatCurrency(tx.net_amount, currency)}</td>
+                  <td className="px-5 py-3 text-gray-600">
+                    {tx.meta?.balance_after != null ? formatCurrency(tx.meta.balance_after, currency) : '—'}
+                  </td>
                   <td className="px-5 py-3">
                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{methodLabel[tx.method] ?? tx.method}</span>
                   </td>
@@ -121,7 +125,7 @@ export default function TransactionsPage() {
                 </tr>
               ))}
               {!isLoading && txList.length === 0 && (
-                <tr><td colSpan={8} className="py-12 text-center text-gray-400">No transactions found.</td></tr>
+                <tr><td colSpan={9} className="py-12 text-center text-gray-400">No transactions found.</td></tr>
               )}
             </tbody>
           </table>
