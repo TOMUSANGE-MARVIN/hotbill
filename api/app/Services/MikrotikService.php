@@ -335,6 +335,21 @@ class MikrotikService
     }
 
     /**
+     * Log a client into the hotspot server-side by MAC/IP — reliable regardless
+     * of the captive-portal browser (avoids HTTPS→HTTP mixed-content and DNS
+     * issues with the login page). RouterOS enforces the user's profile/time.
+     */
+    public function loginHotspotUser(string $username, string $password, string $mac, string $ip): void
+    {
+        $this->command('/ip/hotspot/active/login', [
+            '=user=' . $username,
+            '=password=' . $password,
+            '=mac-address=' . $mac,
+            '=ip=' . $ip,
+        ]);
+    }
+
+    /**
      * Ensure a hotspot user-profile exists that enforces the given rate-limit,
      * returning its name. Profiles are keyed by the rate so they're reused.
      */

@@ -339,6 +339,17 @@ HTML;
             $package->mikrotik_limit_uptime ?: null,
             $package->data_limit_bytes,
         );
+        // Log the device in directly so it connects without relying on the phone
+        // browser posting to the MikroTik login (mixed-content / DNS can block it).
+        if ($order->client_mac && $order->client_ip) {
+            try {
+                $mikrotik->loginHotspotUser($username, $password, $order->client_mac, $order->client_ip);
+            } catch (\Throwable $e) {
+                Log::warning('Hotspot server-side login failed (browser fallback applies)', [
+                    'order' => $order->id, 'error' => $e->getMessage(),
+                ]);
+            }
+        }
         $mikrotik->disconnect();
 
         // Fee split: payment-gateway fee + HotBill platform commission; operator keeps the rest.
