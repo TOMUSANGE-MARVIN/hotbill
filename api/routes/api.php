@@ -43,6 +43,9 @@ Route::prefix('v1')->group(function () {
         Route::post('pay', [PortalController::class, 'pay']);
         Route::post('redeem', [PortalController::class, 'redeem']);
         Route::get('ipn', [PortalController::class, 'ipn']);
+        // MarzPay webhooks (collections + operator payouts)
+        Route::post('marzpay/webhook', [PortalController::class, 'marzpayWebhook']);
+        Route::post('marzpay/payout-webhook', [PortalController::class, 'marzpayPayoutWebhook']);
         Route::get('orders/{reference}/status', [PortalController::class, 'status']);
     });
 });

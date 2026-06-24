@@ -8,6 +8,7 @@ use App\Models\PortalOrder;
 use App\Models\Router;
 use App\Models\Transaction;
 use App\Models\Voucher;
+use App\Services\MarzPayService;
 use App\Services\MikrotikService;
 use App\Services\PesapalService;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +23,16 @@ use Illuminate\Support\Str;
  */
 class PortalController extends Controller
 {
-    public function __construct(private PesapalService $pesapal) {}
+    public function __construct(
+        private PesapalService $pesapal,
+        private MarzPayService $marzpay,
+        private \App\Services\PayoutService $payouts,
+    ) {}
+
+    private function provider(): string
+    {
+        return config('hotbill.payment_provider', 'pesapal') === 'marzpay' ? 'marzpay' : 'pesapal';
+    }
 
     /**
      * Public: packages + branding for a router's captive portal.
@@ -92,7 +102,9 @@ HTML;
             'link_login' => 'nullable|string',
         ]);
 
-        if (!$this->pesapal->isConfigured()) {
+        $provider = $this->provider();
+        $configured = $provider === 'marzpay' ? $this->marzpay->isConfigured() : $this->pesapal->isConfigured();
+        if (!$configured) {
             return response()->json(['message' => 'Payments are not configured for this portal yet.'], 503);
         }
 
@@ -112,11 +124,18 @@ HTML;
             'amount' => $package->price,
             'currency' => $package->currency ?? config('hotbill.pesapal.currency'),
             'status' => 'pending',
-            'merchant_reference' => 'HB-' . strtoupper(Str::random(18)),
+            // MarzPay requires a UUID v4 reference; reuse it as our public reference.
+            'merchant_reference' => $provider === 'marzpay'
+                ? (string) Str::uuid()
+                : 'HB-' . strtoupper(Str::random(18)),
             'client_mac' => $data['mac'] ?? null,
             'client_ip' => $data['ip'] ?? null,
             'link_login' => $data['link_login'] ?? null,
         ]);
+
+        if ($provider === 'marzpay') {
+            return $this->startMarzpay($order, $router, $package);
+        }
 
         try {
             $ipnId = $this->pesapal->ipnId(rtrim(config('app.url'), '/') . '/api/v1/portal/ipn');
@@ -147,6 +166,36 @@ HTML;
         return response()->json([
             'reference' => $order->merchant_reference,
             'redirect_url' => $result['redirect_url'],
+        ]);
+    }
+
+    /**
+     * MarzPay collection: fire the mobile-money prompt to the customer's phone
+     * directly (no redirect). The portal then polls status until the webhook
+     * confirms payment.
+     */
+    private function startMarzpay(PortalOrder $order, Router $router, Package $package): JsonResponse
+    {
+        try {
+            $result = $this->marzpay->collectMoney(
+                (int) round((float) $order->amount),
+                $order->phone,
+                $order->merchant_reference,
+                Str::limit($package->name . ' @ ' . $router->name, 90),
+                rtrim(config('app.url'), '/') . '/api/v1/portal/marzpay/webhook',
+            );
+        } catch (\Throwable $e) {
+            $order->update(['status' => 'failed']);
+            Log::error('Portal MarzPay init failed', ['order' => $order->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'Could not start payment. Please try again.'], 502);
+        }
+
+        // Keep MarzPay's transaction uuid for the status-poll fallback.
+        $order->update(['pesapal_tracking_id' => $result['transaction']['uuid'] ?? null]);
+
+        return response()->json([
+            'reference' => $order->merchant_reference,
+            'prompt_sent' => true,
         ]);
     }
 
@@ -295,11 +344,16 @@ HTML;
     {
         if ($order->status === 'paid') return;
 
+        if ($this->provider() === 'marzpay') {
+            $this->reconcileMarzpay($order);
+            return;
+        }
+
         $status = $this->pesapal->transactionStatus($order->pesapal_tracking_id);
         $desc = strtolower($status['payment_status_description'] ?? '');
 
         if ($desc === 'completed') {
-            $this->fulfill($order, $status);
+            $this->fulfill($order, $status['payment_method'] ?? '');
         } elseif (in_array($desc, ['failed', 'invalid', 'reversed'])) {
             $order->update(['status' => 'failed']);
         }
@@ -307,10 +361,70 @@ HTML;
     }
 
     /**
+     * Verify a MarzPay collection against the API (the webhook is unsigned, so we
+     * always re-check before fulfilling). Idempotent.
+     */
+    private function reconcileMarzpay(PortalOrder $order): void
+    {
+        if (!$order->pesapal_tracking_id) return;
+
+        $data = $this->marzpay->getCollectionDetails($order->pesapal_tracking_id);
+        $txn = $data['data']['transaction'] ?? $data['transaction'] ?? [];
+        $st = strtolower($txn['status'] ?? '');
+        $providerName = $data['data']['collection']['provider'] ?? $order->provider ?? '';
+
+        if (in_array($st, ['completed', 'successful', 'success'])) {
+            $this->fulfill($order, $providerName);
+        } elseif (in_array($st, ['failed', 'declined', 'cancelled', 'reversed'])) {
+            $order->update(['status' => 'failed']);
+        }
+        // 'processing'/'pending' → leave as-is, portal keeps polling
+    }
+
+    /**
+     * Public: MarzPay collection webhook. Re-verifies against the API, then
+     * fulfills. Returns 200 regardless so MarzPay doesn't retry needlessly.
+     */
+    public function marzpayWebhook(Request $request): JsonResponse
+    {
+        $event = (string) $request->input('event_type');
+        $reference = $request->input('transaction.reference');
+
+        if ($reference && str_starts_with($event, 'collection.')) {
+            $order = PortalOrder::where('merchant_reference', $reference)->first();
+            if ($order) {
+                try {
+                    $this->reconcile($order);
+                } catch (\Throwable $e) {
+                    Log::error('MarzPay webhook reconcile failed', ['ref' => $reference, 'error' => $e->getMessage()]);
+                }
+            }
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Public: MarzPay disbursement (operator payout) webhook.
+     */
+    public function marzpayPayoutWebhook(Request $request): JsonResponse
+    {
+        try {
+            $this->payouts->handleDisbursementWebhook($request->all());
+        } catch (\Throwable $e) {
+            Log::error('MarzPay payout webhook failed', ['error' => $e->getMessage()]);
+        }
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
      * Create the one-time hotspot user on the router and mark the order paid.
      */
-    private function fulfill(PortalOrder $order, array $status): void
+    private function fulfill(PortalOrder $order, ?string $paymentMethod = null): void
     {
+        if ($order->status === 'paid') return;
+
         $package = $order->package;
         $router = $order->router;
 
@@ -327,16 +441,16 @@ HTML;
         );
         $mikrotik->disconnect();
 
-        // Fee split: PesaPal gateway fee + HotBill platform commission; operator keeps the rest.
+        // Fee split: payment-gateway fee + HotBill platform commission; operator keeps the rest.
         $gross = (float) $order->amount;
-        $gatewayFee = round($gross * (float) config('hotbill.pesapal.fee_percent') / 100, 2);
+        $gatewayFee = round($gross * (float) config('hotbill.' . $this->provider() . '.fee_percent') / 100, 2);
         $platformFee = round($gross * (float) config('hotbill.platform.commission_percent') / 100, 2);
         $operatorNet = round($gross - $gatewayFee - $platformFee, 2);
 
         $order->update([
             'status' => 'paid',
             'paid_at' => now(),
-            'payment_method' => $status['payment_method'] ?? null,
+            'payment_method' => $paymentMethod,
             'hotspot_username' => $username,
             'hotspot_password' => $password,
             'gateway_fee' => $gatewayFee,
@@ -364,7 +478,7 @@ HTML;
             'package_id' => $order->package_id,
             'reference' => $order->merchant_reference,
             'type' => 'subscription',
-            'method' => $this->mapMethod($status['payment_method'] ?? ''),
+            'method' => $this->mapMethod((string) $paymentMethod),
             'amount' => $order->amount,
             'commission' => $fee,
             'net_amount' => $operatorNet,

@@ -51,10 +51,12 @@ class WalletController extends Controller
         }
 
         // Reserve the funds immediately with a ledger debit (status 'pending'),
-        // then attempt the payout. With auto-disbursement off, it stays 'pending'
-        // for the admin to release manually after sending the money.
+        // then attempt the payout. With auto-disbursement off it stays 'pending'
+        // for the admin to release manually; with MarzPay it goes 'processing'
+        // and the webhook settles it. A UUID reference is required by MarzPay.
         $withdrawal = $tenant->postWallet('debit', $amount, 'withdrawal', [
             'status' => 'pending',
+            'reference' => (string) \Illuminate\Support\Str::uuid(),
             'description' => 'Withdrawal to ' . $tenant->payout_phone,
             'meta' => ['phone' => $tenant->payout_phone, 'provider' => $tenant->payout_provider],
         ]);
@@ -62,10 +64,14 @@ class WalletController extends Controller
         $status = $this->payouts->send($tenant, $withdrawal);
         $withdrawal->update(['status' => $status]);
 
+        $messages = [
+            'completed' => 'Withdrawal sent to ' . $tenant->payout_phone,
+            'processing' => 'Withdrawal is being sent to ' . $tenant->payout_phone . '.',
+            'failed' => 'Payout could not be sent — your balance has been kept. Please try again.',
+        ];
+
         return response()->json([
-            'message' => $status === 'completed'
-                ? 'Withdrawal sent to ' . $tenant->payout_phone
-                : 'Withdrawal request submitted — pending approval.',
+            'message' => $messages[$status] ?? 'Withdrawal request submitted — pending approval.',
             'status' => $status,
             'balance' => (float) $tenant->fresh()->wallet_balance,
         ]);

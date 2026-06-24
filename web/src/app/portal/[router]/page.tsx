@@ -43,6 +43,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
   const [voucherError, setVoucherError] = useState<string | null>(null)
   const [redeeming, setRedeeming] = useState(false)
   const [redeemed, setRedeemed] = useState<any>(null)
+  const [pendingRef, setPendingRef] = useState<string | null>(null)
 
   useEffect(() => {
     http.get(`/portal/routers/${routerId}/packages`)
@@ -62,7 +63,12 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
         provider,
         mac, ip, link_login: linkLogin,
       })
-      window.location.href = res.data.redirect_url
+      // PesaPal → hosted redirect; MarzPay → prompt already sent, poll inline.
+      if (res.data.redirect_url) {
+        window.location.href = res.data.redirect_url
+        return
+      }
+      setPendingRef(res.data.reference)
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Could not start payment. Please try again.')
       setPaying(false)
@@ -86,6 +92,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
     }
   }
 
+  if (pendingRef) return <Verify reference={pendingRef} />
   if (loading) return <Splash><Loader2 className="animate-spin" /> Loading packages…</Splash>
   if (redeemed) return <Connected data={redeemed} />
 
@@ -158,7 +165,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
           >
             {paying ? <><Loader2 size={16} className="animate-spin" /> Starting payment…</> : `Pay ${data?.currency} ${Number(selected.price).toLocaleString()}`}
           </button>
-          <p className="text-[11px] text-gray-400 text-center">Approve the prompt on your phone to complete payment. A PesaPal page may open first.</p>
+          <p className="text-[11px] text-gray-400 text-center">A payment prompt will be sent to your phone — enter your mobile-money PIN to complete.</p>
         </div>
       )}
 
@@ -225,8 +232,8 @@ function Verify({ reference }: { reference: string }) {
       <Shell>
         <div className="text-center py-10">
           <Loader2 className="mx-auto animate-spin text-brand-600 mb-3" size={40} />
-          <p className="font-semibold text-gray-900">Confirming your payment…</p>
-          <p className="text-sm text-gray-500 mt-1">This can take a few moments after you approve on your phone.</p>
+          <p className="font-semibold text-gray-900">Check your phone</p>
+          <p className="text-sm text-gray-500 mt-1">Enter your mobile-money PIN on the prompt to complete payment. This page will update automatically.</p>
         </div>
       </Shell>
     )

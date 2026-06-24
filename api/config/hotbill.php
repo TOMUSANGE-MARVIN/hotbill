@@ -34,6 +34,9 @@ return [
         'api_key' => env('SMS_API_KEY'),
         'sender_id' => env('SMS_SENDER_ID'),
     ],
+    // Active payment provider for captive-portal collections + operator payouts.
+    // 'pesapal' (hosted redirect) or 'marzpay' (direct MTN/Airtel prompt + auto payout).
+    'payment_provider' => env('PAYMENT_PROVIDER', 'pesapal'),
     'pesapal' => [
         'consumer_key' => env('PESAPAL_CONSUMER_KEY'),
         'consumer_secret' => env('PESAPAL_CONSUMER_SECRET'),
@@ -42,6 +45,17 @@ return [
         'currency' => env('PESAPAL_CURRENCY', 'UGX'),
         // Estimated PesaPal gateway fee (% of gross) for operator-wallet accounting.
         'fee_percent' => (float) env('PESAPAL_FEE_PERCENT', 3),
+    ],
+    'marzpay' => [
+        'api_key' => env('MARZPAY_API_KEY'),
+        'api_secret' => env('MARZPAY_API_SECRET'),
+        'base_url' => rtrim(env('MARZPAY_BASE_URL', 'https://wallet.wearemarz.com/api/v1'), '/'),
+        'country' => env('MARZPAY_COUNTRY', 'UG'),
+        'currency' => env('MARZPAY_CURRENCY', 'UGX'),
+        // MarzPay's gateway fee (% of gross) for operator-wallet accounting.
+        'fee_percent' => (float) env('MARZPAY_FEE_PERCENT', 0),
+        // Enable automatic operator payouts via MarzPay send-money.
+        'payouts_enabled' => filter_var(env('MARZPAY_PAYOUTS_ENABLED', false), FILTER_VALIDATE_BOOL),
     ],
     'wireguard' => [
         'enabled' => env('WIREGUARD_ENABLED', true),
