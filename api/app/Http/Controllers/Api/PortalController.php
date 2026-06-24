@@ -319,7 +319,11 @@ HTML;
      */
     private function fulfill(PortalOrder $order, ?string $paymentMethod = null): void
     {
-        if ($order->status === 'paid') return;
+        // Atomic claim — the webhook and the status-poll can fire fulfill() at the
+        // same time; only the caller that flips pending→paid proceeds, so the
+        // wallet is credited once and the transaction is inserted once.
+        $claimed = PortalOrder::whereKey($order->id)->where('status', '!=', 'paid')->update(['status' => 'paid']);
+        if ($claimed === 0) return;
 
         $package = $order->package;
         $router = $order->router;
