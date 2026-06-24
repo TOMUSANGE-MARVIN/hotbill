@@ -57,98 +57,21 @@ class PortalController extends Controller
      */
     public function loginTemplate(Router $router)
     {
-        // Self-contained captive portal served by the router itself. It never
-        // navigates to an external site (iOS's Captive Network Assistant refuses
-        // to leave for an external SPA), and talks straight to the API. The
-        // $(...) tokens are MikroTik hotspot variables, substituted on serve.
-        $api = rtrim(config('app.url'), '/') . '/api/v1';
-        $rid = $router->id;
+        $portal = config('hotbill.portal_url') . '/portal/' . $router->id;
 
+        // $(...) are MikroTik hotspot template variables — must stay literal.
         $html = <<<HTML
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>WiFi</title>
-<style>
-*{box-sizing:border-box}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;margin:0;background:#f4f5fb;color:#1a1a2e;padding:18px}
-.card{max-width:420px;margin:0 auto;background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
-h1{font-size:18px;margin:0 0 14px;text-align:center}
-.pkg{display:flex;justify-content:space-between;align-items:center;width:100%;border:1px solid #e3e3ee;background:#fff;border-radius:12px;padding:14px;margin-bottom:10px;font-size:15px}
-.pkg.sel{border-color:#4F4AD7;box-shadow:0 0 0 2px rgba(79,74,215,.15)}
-.pkg b{color:#4F4AD7;white-space:nowrap}
-.prov{display:flex;gap:8px;margin:6px 0 12px}
-.prov button{flex:1;border:1px solid #e3e3ee;background:#fff;border-radius:10px;padding:10px;font-weight:600}
-.prov button.on{border-color:#4F4AD7;background:#eef0fd;color:#4F4AD7}
-input{width:100%;border:1px solid #e3e3ee;border-radius:10px;padding:13px;font-size:16px;margin-bottom:12px}
-#pay,.again{width:100%;background:#4F4AD7;color:#fff;border:0;border-radius:12px;padding:15px;font-size:16px;font-weight:600}
-.err{color:#d33;font-size:13px;margin:8px 0 0;text-align:center}
-.muted{color:#888;font-size:13px;text-align:center}
-.spin{width:30px;height:30px;border:3px solid #ddd;border-top-color:#4F4AD7;border-radius:50%;animation:s 1s linear infinite;margin:20px auto}
-@keyframes s{to{transform:rotate(360deg)}}
-.ok{text-align:center;padding:10px}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connecting…</title>
+<meta http-equiv="refresh" content="0; url={$portal}?mac=\$(mac)&ip=\$(ip)&link-login-only=\$(link-login-only)&link-orig=\$(link-orig-esc)&error=\$(error)">
 </head>
-<body>
-<div class="card" id="app"><div class="spin"></div></div>
-<script>
-var API="{$api}", RID={$rid};
-var MAC="\$(mac)", IP="\$(ip)", LINK="\$(link-login-only)";
-var pkgs=[], sel=null, prov="mtn", cur="UGX", app=document.getElementById("app");
-function m(n){return Number(n).toLocaleString();}
-function esc(s){return String(s).replace(/[<>&]/g,"");}
-function load(){
-  fetch(API+"/portal/routers/"+RID+"/packages",{headers:{Accept:"application/json"}})
-  .then(function(r){return r.json();})
-  .then(function(d){pkgs=d.packages||[];cur=d.currency||"UGX";view(d.organization||"WiFi Hotspot");})
-  .catch(function(){app.innerHTML='<p class="err">Could not load packages.</p><button class="again" onclick="location.reload()">Retry</button>';});
-}
-function view(org){
-  var h='<h1>'+esc(org)+'</h1><div id="list">';
-  for(var i=0;i<pkgs.length;i++){h+='<button class="pkg" data-i="'+i+'"><span>'+esc(pkgs[i].name)+'</span><b>'+cur+' '+m(pkgs[i].price)+'</b></button>';}
-  h+='</div><div id="pb" style="display:none"><div class="prov"><button id="bmtn" class="on">MTN</button><button id="bairtel">Airtel</button></div><input id="ph" type="tel" inputmode="tel" placeholder="07XX XXX XXX"><button id="pay">Pay</button><p class="err" id="er"></p></div>';
-  if(!pkgs.length)h+='<p class="muted">No packages available right now.</p>';
-  app.innerHTML=h;
-  var b=document.querySelectorAll(".pkg");
-  for(var k=0;k<b.length;k++){b[k].addEventListener("click",function(){pick(parseInt(this.getAttribute("data-i"),10));});}
-  if(pkgs.length){
-    document.getElementById("bmtn").addEventListener("click",function(){setp("mtn");});
-    document.getElementById("bairtel").addEventListener("click",function(){setp("airtel");});
-    document.getElementById("pay").addEventListener("click",pay);
-  }
-}
-function pick(i){sel=i;var b=document.querySelectorAll(".pkg");for(var j=0;j<b.length;j++){b[j].className="pkg"+(j===i?" sel":"");}document.getElementById("pb").style.display="block";document.getElementById("pay").textContent="Pay "+cur+" "+m(pkgs[i].price);}
-function setp(x){prov=x;document.getElementById("bmtn").className=(x==="mtn"?"on":"");document.getElementById("bairtel").className=(x==="airtel"?"on":"");}
-function pay(){
-  var ph=document.getElementById("ph").value.replace(/\\s/g,"");
-  if(sel===null||!ph){return;}
-  var btn=document.getElementById("pay");btn.disabled=true;btn.textContent="Sending...";document.getElementById("er").textContent="";
-  fetch(API+"/portal/pay",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,package_id:pkgs[sel].id,phone:ph,provider:prov,mac:MAC,ip:IP,link_login:LINK})})
-  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
-  .then(function(o){if(!o.ok){throw new Error(o.j.message||"Payment failed");}wait(o.j.reference);})
-  .catch(function(e){btn.disabled=false;btn.textContent="Pay";document.getElementById("er").textContent=e.message;});
-}
-function wait(ref){
-  app.innerHTML='<div class="ok"><div class="spin"></div><h1>Check your phone</h1><p class="muted">Enter your Mobile Money PIN on the prompt. This page updates automatically.</p></div>';
-  var n=0;var t=setInterval(function(){
-    n++;
-    fetch(API+"/portal/orders/"+ref+"/status",{headers:{Accept:"application/json"}})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.status==="paid"){clearInterval(t);done(d);}
-      else if(d.status==="failed"||d.status==="expired"){clearInterval(t);app.innerHTML='<div class="ok"><h1>Payment not completed</h1><p class="muted">Please try again.</p><button class="again" onclick="location.reload()">Try again</button></div>';}
-    }).catch(function(){});
-    if(n>75){clearInterval(t);}
-  },4000);
-}
-function done(d){
-  app.innerHTML='<div class="ok"><h1>You are connected!</h1><p class="muted">'+(d.package?esc(d.package)+" is now active.":"")+'</p><p class="muted">Enjoy your internet.</p></div>';
-  if(d.username&&LINK){try{var f=document.createElement("form");f.method="post";f.action=LINK;var u=document.createElement("input");u.name="username";u.value=d.username;var p=document.createElement("input");p.name="password";p.value=d.password||"";f.appendChild(u);f.appendChild(p);document.body.appendChild(f);f.submit();}catch(e){}}
-}
-load();
-</script>
+<body style="font-family:sans-serif;text-align:center;padding-top:40px">
+Redirecting to the WiFi portal…
+<script>location.href="{$portal}?mac=\$(mac)&ip=\$(ip)&link-login-only=\$(link-login-only)&link-orig=\$(link-orig-esc)&error=\$(error)";</script>
 </body>
 </html>
 HTML;
