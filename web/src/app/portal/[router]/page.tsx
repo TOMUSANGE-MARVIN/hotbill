@@ -20,13 +20,9 @@ function Portal() {
   const params = useParams()
   const search = useSearchParams()
   const routerId = String(params.router)
-  const ref = search.get('ref')
   const mac = search.get('mac') ?? undefined
   const ip = search.get('ip') ?? undefined
   const linkLogin = search.get('link-login-only') ?? undefined
-
-  // returning from PesaPal → verification flow
-  if (ref) return <Verify reference={ref} />
 
   return <Select routerId={routerId} mac={mac} ip={ip} linkLogin={linkLogin} />
 }
@@ -63,11 +59,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
         provider,
         mac, ip, link_login: linkLogin,
       })
-      // PesaPal → hosted redirect; MarzPay → prompt already sent, poll inline.
-      if (res.data.redirect_url) {
-        window.location.href = res.data.redirect_url
-        return
-      }
+      // Prompt has been sent to the phone — poll inline until confirmed.
       setPendingRef(res.data.reference)
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Could not start payment. Please try again.')

@@ -10,7 +10,6 @@ use App\Models\Transaction;
 use App\Models\Voucher;
 use App\Services\MarzPayService;
 use App\Services\MikrotikService;
-use App\Services\PesapalService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -18,21 +17,15 @@ use Illuminate\Support\Str;
 
 /**
  * Public captive-portal endpoints (no auth). A hotspot client lands here after
- * the router redirects them, picks a package, pays via PesaPal, and is then
+ * the router redirects them, picks a package, pays via MarzPay, and is then
  * auto-logged-in with a one-time hotspot credential shaped by the package.
  */
 class PortalController extends Controller
 {
     public function __construct(
-        private PesapalService $pesapal,
         private MarzPayService $marzpay,
         private \App\Services\PayoutService $payouts,
     ) {}
-
-    private function provider(): string
-    {
-        return config('hotbill.payment_provider', 'pesapal') === 'marzpay' ? 'marzpay' : 'pesapal';
-    }
 
     /**
      * Public: packages + branding for a router's captive portal.
@@ -52,7 +45,7 @@ class PortalController extends Controller
         return response()->json([
             'router' => ['id' => $router->id, 'name' => $router->name],
             'organization' => $router->tenant?->name,
-            'currency' => $router->tenant?->currency ?? config('hotbill.pesapal.currency'),
+            'currency' => $router->tenant?->currency ?? config('hotbill.marzpay.currency'),
             'packages' => $packages,
         ]);
     }
@@ -87,7 +80,9 @@ HTML;
     }
 
     /**
-     * Public: create an order and hand back the PesaPal hosted redirect URL.
+     * Public: create an order and fire the MarzPay mobile-money prompt straight
+     * to the customer's phone (no redirect). The portal then polls status until
+     * the webhook confirms payment.
      */
     public function pay(Request $request): JsonResponse
     {
@@ -102,9 +97,7 @@ HTML;
             'link_login' => 'nullable|string',
         ]);
 
-        $provider = $this->provider();
-        $configured = $provider === 'marzpay' ? $this->marzpay->isConfigured() : $this->pesapal->isConfigured();
-        if (!$configured) {
+        if (!$this->marzpay->isConfigured()) {
             return response()->json(['message' => 'Payments are not configured for this portal yet.'], 503);
         }
 
@@ -122,60 +115,15 @@ HTML;
             'provider' => $data['provider'] ?? null,
             'email' => $data['email'] ?? null,
             'amount' => $package->price,
-            'currency' => $package->currency ?? config('hotbill.pesapal.currency'),
+            'currency' => $package->currency ?? config('hotbill.marzpay.currency'),
             'status' => 'pending',
             // MarzPay requires a UUID v4 reference; reuse it as our public reference.
-            'merchant_reference' => $provider === 'marzpay'
-                ? (string) Str::uuid()
-                : 'HB-' . strtoupper(Str::random(18)),
+            'merchant_reference' => (string) Str::uuid(),
             'client_mac' => $data['mac'] ?? null,
             'client_ip' => $data['ip'] ?? null,
             'link_login' => $data['link_login'] ?? null,
         ]);
 
-        if ($provider === 'marzpay') {
-            return $this->startMarzpay($order, $router, $package);
-        }
-
-        try {
-            $ipnId = $this->pesapal->ipnId(rtrim(config('app.url'), '/') . '/api/v1/portal/ipn');
-
-            $result = $this->pesapal->submitOrder([
-                'id' => $order->merchant_reference,
-                'currency' => $order->currency,
-                'amount' => (float) $order->amount,
-                'description' => Str::limit($package->name . ' @ ' . $router->name, 90),
-                'callback_url' => config('hotbill.portal_url') . '/portal/' . $router->id . '?ref=' . $order->merchant_reference,
-                'notification_id' => $ipnId,
-                'billing_address' => [
-                    'phone_number' => $order->phone,
-                    'email_address' => $order->email,
-                    'country_code' => 'UG',
-                    'first_name' => 'Hotspot',
-                    'last_name' => 'User',
-                ],
-            ]);
-        } catch (\Throwable $e) {
-            $order->update(['status' => 'failed']);
-            Log::error('Portal payment init failed', ['order' => $order->id, 'error' => $e->getMessage()]);
-            return response()->json(['message' => 'Could not start payment. Please try again.'], 502);
-        }
-
-        $order->update(['pesapal_tracking_id' => $result['order_tracking_id']]);
-
-        return response()->json([
-            'reference' => $order->merchant_reference,
-            'redirect_url' => $result['redirect_url'],
-        ]);
-    }
-
-    /**
-     * MarzPay collection: fire the mobile-money prompt to the customer's phone
-     * directly (no redirect). The portal then polls status until the webhook
-     * confirms payment.
-     */
-    private function startMarzpay(PortalOrder $order, Router $router, Package $package): JsonResponse
-    {
         try {
             $result = $this->marzpay->collectMoney(
                 (int) round((float) $order->amount),
@@ -186,7 +134,7 @@ HTML;
             );
         } catch (\Throwable $e) {
             $order->update(['status' => 'failed']);
-            Log::error('Portal MarzPay init failed', ['order' => $order->id, 'error' => $e->getMessage()]);
+            Log::error('Portal payment init failed', ['order' => $order->id, 'error' => $e->getMessage()]);
             return response()->json(['message' => 'Could not start payment. Please try again.'], 502);
         }
 
@@ -267,7 +215,7 @@ HTML;
             'method' => 'cash',
             'amount' => $voucher->price,
             'net_amount' => $voucher->price,
-            'currency' => $router->tenant?->currency ?? config('hotbill.pesapal.currency'),
+            'currency' => $router->tenant?->currency ?? config('hotbill.marzpay.currency'),
             'status' => 'completed',
             'notes' => 'Captive portal voucher redemption',
             'paid_at' => now(),
@@ -283,37 +231,8 @@ HTML;
     }
 
     /**
-     * PesaPal IPN callback (GET). Verifies status and fulfills the order.
-     */
-    public function ipn(Request $request): JsonResponse
-    {
-        $trackingId = $request->query('OrderTrackingId');
-        $reference = $request->query('OrderMerchantReference');
-
-        $order = PortalOrder::when($trackingId, fn ($q) => $q->where('pesapal_tracking_id', $trackingId))
-            ->when(!$trackingId && $reference, fn ($q) => $q->where('merchant_reference', $reference))
-            ->first();
-
-        if ($order) {
-            try {
-                $this->reconcile($order);
-            } catch (\Throwable $e) {
-                Log::error('Portal IPN reconcile failed', ['order' => $order->id, 'error' => $e->getMessage()]);
-            }
-        }
-
-        // Acknowledgement shape PesaPal expects.
-        return response()->json([
-            'orderNotificationType' => $request->query('OrderNotificationType', 'IPNCHANGE'),
-            'orderTrackingId' => $trackingId,
-            'orderMerchantReference' => $reference,
-            'status' => 200,
-        ]);
-    }
-
-    /**
-     * Public: portal polls this by merchant_reference. Re-checks PesaPal if still
-     * pending (covers delayed IPN), and returns credentials once paid.
+     * Public: portal polls this by merchant_reference. Re-checks MarzPay if still
+     * pending (covers delayed webhook), and returns credentials once paid.
      */
     public function status(string $reference): JsonResponse
     {
@@ -337,35 +256,12 @@ HTML;
     }
 
     /**
-     * Check PesaPal status and, if completed, provision the hotspot session.
-     * Idempotent — a no-op once the order is already paid.
+     * Verify a MarzPay collection against the API (the webhook is unsigned, so we
+     * always re-check before fulfilling). Idempotent — a no-op once paid.
      */
     private function reconcile(PortalOrder $order): void
     {
         if ($order->status === 'paid') return;
-
-        if ($this->provider() === 'marzpay') {
-            $this->reconcileMarzpay($order);
-            return;
-        }
-
-        $status = $this->pesapal->transactionStatus($order->pesapal_tracking_id);
-        $desc = strtolower($status['payment_status_description'] ?? '');
-
-        if ($desc === 'completed') {
-            $this->fulfill($order, $status['payment_method'] ?? '');
-        } elseif (in_array($desc, ['failed', 'invalid', 'reversed'])) {
-            $order->update(['status' => 'failed']);
-        }
-        // 'pending' → leave as-is, portal keeps polling
-    }
-
-    /**
-     * Verify a MarzPay collection against the API (the webhook is unsigned, so we
-     * always re-check before fulfilling). Idempotent.
-     */
-    private function reconcileMarzpay(PortalOrder $order): void
-    {
         if (!$order->pesapal_tracking_id) return;
 
         $data = $this->marzpay->getCollectionDetails($order->pesapal_tracking_id);
@@ -443,7 +339,7 @@ HTML;
 
         // Fee split: payment-gateway fee + HotBill platform commission; operator keeps the rest.
         $gross = (float) $order->amount;
-        $gatewayFee = round($gross * (float) config('hotbill.' . $this->provider() . '.fee_percent') / 100, 2);
+        $gatewayFee = round($gross * (float) config('hotbill.marzpay.fee_percent') / 100, 2);
         $platformFee = round($gross * (float) config('hotbill.platform.commission_percent') / 100, 2);
         $operatorNet = round($gross - $gatewayFee - $platformFee, 2);
 
@@ -496,9 +392,9 @@ HTML;
         ]);
     }
 
-    private function mapMethod(string $pesapalMethod): string
+    private function mapMethod(string $method): string
     {
-        $m = strtolower($pesapalMethod);
+        $m = strtolower($method);
         if (str_contains($m, 'airtel')) return 'airtel_money';
         if (str_contains($m, 'mtn') || str_contains($m, 'momo') || str_contains($m, 'mpesa')) return 'mtn_momo';
         if (str_contains($m, 'visa') || str_contains($m, 'master') || str_contains($m, 'card')) return 'card';

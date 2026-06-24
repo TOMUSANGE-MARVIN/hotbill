@@ -21,8 +21,7 @@ class PayoutService
 
     public function isEnabled(): bool
     {
-        return config('hotbill.payment_provider') === 'marzpay'
-            && (bool) config('hotbill.marzpay.payouts_enabled')
+        return (bool) config('hotbill.marzpay.payouts_enabled')
             && $this->marzpay->isConfigured();
     }
 

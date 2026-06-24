@@ -32,7 +32,7 @@ const featureGroups = [
     description: 'Mobile money, card payments, and vouchers, all automated. Your customers pay, get instant internet, and you earn while you sleep.',
     image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=700&h=450&fit=crop',
     features: [
-      'PesaPal integration (MTN MoMo, Airtel Money, cards)',
+      'MarzPay integration (MTN MoMo, Airtel Money, cards)',
       'Automatic package activation via RADIUS on payment',
       'Customizable captive portal with your branding',
       'Real-time payment tracking and reconciliation',

@@ -25,7 +25,7 @@ export default function PrivacyPolicyPage() {
           bullets: [
             'Account details: your name, email address, phone number, business name and login credentials.',
             'Business data: the routers, packages, vouchers, subscribers and transactions you create inside your account.',
-            'Payment information: mobile money and card payments are processed by our payment partner (PesaPal). We receive confirmation and reference details, but we do not store full card numbers or mobile money PINs.',
+            'Payment information: mobile money and card payments are processed by our payment partner (MarzPay). We receive confirmation and reference details, but we do not store full card numbers or mobile money PINs.',
             'Subscriber data: phone numbers, MAC and IP addresses, and session usage collected through the captive portal so that billing and access control work.',
             'Technical data: device, browser, IP address and log information generated when you use the dashboard.',
           ],

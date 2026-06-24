@@ -185,8 +185,6 @@ class RouterSetupController extends Controller
                     $mikrotik->configureCaptivePortal($loginUrl, array_filter([
                         $portalHost,
                         $apiHost,
-                        '*.pesapal.com',
-                        'pesapal.com',
                     ]));
                 } catch (\Throwable $e) {
                     Log::warning('HotBill: captive portal config failed (bridge still deployed)', [

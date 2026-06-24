@@ -19,7 +19,7 @@ const posts = [
   {
     category: 'Guides',
     title: 'Setting Up Mobile Money Billing for Your Hotspot',
-    excerpt: 'Step-by-step: connect PesaPal, accept MTN MoMo and Airtel Money, and auto-activate packages on payment.',
+    excerpt: 'Step-by-step: connect MarzPay, accept MTN MoMo and Airtel Money, and auto-activate packages on payment.',
     image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=500&h=340&fit=crop',
     author: 'Grace Achieng',
     date: 'Jun 8, 2026',

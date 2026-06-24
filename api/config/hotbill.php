@@ -2,7 +2,7 @@
 
 return [
     'radius_api_secret' => env('RADIUS_API_SECRET', ''),
-    // Public-facing captive-portal web URL (the Next.js app), used for PesaPal return links.
+    // Public-facing captive-portal web URL (the Next.js app).
     'portal_url' => rtrim(env('PORTAL_URL', 'https://hotbill.app'), '/'),
     'platform' => [
         // HotBill's per-transaction commission on each hotspot sale (% of gross).
@@ -12,7 +12,7 @@ return [
         'voucher_commission_percent' => (float) env('VOUCHER_COMMISSION_PERCENT', 2),
         // Minimum operator wallet withdrawal.
         'min_withdrawal' => (float) env('PLATFORM_MIN_WITHDRAWAL', 1000),
-        // Auto-payouts require a disbursement API (PesaPal Payouts / MTN / Airtel).
+        // Auto-payouts are handled by MarzPay send-money (see marzpay.payouts_enabled).
         // Until enabled, withdrawal requests queue as 'processing' for manual release.
         'payouts_enabled' => (bool) env('PLATFORM_PAYOUTS_ENABLED', false),
     ],
@@ -33,18 +33,6 @@ return [
         'username' => env('SMS_USERNAME'),
         'api_key' => env('SMS_API_KEY'),
         'sender_id' => env('SMS_SENDER_ID'),
-    ],
-    // Active payment provider for captive-portal collections + operator payouts.
-    // 'pesapal' (hosted redirect) or 'marzpay' (direct MTN/Airtel prompt + auto payout).
-    'payment_provider' => env('PAYMENT_PROVIDER', 'pesapal'),
-    'pesapal' => [
-        'consumer_key' => env('PESAPAL_CONSUMER_KEY'),
-        'consumer_secret' => env('PESAPAL_CONSUMER_SECRET'),
-        // Production: https://pay.pesapal.com/v3 — Sandbox: https://cybqa.pesapal.com/pesapalv3
-        'base_url' => env('PESAPAL_BASE_URL', 'https://pay.pesapal.com/v3'),
-        'currency' => env('PESAPAL_CURRENCY', 'UGX'),
-        // Estimated PesaPal gateway fee (% of gross) for operator-wallet accounting.
-        'fee_percent' => (float) env('PESAPAL_FEE_PERCENT', 3),
     ],
     'marzpay' => [
         'api_key' => env('MARZPAY_API_KEY'),

@@ -18,8 +18,8 @@ const faqGroups = [
     category: 'Billing & Payments',
     items: [
       { q: 'How does the automatic billing work?', a: 'When a customer connects to your hotspot, they see a captive portal with your packages. They choose a plan, pay via mobile money (MTN MoMo, Airtel Money) or voucher, and the system automatically activates their internet access through RADIUS.' },
-      { q: 'What payment methods do you support?', a: 'Mobile money (MTN MoMo, Airtel Money) and cards via PesaPal, plus voucher codes. Enterprise plans can add bank transfers.' },
-      { q: 'How do I get paid?', a: 'Payments from your customers go directly to your configured mobile money or PesaPal account. You can track all revenue in real-time and request withdrawals anytime.' },
+      { q: 'What payment methods do you support?', a: 'Mobile money (MTN MoMo, Airtel Money) and cards via MarzPay, plus voucher codes. Enterprise plans can add bank transfers.' },
+      { q: 'How do I get paid?', a: 'Payments from your customers are collected to your wallet and paid out automatically to your mobile money. You can track all revenue in real-time and request withdrawals anytime.' },
     ],
   },
   {
