@@ -37,6 +37,27 @@ class MarzPayService
     }
 
     /**
+     * MarzPay's tiered disbursement (withdrawal) fee, borne by the operator and
+     * deducted before payout:
+     *   1,000–4,999  → flat 500
+     *   5,000–9,999  → 10%
+     *   ≥ 10,000     → 3%
+     */
+    public static function disbursementFee(float $amount): float
+    {
+        if ($amount >= 10000) {
+            return round($amount * 0.03, 2);
+        }
+        if ($amount >= 5000) {
+            return round($amount * 0.10, 2);
+        }
+        if ($amount >= 1000) {
+            return 500.0;
+        }
+        return 0.0;
+    }
+
+    /**
      * Normalise a Ugandan number to MarzPay's +256XXXXXXXXX format.
      */
     public static function normalizePhone(string $phone): string

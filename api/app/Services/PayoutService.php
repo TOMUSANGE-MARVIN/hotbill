@@ -41,8 +41,11 @@ class PayoutService
         }
 
         try {
+            // The operator bears MarzPay's withdrawal fee — send the net amount.
+            $net = (float) ($withdrawal->meta['net_payout'] ?? $withdrawal->amount);
+
             $result = $this->marzpay->sendMoney(
-                (int) round((float) $withdrawal->amount),
+                (int) round($net),
                 (string) $tenant->payout_phone,
                 (string) $withdrawal->reference,
                 'HotBill operator payout',

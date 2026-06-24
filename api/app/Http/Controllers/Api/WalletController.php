@@ -50,6 +50,11 @@ class WalletController extends Controller
             return response()->json(['message' => 'Amount exceeds your available balance.'], 422);
         }
 
+        // MarzPay's withdrawal fee is borne by the operator and cut off the amount:
+        // they request `amount` (debited in full from the wallet) and receive `net`.
+        $fee = \App\Services\MarzPayService::disbursementFee($amount);
+        $net = round($amount - $fee, 2);
+
         // Reserve the funds immediately with a ledger debit (status 'pending'),
         // then attempt the payout. With auto-disbursement off it stays 'pending'
         // for the admin to release manually; with MarzPay it goes 'processing'
@@ -58,21 +63,28 @@ class WalletController extends Controller
             'status' => 'pending',
             'reference' => (string) \Illuminate\Support\Str::uuid(),
             'description' => 'Withdrawal to ' . $tenant->payout_phone,
-            'meta' => ['phone' => $tenant->payout_phone, 'provider' => $tenant->payout_provider],
+            'meta' => [
+                'phone' => $tenant->payout_phone,
+                'provider' => $tenant->payout_provider,
+                'payout_fee' => $fee,
+                'net_payout' => $net,
+            ],
         ]);
 
         $status = $this->payouts->send($tenant, $withdrawal);
         $withdrawal->update(['status' => $status]);
 
         $messages = [
-            'completed' => 'Withdrawal sent to ' . $tenant->payout_phone,
-            'processing' => 'Withdrawal is being sent to ' . $tenant->payout_phone . '.',
+            'completed' => 'Sent ' . number_format($net) . ' to ' . $tenant->payout_phone . ' (fee ' . number_format($fee) . ').',
+            'processing' => number_format($net) . ' is being sent to ' . $tenant->payout_phone . ' (fee ' . number_format($fee) . ').',
             'failed' => 'Payout could not be sent — your balance has been kept. Please try again.',
         ];
 
         return response()->json([
             'message' => $messages[$status] ?? 'Withdrawal request submitted — pending approval.',
             'status' => $status,
+            'fee' => $fee,
+            'net' => $net,
             'balance' => (float) $tenant->fresh()->wallet_balance,
         ]);
     }

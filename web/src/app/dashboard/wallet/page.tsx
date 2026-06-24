@@ -7,6 +7,14 @@ import { formatCurrency, formatDateTime, cn } from '@/lib/utils'
 import { Wallet, ArrowUpRight, ArrowDownLeft, Banknote, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
+// Mirrors MarzPay's tiered withdrawal fee (borne by the operator).
+function payoutFee(amount: number): number {
+  if (amount >= 10000) return Math.round(amount * 0.03)
+  if (amount >= 5000) return Math.round(amount * 0.1)
+  if (amount >= 1000) return 500
+  return 0
+}
+
 export default function WalletPage() {
   const qc = useQueryClient()
   const [showWithdraw, setShowWithdraw] = useState(false)
@@ -144,6 +152,18 @@ export default function WalletPage() {
                   Min {formatCurrency(data?.min_withdrawal ?? 0, currency)} · Available {formatCurrency(balance, currency)}
                 </p>
               </div>
+              {Number(amount) >= (data?.min_withdrawal ?? 1000) && (
+                <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+                  <div className="flex justify-between text-gray-500">
+                    <span>Withdrawal fee</span>
+                    <span>−{formatCurrency(payoutFee(Number(amount)), currency)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-gray-900">
+                    <span>You&apos;ll receive</span>
+                    <span>{formatCurrency(Math.max(0, Number(amount) - payoutFee(Number(amount))), currency)}</span>
+                  </div>
+                </div>
+              )}
               <button
                 onClick={() => withdraw.mutate(Number(amount))}
                 disabled={withdraw.isPending || !amount || !data?.payout_phone}
