@@ -58,20 +58,32 @@ class PortalController extends Controller
     public function loginTemplate(Router $router)
     {
         $portal = config('hotbill.portal_url') . '/portal/' . $router->id;
-
         // $(...) are MikroTik hotspot template variables — must stay literal.
+        $url = "{$portal}?mac=\$(mac)&ip=\$(ip)&link-login-only=\$(link-login-only)&link-orig=\$(link-orig-esc)&error=\$(error)";
+
+        // Kept deliberately tiny so it renders in iOS's Captive Network Assistant,
+        // with a tappable button (iOS honours a user tap even when it blocks the
+        // auto-redirect to an external HTTPS site).
         $html = <<<HTML
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connecting…</title>
-<meta http-equiv="refresh" content="0; url={$portal}?mac=\$(mac)&ip=\$(ip)&link-login-only=\$(link-login-only)&link-orig=\$(link-orig-esc)&error=\$(error)">
+<title>Connect to WiFi</title>
+<meta http-equiv="refresh" content="0; url={$url}">
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;text-align:center;padding:56px 22px;color:#1a1a2e;margin:0}
+h2{margin:0 0 6px;font-size:20px}
+p{color:#666;font-size:15px;margin:0 0 28px}
+a.btn{display:inline-block;background:#4F4AD7;color:#fff;text-decoration:none;padding:16px 36px;border-radius:12px;font-weight:600;font-size:17px}
+</style>
 </head>
-<body style="font-family:sans-serif;text-align:center;padding-top:40px">
-Redirecting to the WiFi portal…
-<script>location.href="{$portal}?mac=\$(mac)&ip=\$(ip)&link-login-only=\$(link-login-only)&link-orig=\$(link-orig-esc)&error=\$(error)";</script>
+<body>
+<h2>WiFi Portal</h2>
+<p>Tap below to choose a package and connect.</p>
+<a class="btn" href="{$url}">Continue &rarr;</a>
+<script>setTimeout(function(){location.href="{$url}";},400);</script>
 </body>
 </html>
 HTML;
