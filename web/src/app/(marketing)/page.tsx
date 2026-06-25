@@ -40,8 +40,17 @@ function Hero() {
   const cardMask = `radial-gradient(circle ${tl}px at left top, transparent 0 ${tl - 1}px, #000 ${tl}px), radial-gradient(circle ${br}px at right bottom, transparent 0 ${br - 1}px, #000 ${br}px)`
 
   return (
-    <section className="bg-lightgray pt-16 pb-24 lg:pt-20 lg:pb-28">
-      <div className="container-1200">
+    <section className="relative overflow-hidden bg-white -mt-[72px] pt-[136px] pb-24 lg:pt-[152px] lg:pb-28">
+      <video
+        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+        src="/hero-bg.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+      />
+      <div className="container-1200 relative z-10">
         {/* Giant headline */}
         <Reveal className="text-center mb-16 lg:mb-20">
           <h1 className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-extrabold uppercase tracking-[-1px] leading-[0.95] text-navy text-5xl sm:text-6xl lg:text-8xl">
