@@ -500,31 +500,26 @@ const testimonials = [
     quote: 'HotBill transformed our WiFi business. Customers pay via mobile money and get instant access, no more manual vouchers. As an operator, it changed everything.',
     name: 'James Okello',
     role: 'ISP Operator',
-    photo: 'https://randomuser.me/api/portraits/men/32.jpg',
   },
   {
     quote: 'The automated billing saves us hours every day. We went from manually managing 2 routers to 15, all from one clean dashboard that just works.',
     name: 'Sarah Nakamya',
     role: 'Network Manager',
-    photo: 'https://randomuser.me/api/portraits/women/44.jpg',
   },
   {
     quote: 'We increased revenue by 40% in three months just by switching to HotBill. The analytics showed us exactly where we were leaking money.',
     name: 'David Ssempijja',
     role: 'CEO, ConnectUG',
-    photo: 'https://randomuser.me/api/portraits/men/67.jpg',
   },
   {
     quote: 'Setup took under a minute. The provisioning script handled RADIUS, hotspot and the VPN tunnel, things that used to take me a whole afternoon.',
     name: 'Brian Kato',
     role: 'Network Engineer',
-    photo: 'https://randomuser.me/api/portraits/men/52.jpg',
   },
   {
     quote: 'Our resellers love the voucher batches, and I love that every code is tracked. Reconciliation that used to take days now takes minutes.',
     name: 'Aisha Namuli',
     role: 'Operations Lead',
-    photo: 'https://randomuser.me/api/portraits/women/68.jpg',
   },
 ]
 
@@ -578,15 +573,14 @@ function Testimonials() {
             {testimonials.map((t) => (
               <div key={t.name} className="w-full lg:w-1/2 shrink-0 lg:pr-7">
                 <div className="flex items-end gap-0">
-                  <div className="relative w-40 sm:w-52 shrink-0">
+                  <div className="relative w-40 sm:w-52 shrink-0 aspect-[220/260]">
                     <div className="absolute inset-x-0 bottom-0 h-[88%] rounded-card bg-lightgray" />
-                    <Image
-                      src={t.photo}
-                      alt={t.name}
-                      width={220}
-                      height={260}
-                      className="relative z-10 w-full object-cover"
-                    />
+                    <div className="relative z-10 flex h-full w-full items-center justify-center">
+                      <svg viewBox="0 0 24 24" fill="currentColor" role="img" aria-label={t.name} className="w-24 h-24 text-gray-400">
+                        <circle cx="12" cy="8" r="4.2" />
+                        <path d="M4 19.2C4 15.8 7.6 13.6 12 13.6s8 2.2 8 5.6V20.6H4z" />
+                      </svg>
+                    </div>
                   </div>
                   <div className="flex-1 bg-lightgray rounded-card border border-black/[0.06] p-6 lg:p-7 -ml-4">
                     <p className="text-sm text-navy/70 leading-relaxed mb-5">{t.quote}</p>

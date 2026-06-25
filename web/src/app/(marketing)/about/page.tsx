@@ -13,10 +13,9 @@ const values = [
 ]
 
 const team = [
-  { name: 'Marvin Tomusange', role: 'Founder & CEO', image: 'https://randomuser.me/api/portraits/men/75.jpg', bio: 'Full-stack engineer passionate about building technology that powers African connectivity.' },
-  { name: 'Grace Achieng', role: 'Head of Product', image: 'https://randomuser.me/api/portraits/women/68.jpg', bio: 'Former ISP operator who understands the daily challenges of running a WiFi business.' },
-  { name: 'Patrick Mugisha', role: 'Lead Engineer', image: 'https://randomuser.me/api/portraits/men/46.jpg', bio: 'MikroTik-certified network engineer with 8 years of experience in ISP infrastructure.' },
-  { name: 'Diana Namubiru', role: 'Customer Success', image: 'https://randomuser.me/api/portraits/women/33.jpg', bio: 'Ensures every operator gets the support they need to grow their business.' },
+  { name: 'Tomusange Marvin', role: 'Founder & CEO', bio: 'Full-stack engineer passionate about building technology that powers African connectivity.' },
+  { name: 'Kiwana Collins', role: 'Co-Founder', bio: 'Drives operations and partnerships, helping operators get the most out of HotBill.' },
+  { name: 'Nyanzi Shivan', role: 'Co-Founder & Engineer', bio: 'Builds and maintains the platform that keeps ISP billing fast and reliable.' },
 ]
 
 const milestones = [
@@ -117,11 +116,14 @@ export default function AboutPage() {
             <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">Meet the team</h2>
             <p className="text-navy/60 max-w-xl mx-auto">Engineers and operators building the future of ISP billing in Africa.</p>
           </Reveal>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-4xl mx-auto">
             {team.map((member, i) => (
               <Reveal key={member.name} delay={i * 80} className="bg-white rounded-card border border-black/[0.08] overflow-hidden group">
-                <div className="relative h-56 overflow-hidden bg-lightgray">
-                  <Image src={member.image} alt={member.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                <div className="relative h-56 overflow-hidden bg-lightgray flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" fill="currentColor" role="img" aria-label={member.name} className="w-28 h-28 text-gray-400">
+                    <circle cx="12" cy="8" r="4.2" />
+                    <path d="M4 19.2C4 15.8 7.6 13.6 12 13.6s8 2.2 8 5.6V20.6H4z" />
+                  </svg>
                 </div>
                 <div className="p-5">
                   <h3 className="font-bold text-navy">{member.name}</h3>
