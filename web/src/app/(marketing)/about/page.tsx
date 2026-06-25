@@ -47,7 +47,7 @@ export default function AboutPage() {
             </Reveal>
             <Reveal delay={120} className="relative">
               <div className="rounded-card overflow-hidden border border-black/[0.06] shadow-[0_24px_60px_rgba(0,1,42,0.12)]">
-                <Image src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=700&h=500&fit=crop" alt="Team" width={700} height={500} className="w-full" />
+                <Image src="/global-network.jpg" alt="Global network connectivity across Africa" width={728} height={408} className="w-full" />
               </div>
               <div className="absolute -bottom-5 -right-5 bg-purple text-white rounded-card p-5 shadow-xl">
                 <div className="text-3xl font-extrabold">80+</div>
