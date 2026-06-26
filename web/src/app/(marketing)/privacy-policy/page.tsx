@@ -3,6 +3,7 @@ import LegalPage from '@/components/landing/LegalPage'
 export const metadata = {
   title: 'Privacy Policy | HotBill',
   description: 'How HotBill collects, uses, and protects your data.',
+  alternates: { canonical: '/privacy-policy' },
 }
 
 export default function PrivacyPolicyPage() {

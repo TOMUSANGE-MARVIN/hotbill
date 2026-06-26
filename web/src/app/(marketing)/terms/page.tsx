@@ -3,6 +3,7 @@ import LegalPage from '@/components/landing/LegalPage'
 export const metadata = {
   title: 'Terms & Conditions | HotBill',
   description: 'The terms that govern your use of the HotBill platform.',
+  alternates: { canonical: '/terms' },
 }
 
 export default function TermsPage() {

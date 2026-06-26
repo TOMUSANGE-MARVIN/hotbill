@@ -3,6 +3,7 @@ import LegalPage from '@/components/landing/LegalPage'
 export const metadata = {
   title: 'Return & Refund Policy | HotBill',
   description: 'How returns and refunds work on the HotBill platform.',
+  alternates: { canonical: '/refund-policy' },
 }
 
 export default function RefundPolicyPage() {
