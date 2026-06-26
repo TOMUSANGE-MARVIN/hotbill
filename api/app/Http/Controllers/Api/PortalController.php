@@ -57,21 +57,128 @@ class PortalController extends Controller
      */
     public function loginTemplate(Router $router)
     {
-        $portal = config('hotbill.portal_url') . '/portal/' . $router->id;
+        // Branded, self-contained captive portal served by the router itself.
+        // It never navigates to an external site (iOS's Captive Network Assistant
+        // refuses to leave for an external SPA) and talks straight to the API.
+        // The $(...) tokens are MikroTik hotspot variables, substituted on serve.
+        $api = rtrim(config('app.url'), '/') . '/api/v1';
+        $logo = rtrim(config('hotbill.portal_url'), '/') . '/hotbill-logo.png';
+        $rid = $router->id;
 
-        // $(...) are MikroTik hotspot template variables — must stay literal.
         $html = <<<HTML
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connecting…</title>
-<meta http-equiv="refresh" content="0; url={$portal}?mac=\$(mac)&ip=\$(ip)&link-login-only=\$(link-login-only)&link-orig=\$(link-orig-esc)&error=\$(error)">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>WiFi · HotBill</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(to bottom,#EFEFFE,#fff);color:#00012A;display:flex;align-items:center;justify-content:center;padding:16px;min-height:100vh}
+.card{width:100%;max-width:384px;background:#fff;border:1px solid #eee;border-radius:20px;box-shadow:0 20px 50px rgba(0,1,42,.12);padding:22px}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.brand img{height:30px;width:auto}
+.brand .o{font-weight:800;font-size:15px;line-height:1.1}
+.brand .s{font-size:11px;color:#9a9aa5;margin-top:1px}
+.lbl{font-size:13px;color:#6b6b76;margin:0 0 10px}
+.pkg{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:1px solid #e7e7ef;background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;font:inherit;color:inherit}
+.pkg.sel{border-color:#4F4AD7;background:#EFEFFE;box-shadow:0 0 0 2px #E1E0FC}
+.pkg .n{font-weight:600;font-size:15px}
+.pkg .d{font-size:12px;color:#9a9aa5;margin-top:3px}
+.pkg .p{font-weight:700;color:#4F4AD7;white-space:nowrap;margin-left:10px}
+.prov{display:flex;gap:8px;margin:14px 0 10px}
+.prov button{flex:1;border:1px solid #e7e7ef;background:#fff;border-radius:12px;padding:11px;font-weight:600;font-size:14px;cursor:pointer;color:#6b6b76}
+.prov button.mtn.on{border-color:#F5C518;background:#FEF9E7;color:#8a6d00}
+.prov button.air.on{border-color:#E4002B;background:#FDECEF;color:#c0001f}
+input{width:100%;border:1px solid #e7e7ef;border-radius:12px;padding:14px;font-size:16px;margin-bottom:12px;outline:none;font-family:inherit}
+input:focus{border-color:#4F4AD7;box-shadow:0 0 0 2px #E1E0FC}
+.btn{width:100%;background:#4F4AD7;color:#fff;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;cursor:pointer}
+.btn:active{background:#3F3ABF}.btn:disabled{opacity:.55}
+.err{color:#d33;font-size:13px;margin:8px 0 0;text-align:center}
+.muted{color:#9a9aa5;font-size:13px;text-align:center;line-height:1.5;margin:6px 0}
+.center{text-align:center;padding:10px 0}
+.spin{width:34px;height:34px;border:3px solid #E1E0FC;border-top-color:#4F4AD7;border-radius:50%;animation:sp 1s linear infinite;margin:18px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.tick{width:56px;height:56px;border-radius:50%;background:#EFEFFE;display:flex;align-items:center;justify-content:center;margin:4px auto 10px}
+h3{margin:0 0 2px;font-size:19px;text-align:center}
+.vc{margin-top:18px;padding-top:16px;border-top:1px solid #f0f0f5}
+.vrow{display:flex;gap:8px}
+.vrow input{margin-bottom:0;text-transform:uppercase;letter-spacing:1px}
+.vbtn{background:#00012A;color:#fff;border:0;border-radius:12px;padding:0 16px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+</style>
 </head>
-<body style="font-family:sans-serif;text-align:center;padding-top:40px">
-Redirecting to the WiFi portal…
-<script>location.href="{$portal}?mac=\$(mac)&ip=\$(ip)&link-login-only=\$(link-login-only)&link-orig=\$(link-orig-esc)&error=\$(error)";</script>
+<body>
+<div class="card" id="app"><div class="spin"></div></div>
+<script>
+var API="{$api}", RID={$rid}, LOGO="{$logo}";
+var MAC="\$(mac)", IP="\$(ip)", LINK="\$(link-login-only)";
+var pkgs=[], sel=null, prov="mtn", cur="UGX", org="WiFi Hotspot", app=document.getElementById("app");
+function m(n){return Number(n).toLocaleString();}
+function esc(s){return String(s==null?"":s).replace(/[<>&]/g,"");}
+function head(){return '<div class="brand"><img src="'+LOGO+'" alt="HotBill" onerror="this.remove()"><div><div class="o">'+esc(org)+'</div><div class="s">Powered by HotBill</div></div></div>';}
+function load(){
+  fetch(API+"/portal/routers/"+RID+"/packages",{headers:{Accept:"application/json"}})
+  .then(function(r){return r.json();})
+  .then(function(d){pkgs=d.packages||[];cur=d.currency||"UGX";org=d.organization||"WiFi Hotspot";view();})
+  .catch(function(){app.innerHTML=head()+'<p class="err">Could not load packages.</p><button class="btn" onclick="location.reload()" style="margin-top:10px">Retry</button>';});
+}
+function view(){
+  var h=head()+'<p class="lbl">Choose a package</p><div id="list">';
+  for(var i=0;i<pkgs.length;i++){var p=pkgs[i];var sub=esc(p.duration_label||"")+(p.speed_label?" · "+esc(p.speed_label):"");h+='<button class="pkg" data-i="'+i+'"><div><div class="n">'+esc(p.name)+'</div><div class="d">'+sub+'</div></div><div class="p">'+cur+" "+m(p.price)+'</div></button>';}
+  h+='</div><div id="pb" style="display:none"><div class="prov"><button id="bmtn" class="mtn on">MTN MoMo</button><button id="bair" class="air">Airtel Money</button></div><input id="ph" type="tel" inputmode="tel" placeholder="07XX XXX XXX"><button class="btn" id="pay">Pay</button><p class="err" id="er"></p></div>';
+  if(!pkgs.length)h+='<p class="muted">No packages available right now.</p>';
+  h+='<div class="vc"><p class="lbl">Have a voucher?</p><div class="vrow"><input id="vc" placeholder="VOUCHER CODE"><button class="vbtn" id="vbtn">Redeem</button></div><p class="err" id="ver"></p></div>';
+  app.innerHTML=h;
+  var b=document.querySelectorAll(".pkg");
+  for(var k=0;k<b.length;k++){b[k].addEventListener("click",function(){pick(parseInt(this.getAttribute("data-i"),10));});}
+  if(pkgs.length){
+    document.getElementById("bmtn").addEventListener("click",function(){setp("mtn");});
+    document.getElementById("bair").addEventListener("click",function(){setp("airtel");});
+    document.getElementById("pay").addEventListener("click",pay);
+  }
+  document.getElementById("vbtn").addEventListener("click",redeem);
+}
+function pick(i){sel=i;var b=document.querySelectorAll(".pkg");for(var j=0;j<b.length;j++){b[j].className="pkg"+(j===i?" sel":"");}document.getElementById("pb").style.display="block";document.getElementById("pay").textContent="Pay "+cur+" "+m(pkgs[i].price);}
+function setp(x){prov=x;document.getElementById("bmtn").className="mtn"+(x==="mtn"?" on":"");document.getElementById("bair").className="air"+(x==="airtel"?" on":"");}
+function pay(){
+  var ph=document.getElementById("ph").value.replace(/\\s/g,"");
+  if(sel===null||!ph){return;}
+  var btn=document.getElementById("pay");btn.disabled=true;btn.textContent="Sending...";document.getElementById("er").textContent="";
+  fetch(API+"/portal/pay",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,package_id:pkgs[sel].id,phone:ph,provider:prov,mac:MAC,ip:IP,link_login:LINK})})
+  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+  .then(function(o){if(!o.ok){throw new Error(o.j.message||"Payment failed");}wait(o.j.reference);})
+  .catch(function(e){btn.disabled=false;btn.textContent="Pay";document.getElementById("er").textContent=e.message;});
+}
+function redeem(){
+  var code=document.getElementById("vc").value.trim();
+  if(!code){return;}
+  var vb=document.getElementById("vbtn");vb.disabled=true;vb.textContent="...";document.getElementById("ver").textContent="";
+  fetch(API+"/portal/redeem",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,code:code,mac:MAC,ip:IP,link_login:LINK})})
+  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+  .then(function(o){if(!o.ok){throw new Error(o.j.message||"Invalid voucher");}done(o.j);})
+  .catch(function(e){vb.disabled=false;vb.textContent="Redeem";document.getElementById("ver").textContent=e.message;});
+}
+function wait(ref){
+  app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Check your phone</h3><p class="muted">Enter your Mobile Money PIN on the prompt.<br>This page updates automatically.</p></div>';
+  var n=0;var t=setInterval(function(){
+    n++;
+    fetch(API+"/portal/orders/"+ref+"/status",{headers:{Accept:"application/json"}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==="paid"){clearInterval(t);done(d);}
+      else if(d.status==="failed"||d.status==="expired"){clearInterval(t);app.innerHTML=head()+'<div class="center"><h3>Payment not completed</h3><p class="muted">Please try again.</p><button class="btn" onclick="location.reload()" style="margin-top:8px">Try again</button></div>';}
+    }).catch(function(){});
+    if(n>75){clearInterval(t);}
+  },4000);
+}
+function done(d){
+  var tick='<div class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4F4AD7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
+  app.innerHTML=head()+'<div class="center">'+tick+'<h3>You are connected!</h3><p class="muted">'+(d.package?esc(d.package)+" is now active. ":"")+'Enjoy your internet.</p></div>';
+  if(d.username&&LINK){try{var f=document.createElement("form");f.method="post";f.action=LINK;var u=document.createElement("input");u.name="username";u.value=d.username;var p=document.createElement("input");p.name="password";p.value=d.password||"";f.appendChild(u);f.appendChild(p);document.body.appendChild(f);f.submit();}catch(e){}}
+}
+load();
+</script>
 </body>
 </html>
 HTML;
@@ -188,6 +295,14 @@ HTML;
                 $package->mikrotik_limit_uptime ?: null,
                 $package->data_limit_bytes,
             );
+            // Log the device in directly so it connects without the browser.
+            if (!empty($data['mac']) && !empty($data['ip'])) {
+                try {
+                    $mikrotik->loginHotspotUser($username, $password, $data['mac'], $data['ip']);
+                } catch (\Throwable $e) {
+                    Log::warning('Voucher server-side login failed (browser fallback applies)', ['error' => $e->getMessage()]);
+                }
+            }
             $mikrotik->disconnect();
         } catch (\Throwable $e) {
             Log::error('Portal voucher provisioning failed', ['voucher' => $voucher->id, 'error' => $e->getMessage()]);
