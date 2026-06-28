@@ -154,19 +154,30 @@ export default function WalletPage() {
               </div>
               {Number(amount) >= (data?.min_withdrawal ?? 1000) && (
                 <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
-                  <div className="flex justify-between text-gray-500">
-                    <span>Withdrawal fee</span>
-                    <span>−{formatCurrency(payoutFee(Number(amount)), currency)}</span>
-                  </div>
                   <div className="flex justify-between font-semibold text-gray-900">
                     <span>You&apos;ll receive</span>
-                    <span>{formatCurrency(Math.max(0, Number(amount) - payoutFee(Number(amount))), currency)}</span>
+                    <span>{formatCurrency(Number(amount), currency)}</span>
                   </div>
+                  <div className="flex justify-between text-gray-500">
+                    <span>Withdrawal fee</span>
+                    <span>+{formatCurrency(payoutFee(Number(amount)), currency)}</span>
+                  </div>
+                  <div className="flex justify-between text-gray-900 border-t border-gray-200 pt-1 mt-1">
+                    <span>Total from wallet</span>
+                    <span className={Number(amount) + payoutFee(Number(amount)) > balance ? 'text-red-600 font-semibold' : ''}>
+                      {formatCurrency(Number(amount) + payoutFee(Number(amount)), currency)}
+                    </span>
+                  </div>
+                  {Number(amount) + payoutFee(Number(amount)) > balance && (
+                    <p className="text-xs text-red-600 pt-1">
+                      That&apos;s more than your balance of {formatCurrency(balance, currency)}. Lower the amount.
+                    </p>
+                  )}
                 </div>
               )}
               <button
                 onClick={() => withdraw.mutate(Number(amount))}
-                disabled={withdraw.isPending || !amount || !data?.payout_phone}
+                disabled={withdraw.isPending || !amount || !data?.payout_phone || Number(amount) + payoutFee(Number(amount)) > balance}
                 className="w-full bg-brand-600 text-white rounded-lg py-2.5 text-sm font-semibold hover:bg-brand-700 disabled:opacity-50"
               >
                 {withdraw.isPending ? 'Processing…' : 'Withdraw'}

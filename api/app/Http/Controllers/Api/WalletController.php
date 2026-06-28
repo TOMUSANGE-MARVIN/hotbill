@@ -45,21 +45,28 @@ class WalletController extends Controller
             return response()->json(['message' => 'Set a payout mobile-money number in Settings first.'], 422);
         }
 
+        // `amount` is what the operator wants to RECEIVE. The withdrawal fee is
+        // charged on top and pulled from the rest of the wallet, so the operator
+        // gets the full amount and the wallet is debited amount + fee.
         $amount = (float) $data['amount'];
-        if ($amount > (float) $tenant->wallet_balance) {
-            return response()->json(['message' => 'Amount exceeds your available balance.'], 422);
-        }
-
-        // MarzPay's withdrawal fee is borne by the operator and cut off the amount:
-        // they request `amount` (debited in full from the wallet) and receive `net`.
         $fee = \App\Services\MarzPayService::disbursementFee($amount);
-        $net = round($amount - $fee, 2);
+        $total = round($amount + $fee, 2);
+
+        if ($total > (float) $tenant->wallet_balance) {
+            return response()->json([
+                'message' => 'Not enough balance. Withdrawing ' . number_format($amount)
+                    . ' costs ' . number_format($total) . ' (' . number_format($amount)
+                    . ' + ' . number_format($fee) . ' fee), but your balance is '
+                    . number_format((float) $tenant->wallet_balance) . '.',
+            ], 422);
+        }
 
         // Reserve the funds immediately with a ledger debit (status 'pending'),
         // then attempt the payout. With auto-disbursement off it stays 'pending'
         // for the admin to release manually; with MarzPay it goes 'processing'
         // and the webhook settles it. A UUID reference is required by MarzPay.
-        $withdrawal = $tenant->postWallet('debit', $amount, 'withdrawal', [
+        // We debit the full amount+fee and send the full `amount` to the operator.
+        $withdrawal = $tenant->postWallet('debit', $total, 'withdrawal', [
             'status' => 'pending',
             'reference' => (string) \Illuminate\Support\Str::uuid(),
             'description' => 'Withdrawal to ' . $tenant->payout_phone,
@@ -67,7 +74,8 @@ class WalletController extends Controller
                 'phone' => $tenant->payout_phone,
                 'provider' => $tenant->payout_provider,
                 'payout_fee' => $fee,
-                'net_payout' => $net,
+                'net_payout' => $amount,    // the amount actually sent to the operator
+                'requested_amount' => $amount,
             ],
         ]);
 
@@ -78,7 +86,7 @@ class WalletController extends Controller
         // settle it — so the reserved debit must be refunded right here, otherwise
         // the operator loses the money for a withdrawal that never happened.
         if ($status === 'failed') {
-            $tenant->postWallet('credit', $amount, 'adjustment', [
+            $tenant->postWallet('credit', $total, 'adjustment', [
                 'status' => 'completed',
                 'reference' => $withdrawal->reference,
                 'description' => 'Refund: withdrawal could not be sent',
@@ -92,8 +100,8 @@ class WalletController extends Controller
         $withdrawal->update(['status' => $status]);
 
         $messages = [
-            'completed' => 'Sent ' . number_format($net) . ' to ' . $tenant->payout_phone . ' (fee ' . number_format($fee) . ').',
-            'processing' => number_format($net) . ' is being sent to ' . $tenant->payout_phone . ' (fee ' . number_format($fee) . ').',
+            'completed' => 'Sent ' . number_format($amount) . ' to ' . $tenant->payout_phone . ' (' . number_format($fee) . ' fee deducted from your wallet).',
+            'processing' => number_format($amount) . ' is being sent to ' . $tenant->payout_phone . ' (' . number_format($fee) . ' fee deducted from your wallet).',
             'failed' => 'Payout could not be sent — your balance has been kept. Please try again.',
         ];
 
@@ -101,7 +109,9 @@ class WalletController extends Controller
             'message' => $messages[$status] ?? 'Withdrawal request submitted — pending approval.',
             'status' => $status,
             'fee' => $fee,
-            'net' => $net,
+            'amount' => $amount,
+            'total' => $total,
+            'net' => $amount,
             'balance' => (float) $tenant->fresh()->wallet_balance,
         ]);
     }
