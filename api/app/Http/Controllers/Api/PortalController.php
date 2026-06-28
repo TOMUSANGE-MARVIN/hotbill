@@ -321,20 +321,60 @@ HTML;
             'expires_at' => $expiresAt,
         ]);
 
-        Transaction::create([
+        // Vouchers are bought with physical cash, so the sale value is NEVER
+        // credited to the wallet (the operator already holds the cash). We only
+        // take the platform commission, which is debited from the operator wallet
+        // and shown on the transaction — identical to the operator-side redeem.
+        $commissionPercent = (float) config('hotbill.platform.voucher_commission_percent');
+        $value = (float) $voucher->price;
+        $commission = round($value * $commissionPercent / 100, 2);
+        $net = round($value - $commission, 2);
+
+        $transaction = Transaction::create([
             'tenant_id' => $voucher->tenant_id,
             'voucher_id' => $voucher->id,
             'package_id' => $package->id,
             'reference' => 'VCH-' . $voucher->code,
             'type' => 'voucher',
             'method' => 'cash',
-            'amount' => $voucher->price,
-            'net_amount' => $voucher->price,
+            'amount' => $value,
+            'commission' => $commission,
+            'net_amount' => $net,
             'currency' => $router->tenant?->currency ?? config('hotbill.marzpay.currency'),
             'status' => 'completed',
             'notes' => 'Captive portal voucher redemption',
             'paid_at' => now(),
+            'meta' => [
+                'voucher_code' => $voucher->code,
+                'commission_percent' => $commissionPercent,
+            ],
         ]);
+
+        // Deduct only the commission from the operator wallet (not the sale value)
+        // and log it on the ledger so the wallet holds mobile-money + voucher-fee
+        // movements only, and platform revenue captures the voucher commission.
+        if ($commission > 0) {
+            $walletTxn = $voucher->tenant?->postWallet('debit', $commission, 'voucher_commission', [
+                'reference' => $transaction->reference,
+                'status' => 'completed',
+                'description' => "Platform fee {$commissionPercent}% — voucher {$voucher->code}",
+                'meta' => [
+                    'voucher_id' => $voucher->id,
+                    'voucher_code' => $voucher->code,
+                    'voucher_value' => $value,
+                    'commission_percent' => $commissionPercent,
+                    'transaction_id' => $transaction->id,
+                ],
+            ]);
+
+            if ($walletTxn) {
+                $transaction->update([
+                    'meta' => array_merge($transaction->meta ?? [], [
+                        'balance_after' => (float) $walletTxn->balance_after,
+                    ]),
+                ]);
+            }
+        }
 
         return response()->json([
             'status' => 'paid',

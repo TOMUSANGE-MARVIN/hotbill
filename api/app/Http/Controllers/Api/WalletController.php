@@ -72,6 +72,23 @@ class WalletController extends Controller
         ]);
 
         $status = $this->payouts->send($tenant, $withdrawal);
+
+        // If the payout could not even be submitted (e.g. MarzPay rejected it or
+        // had insufficient float), no disbursement exists and no webhook will ever
+        // settle it — so the reserved debit must be refunded right here, otherwise
+        // the operator loses the money for a withdrawal that never happened.
+        if ($status === 'failed') {
+            $tenant->postWallet('credit', $amount, 'adjustment', [
+                'status' => 'completed',
+                'reference' => $withdrawal->reference,
+                'description' => 'Refund: withdrawal could not be sent',
+                'meta' => [
+                    'withdrawal_id' => $withdrawal->id,
+                    'reason' => 'payout_submission_failed',
+                ],
+            ]);
+        }
+
         $withdrawal->update(['status' => $status]);
 
         $messages = [
