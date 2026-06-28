@@ -36,20 +36,13 @@ function Hero() {
     return () => mq.removeEventListener('change', update)
   }, [])
   const tl = isMobile ? 44 : 68
-  const br = isMobile ? 72 : 104
-  const cardMask = `radial-gradient(circle ${tl}px at left top, transparent 0 ${tl - 1}px, #000 ${tl}px), radial-gradient(circle ${br}px at right bottom, transparent 0 ${br - 1}px, #000 ${br}px)`
+  // Only the top-left badge cutout is carved into the card now. The bottom-right
+  // "Get Started" button instead nests via a uniform white moat (box-shadow ring)
+  // so its gap follows the button's exact shape — perfectly parallel curves.
+  const cardMask = `radial-gradient(circle ${tl}px at left top, transparent 0 ${tl - 1}px, #000 ${tl}px)`
 
   return (
     <section className="relative overflow-hidden bg-white -mt-[72px] pt-[136px] pb-24 lg:pt-[152px] lg:pb-28">
-      <video
-        className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-        src="/hero-bg.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="auto"
-      />
       <div className="container-1200 relative z-10">
         {/* Giant headline */}
         <Reveal className="text-center mb-16 lg:mb-20">
@@ -112,8 +105,6 @@ function Hero() {
                 borderRadius: '20px',
                 WebkitMaskImage: cardMask,
                 maskImage: cardMask,
-                WebkitMaskComposite: 'source-in',
-                maskComposite: 'intersect',
                 filter: 'drop-shadow(0 30px 55px rgba(79,74,215,0.32))',
               } as React.CSSProperties}
             >
@@ -131,10 +122,13 @@ function Hero() {
               <RotatingBadge text="DEMO · VIDEO · " variant="light" size={96} />
             </div>
 
-            {/* Get Started button nestled in the bottom-right concave cutout */}
+            {/* Get Started button nested into the bottom-right corner. The white
+                box-shadow ring is a uniform "moat" that traces the button's exact
+                shape — where it overlaps the purple card it carves a perfectly
+                parallel concave notch; where it pokes past, it blends into white. */}
             <Link
               href={loginUrl}
-              className="absolute bottom-0 right-0 translate-x-[2px] translate-y-[18px] z-20 inline-flex items-center gap-2 bg-purple hover:bg-purple-dark text-white text-sm font-semibold px-7 py-4 rounded-btn shadow-[0_14px_30px_rgba(79,74,215,0.4)] transition-colors"
+              className="absolute -bottom-3.5 -right-3.5 z-20 inline-flex items-center gap-2 bg-purple hover:bg-purple-dark text-white text-sm font-semibold px-7 py-4 rounded-btn transition-colors shadow-[0_0_0_10px_#fff]"
             >
               Get Started <ArrowUpRight size={16} />
             </Link>
