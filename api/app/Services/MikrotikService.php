@@ -582,17 +582,25 @@ class MikrotikService
         // expired (days later). Dropping cookie forces every reconnect back through
         // RADIUS, which enforces the voucher's real remaining time.
         $loginBy = 'http-pap,http-chap';
+        // IMPORTANT: do NOT use a `.local` dns-name. The `.local` TLD is reserved
+        // for mDNS (RFC 6762), so Linux (avahi/systemd-resolved), macOS and iOS all
+        // resolve `*.local` via multicast DNS instead of asking the hotspot's DNS —
+        // the lookup fails with NXDOMAIN and the captive portal never loads. Leaving
+        // dns-name empty makes MikroTik serve the login page from the gateway IP, so
+        // no DNS lookup happens at all and the portal works on every device.
         $existingProfile = $this->rows($this->command('/ip/hotspot/profile/print', ['?name=' . $profileName]));
         if (empty($existingProfile)) {
             $this->command('/ip/hotspot/profile/add', [
                 '=name=' . $profileName,
                 '=hotspot-address=' . $gatewayIp,
-                '=dns-name=hotspot.local',
+                '=dns-name=',
                 '=login-by=' . $loginBy,
             ]);
         } elseif (isset($existingProfile[0]['.id'])) {
+            // Also clear any previously-provisioned `hotspot.local` on existing routers.
             $this->command('/ip/hotspot/profile/set', [
                 '=.id=' . $existingProfile[0]['.id'],
+                '=dns-name=',
                 '=login-by=' . $loginBy,
             ]);
         }
