@@ -6,7 +6,7 @@ import Reveal from '@/components/landing/Reveal'
 
 const contactInfo = [
   { icon: Mail, label: 'Email', value: 'info@hotbill.app', href: 'mailto:info@hotbill.app' },
-  { icon: Phone, label: 'Phone', value: '+256 700 000 000', href: 'tel:+256700000000' },
+  { icon: Phone, label: 'Phone', value: '+256 705 240 647 / +256 761 700 498', href: 'tel:+256705240647' },
   { icon: MapPin, label: 'Office', value: 'Kampala, Uganda', href: '#' },
   { icon: Clock, label: 'Support Hours', value: 'Mon-Fri, 8am-6pm EAT', href: '#' },
 ]
