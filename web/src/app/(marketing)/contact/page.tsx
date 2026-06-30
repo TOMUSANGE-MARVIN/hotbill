@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Mail, Phone, MapPin, Clock, Send, MessageSquare, Headphones, FileText } from 'lucide-react'
 import Reveal from '@/components/landing/Reveal'
 
@@ -12,9 +13,9 @@ const contactInfo = [
 ]
 
 const supportOptions = [
-  { icon: MessageSquare, title: 'Live Chat', description: 'Get instant help from our support team during business hours.', cta: 'Start Chat' },
-  { icon: Headphones, title: 'Phone Support', description: 'Talk to a real person for urgent issues or complex setups.', cta: 'Call Us' },
-  { icon: FileText, title: 'Documentation', description: 'Step-by-step guides for setup, configuration, and troubleshooting.', cta: 'View Docs' },
+  { icon: MessageSquare, title: 'Live Chat', description: 'Get instant help from our support team during business hours.', cta: 'Start Chat', href: 'https://wa.me/256705240647' },
+  { icon: Headphones, title: 'Phone Support', description: 'Talk to a real person for urgent issues or complex setups.', cta: 'Call Us', href: 'tel:+256705240647' },
+  { icon: FileText, title: 'Documentation', description: 'Step-by-step guides for setup, configuration, and troubleshooting.', cta: 'View Docs', href: '/docs' },
 ]
 
 const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mrewakva'
@@ -176,7 +177,11 @@ export default function ContactPage() {
                   </span>
                   <h3 className="font-bold text-navy mb-1">{option.title}</h3>
                   <p className="text-sm text-navy/55 mb-4">{option.description}</p>
-                  <button className="text-purple text-sm font-semibold hover:underline transition-colors">{option.cta} →</button>
+                  {option.href.startsWith('/') ? (
+                    <Link href={option.href} className="text-purple text-sm font-semibold hover:underline transition-colors">{option.cta} →</Link>
+                  ) : (
+                    <a href={option.href} target={option.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" className="text-purple text-sm font-semibold hover:underline transition-colors">{option.cta} →</a>
+                  )}
                 </div>
               </Reveal>
             ))}
