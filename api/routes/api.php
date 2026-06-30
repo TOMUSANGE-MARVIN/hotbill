@@ -25,6 +25,8 @@ Route::prefix('v1')->group(function () {
     // Auth
     Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
+    Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
 
     // Router heartbeat & install script (authenticated by router bearer token, not user token)
     Route::post('routers/heartbeat', [RouterController::class, 'heartbeat']);
