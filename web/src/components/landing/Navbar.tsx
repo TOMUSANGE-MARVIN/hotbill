@@ -55,7 +55,13 @@ export default function Navbar() {
             ))}
           </nav>
 
-          <div className="hidden md:block">
+          <div className="hidden md:flex items-center gap-2">
+            <Link
+              href="/login"
+              className="inline-flex items-center text-sm font-semibold text-navy/80 hover:text-purple px-4 py-2.5 rounded-full transition-colors duration-200"
+            >
+              Login
+            </Link>
             <Link
               href="/contact"
               className="inline-flex items-center bg-purple hover:bg-purple-dark text-white text-sm font-semibold px-5 py-2.5 rounded-full transition-colors duration-200"
@@ -87,6 +93,13 @@ export default function Navbar() {
                 {link.label}
               </Link>
             ))}
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 rounded-full text-sm font-medium text-navy/75 hover:bg-black/5 hover:text-purple transition-colors"
+            >
+              Login
+            </Link>
             <Link
               href="/contact"
               onClick={() => setOpen(false)}

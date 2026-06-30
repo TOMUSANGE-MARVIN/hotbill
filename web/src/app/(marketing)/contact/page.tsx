@@ -17,13 +17,43 @@ const supportOptions = [
   { icon: FileText, title: 'Documentation', description: 'Step-by-step guides for setup, configuration, and troubleshooting.', cta: 'View Docs' },
 ]
 
+const FORMSPREE_ENDPOINT = 'https://formspree.io/f/mrewakva'
+
 export default function ContactPage() {
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' })
   const [submitted, setSubmitted] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
+    setError('')
+    setSending(true)
+    try {
+      // AJAX submit (Accept: application/json) so Formspree returns JSON instead
+      // of redirecting to its thank-you page — the user stays right here.
+      const res = await fetch(FORMSPREE_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          subject: form.subject,
+          message: form.message,
+          _subject: `HotBill contact: ${form.subject || 'New message'}`,
+        }),
+      })
+      if (res.ok) {
+        setSubmitted(true)
+      } else {
+        const data = await res.json().catch(() => null)
+        setError(data?.errors?.[0]?.message ?? 'Something went wrong. Please try again or email us directly.')
+      }
+    } catch {
+      setError('Could not send your message. Please check your connection and try again.')
+    } finally {
+      setSending(false)
+    }
   }
 
   const inputCls = 'w-full border border-black/12 rounded-btn px-4 py-3 text-sm bg-white focus:ring-2 focus:ring-purple/40 focus:border-purple outline-none transition-all'
@@ -65,6 +95,9 @@ export default function ContactPage() {
                     <h2 className="text-xl font-bold text-navy mb-1">Send us a message</h2>
                     <p className="text-sm text-navy/55 mb-8">Fill out the form and we&apos;ll get back to you within 24 hours.</p>
                     <form onSubmit={handleSubmit} className="space-y-5">
+                      {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-btn p-3">{error}</div>
+                      )}
                       <div className="grid sm:grid-cols-2 gap-5">
                         <div>
                           <label className="block text-sm font-medium text-navy mb-1.5">Full Name</label>
@@ -91,8 +124,8 @@ export default function ContactPage() {
                         <label className="block text-sm font-medium text-navy mb-1.5">Message</label>
                         <textarea required rows={5} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="Tell us how we can help..." className={`${inputCls} resize-none`} />
                       </div>
-                      <button type="submit" className="w-full sm:w-auto bg-purple hover:bg-purple-dark text-white px-8 py-3 rounded-btn text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-                        <Send size={16} /> Send Message
+                      <button type="submit" disabled={sending} className="w-full sm:w-auto bg-purple hover:bg-purple-dark text-white px-8 py-3 rounded-btn text-sm font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+                        <Send size={16} /> {sending ? 'Sending…' : 'Send Message'}
                       </button>
                     </form>
                   </>
