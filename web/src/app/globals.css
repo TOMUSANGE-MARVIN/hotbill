@@ -195,6 +195,17 @@ input, select, textarea {
 .dark .text-gray-400 { color: #74839a; }
 .dark .text-gray-300 { color: #5c6b82; }
 
+/* Other dark text tokens used across dashboard components (navy = near-black
+   marketing token; slate 600–900 = dark). Flip these to light so they stay
+   visible on dark surfaces. */
+.dark .text-navy { color: #f1f5f9; }
+.dark .text-slate-900 { color: #f1f5f9; }
+.dark .text-slate-800 { color: #e5edf7; }
+.dark .text-slate-700 { color: #cbd6e4; }
+.dark .text-slate-600 { color: #aebccf; }
+.dark .text-slate-500 { color: #93a2b8; }
+.dark .text-black { color: #f1f5f9; }
+
 /* Rings + placeholders */
 .dark .ring-gray-200 { --tw-ring-color: #24324a; }
 .dark .placeholder-gray-400::placeholder { color: #64748b; }
