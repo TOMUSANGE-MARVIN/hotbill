@@ -7,6 +7,8 @@ use App\Http\Controllers\Api\BusinessController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\Admin\PlatformController;
+use App\Http\Controllers\Api\Admin\BlogController as AdminBlogController;
+use App\Http\Controllers\Api\BlogController;
 use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\PortalController;
 use App\Http\Controllers\Api\RadiusController;
@@ -48,6 +50,13 @@ Route::prefix('v1')->group(function () {
         Route::post('marzpay/webhook', [PortalController::class, 'marzpayWebhook']);
         Route::post('marzpay/payout-webhook', [PortalController::class, 'marzpayPayoutWebhook']);
         Route::get('orders/{reference}/status', [PortalController::class, 'status']);
+    });
+
+    // Public blog (marketing site)
+    Route::prefix('blog')->group(function () {
+        Route::get('posts', [BlogController::class, 'index']);
+        Route::get('categories', [BlogController::class, 'categories']);
+        Route::get('posts/{slug}', [BlogController::class, 'show']);
     });
 });
 
@@ -134,5 +143,9 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'business'])->group(function ()
         Route::post('withdrawals/{transaction}/fail', [PlatformController::class, 'failWithdrawal']);
         Route::get('transactions', [PlatformController::class, 'transactions']);
         Route::get('routers', [PlatformController::class, 'routers']);
+
+        // Blog CMS
+        Route::post('blog/uploads', [AdminBlogController::class, 'upload']);
+        Route::apiResource('blog/posts', AdminBlogController::class)->parameters(['posts' => 'post']);
     });
 });

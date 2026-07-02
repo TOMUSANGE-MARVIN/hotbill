@@ -3,6 +3,10 @@ set -e
 
 php artisan config:clear
 
+# Symlink public/storage → storage/app/public so uploaded blog images are served.
+# Recreated on every boot because the image is rebuilt each deploy.
+php artisan storage:link 2>/dev/null || true
+
 if [ "$RUN_MIGRATIONS" = "true" ]; then
     echo "Running database migrations..."
     php artisan migrate --force

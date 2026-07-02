@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import {
   ShieldCheck, LayoutDashboard, Building2, Wallet,
-  CreditCard, Router as RouterIcon, LogOut, X,
+  CreditCard, Router as RouterIcon, LogOut, X, FileText,
 } from 'lucide-react'
 
 const navItems = [
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/admin/withdrawals', label: 'Withdrawals', icon: Wallet },
   { href: '/admin/transactions', label: 'Transactions', icon: CreditCard },
   { href: '/admin/routers', label: 'All Routers', icon: RouterIcon },
+  { href: '/admin/blog', label: 'Blog', icon: FileText },
 ]
 
 export default function AdminSidebar({ onClose }: { onClose?: () => void }) {

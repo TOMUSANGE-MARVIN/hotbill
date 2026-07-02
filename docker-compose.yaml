@@ -63,6 +63,8 @@ services:
         condition: service_started
     volumes:
       - wg_data:/var/wireguard
+      # Persist uploaded files (blog images) across redeploys.
+      - api_storage:/var/www/html/storage/app/public
     environment:
       APP_NAME: ${APP_NAME:-HotBill}
       APP_ENV: ${APP_ENV:-production}
@@ -137,3 +139,4 @@ volumes:
   db_data:
   wg_data:
   redis_data:
+  api_storage:
