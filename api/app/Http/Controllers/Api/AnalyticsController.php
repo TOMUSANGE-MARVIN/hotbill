@@ -21,8 +21,11 @@ class AnalyticsController extends Controller
     public function dashboard(Request $request): JsonResponse
     {
         $tenantId = $request->user()->tenant_id;
-        $start = $request->start_date ?? now()->startOfMonth()->toDateString();
-        $end = $request->end_date ?? now()->toDateString();
+        // The dashboard sends `start`/`end`; accept the legacy `start_date`/`end_date`
+        // names too. Without this the range silently fell back to the current month,
+        // so at every month boundary the dashboard showed zeros for prior data.
+        $start = $request->input('start', $request->input('start_date')) ?? now()->startOfMonth()->toDateString();
+        $end = $request->input('end', $request->input('end_date')) ?? now()->toDateString();
 
         $range = [$start . ' 00:00:00', $end . ' 23:59:59'];
 
