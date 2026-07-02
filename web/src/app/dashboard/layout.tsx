@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuthStore } from '@/store/auth'
+import { useThemeStore } from '@/store/theme'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
@@ -8,6 +9,7 @@ import Header from '@/components/layout/Header'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { token, user, hasHydrated } = useAuthStore()
+  const theme = useThemeStore((s) => s.theme)
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
@@ -30,7 +32,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!token || user?.role === 'super_admin') return null
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className={`${theme === 'dark' ? 'dark' : ''} flex h-screen bg-gray-50 overflow-hidden`}>
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div

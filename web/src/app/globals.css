@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (applied on the tenant dashboard root only). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #f9fafb;
   --foreground: #111827;
@@ -149,3 +152,74 @@ input, select, textarea {
   color: #111827;
   background-color: #ffffff;
 }
+
+/* ── Tenant dashboard dark mode ──────────────────────────────────
+   The `.dark` class is set on the dashboard root wrapper only. These
+   rules are intentionally unlayered so they win over Tailwind's
+   utility layer, letting us retrofit dark mode without editing every
+   component's className. We flip only neutral grays + white surfaces;
+   brand and semantic (green/red/amber) colors are left intact. */
+.dark {
+  color: #dfe6f0;
+  color-scheme: dark;
+  /* The dashboard shell carries both `.dark` and `bg-gray-50` on the same
+     element, so the descendant rules below can't reach it — set it here. */
+  background-color: #0b1120;
+}
+
+/* Surfaces */
+.dark .bg-white { background-color: #0f172a; }
+.dark .bg-white\/80 { background-color: rgba(15, 23, 42, 0.8); }
+.dark .bg-white\/95 { background-color: rgba(15, 23, 42, 0.95); }
+.dark .bg-gray-50 { background-color: #0b1120; }
+.dark .bg-gray-100 { background-color: #1e293b; }
+.dark .bg-gray-200 { background-color: #334155; }
+.dark .hover\:bg-gray-50:hover { background-color: #1e293b; }
+.dark .hover\:bg-gray-100:hover { background-color: #263349; }
+.dark .hover\:bg-white:hover { background-color: #0f172a; }
+
+/* Borders + dividers */
+.dark .border-gray-100 { border-color: #1e293b; }
+.dark .border-gray-200 { border-color: #24324a; }
+.dark .border-gray-300 { border-color: #2f3e58; }
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b; }
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #24324a; }
+.dark .hover\:border-gray-300:hover { border-color: #3a4c6b; }
+
+/* Text */
+.dark .text-gray-900 { color: #f1f5f9; }
+.dark .text-gray-800 { color: #e5edf7; }
+.dark .text-gray-700 { color: #cbd6e4; }
+.dark .text-gray-600 { color: #aebccf; }
+.dark .text-gray-500 { color: #93a2b8; }
+.dark .text-gray-400 { color: #74839a; }
+.dark .text-gray-300 { color: #5c6b82; }
+
+/* Rings + placeholders */
+.dark .ring-gray-200 { --tw-ring-color: #24324a; }
+.dark .placeholder-gray-400::placeholder { color: #64748b; }
+
+/* Form controls */
+.dark input, .dark select, .dark textarea {
+  color: #e5edf7;
+  background-color: #0f172a;
+  border-color: #24324a;
+}
+.dark input::placeholder, .dark textarea::placeholder { color: #64748b; }
+
+/* Recharts — inline fill/stroke attributes are overridden by CSS */
+.dark .recharts-cartesian-grid line { stroke: #1e293b; }
+.dark .recharts-cartesian-axis-line,
+.dark .recharts-cartesian-axis-tick-line { stroke: #24324a; }
+.dark .recharts-cartesian-axis-tick text,
+.dark .recharts-text { fill: #93a2b8; }
+.dark .recharts-tooltip-wrapper .recharts-default-tooltip {
+  background-color: #0f172a !important;
+  border-color: #24324a !important;
+  color: #e5edf7;
+}
+.dark .recharts-default-tooltip .recharts-tooltip-label { color: #e5edf7 !important; }
+
+/* Scrollbars */
+.dark ::-webkit-scrollbar-thumb { background-color: #334155; }
+.dark ::-webkit-scrollbar-track { background-color: #0b1120; }

@@ -46,7 +46,7 @@ export default function AuthBrand() {
         </div>
       </div>
 
-      <p className="relative text-sm text-white/40">© 2025 HotBill. All rights reserved.</p>
+      <p className="relative text-sm text-white/40">© {new Date().getFullYear()} HotBill. All rights reserved.</p>
     </div>
   )
 }
