@@ -8,12 +8,12 @@ const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin']
 
 const SITE_URL = 'https://hotbill.app'
 const DESCRIPTION =
-  'HotBill is the all-in-one billing platform for WiFi hotspot operators and ISPs in Africa. Accept MTN MoMo & Airtel Money, auto-activate packages, manage MikroTik routers, sell vouchers, and get paid automatically.'
+  'HotBill is the all-in-one billing platform for WiFi hotspot operators and ISPs in Uganda. Accept MTN MoMo & Airtel Money, auto-activate packages, manage MikroTik routers, sell vouchers, and get paid automatically.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'HotBill — Smart WiFi Hotspot Billing for ISPs in Africa',
+    default: 'HotBill — Smart WiFi Hotspot Billing for ISPs in Uganda',
     template: '%s | HotBill',
   },
   description: DESCRIPTION,
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   keywords: [
     'WiFi billing', 'hotspot billing', 'MikroTik billing software', 'ISP billing',
     'captive portal', 'MTN MoMo payments', 'Airtel Money', 'mobile money WiFi',
-    'hotspot management', 'RADIUS billing', 'WiFi voucher system', 'internet billing Africa',
+    'hotspot management', 'RADIUS billing', 'WiFi voucher system', 'internet billing Uganda',
     'Uganda ISP software', 'WiFi business', 'hotspot payment system',
   ],
   authors: [{ name: 'HotBill' }],
@@ -34,9 +34,9 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: SITE_URL,
     siteName: 'HotBill',
-    title: 'HotBill — Smart WiFi Hotspot Billing for ISPs in Africa',
+    title: 'HotBill — Smart WiFi Hotspot Billing for ISPs in Uganda',
     description: DESCRIPTION,
-    images: [{ url: '/global-network.jpg', width: 728, height: 408, alt: 'HotBill — WiFi billing for Africa' }],
+    images: [{ url: '/global-network.jpg', width: 728, height: 408, alt: 'HotBill — WiFi billing for Uganda' }],
   },
   twitter: {
     card: 'summary_large_image',
@@ -68,7 +68,7 @@ const jsonLd = {
       logo: `${SITE_URL}/hotbill-logo.png`,
       description: DESCRIPTION,
       email: 'info@hotbill.app',
-      areaServed: 'Africa',
+      areaServed: 'Uganda',
     },
     {
       '@type': 'WebSite',

@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: 'Blog',
   description:
-    'Guides and insights for WiFi hotspot operators and ISPs — MikroTik setup, mobile money billing, and growing a connectivity business in Africa.',
+    'Guides and insights for WiFi hotspot operators and ISPs — MikroTik setup, mobile money billing, and growing a connectivity business in Uganda.',
   alternates: { canonical: '/blogs' },
 }
 

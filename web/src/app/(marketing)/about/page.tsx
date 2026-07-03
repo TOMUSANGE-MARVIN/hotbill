@@ -8,18 +8,18 @@ import Reveal from '@/components/landing/Reveal'
 const values = [
   { icon: Target, title: 'Operator-First', description: 'Every decision starts with the question: does this make life easier for ISP operators in the field?' },
   { icon: Lightbulb, title: 'Radical Simplicity', description: 'Complex technology should feel effortless. One script to provision, one dashboard to manage, one platform to bill.' },
-  { icon: Heart, title: 'Built for Africa', description: 'We understand African connectivity challenges, intermittent power, mobile-first payments, low-bandwidth environments.' },
+  { icon: Heart, title: 'Built for Uganda', description: 'We understand Ugandan connectivity challenges, intermittent power, mobile-first payments, low-bandwidth environments.' },
   { icon: Users, title: 'Community Driven', description: 'Our roadmap is shaped by feedback from 80+ operators running real businesses in the field.' },
 ]
 
 const team = [
-  { name: 'Tomusange Marvin', role: 'Founder & CEO', bio: 'Full-stack engineer passionate about building technology that powers African connectivity.' },
+  { name: 'Tomusange Marvin', role: 'Founder & CEO', bio: 'Full-stack engineer passionate about building technology that powers Ugandan connectivity.' },
   { name: 'Kiwana Collins', role: 'Co-Founder', bio: 'Drives operations and partnerships, helping operators get the most out of HotBill.' },
   { name: 'Nyanzi Shivan', role: 'Co-Founder & Engineer', bio: 'Builds and maintains the platform that keeps ISP billing fast and reliable.' },
 ]
 
 const milestones = [
-  { year: '2024', title: 'The Idea', description: 'Born from frustration with existing ISP billing tools that were expensive, slow, and didn\'t support African payment methods.' },
+  { year: '2024', title: 'The Idea', description: 'Born from frustration with existing ISP billing tools that were expensive, slow, and didn\'t support Ugandan payment methods.' },
   { year: '2025', title: 'First Beta', description: 'Launched with 5 ISP operators in Kampala. Processed first mobile money payment through the captive portal.' },
   { year: '2025', title: 'Product-Market Fit', description: 'Expanded to 40+ operators across Uganda. Added voucher system and multi-router support.' },
   { year: '2026', title: 'Scaling Up', description: '80+ operators, 500+ routers, 50K subscribers. Launched remote access VPN and enterprise plans.' },
@@ -36,10 +36,10 @@ export default function AboutPage() {
                 About Us
               </span>
               <h1 className="text-4xl sm:text-5xl font-extrabold tracking-[-1px] text-navy mb-6">
-                Connecting Africa, <span className="text-purple">one hotspot</span> at a time
+                Connecting Uganda, <span className="text-purple">one hotspot</span> at a time
               </h1>
               <p className="text-lg text-navy/60 leading-relaxed mb-6">
-                HotBill was born from a simple frustration: why is it so hard to run a WiFi business in Africa? Existing tools were built for Western markets, expensive, overly complex, and disconnected from how African operators actually work.
+                HotBill was born from a simple frustration: why is it so hard to run a WiFi business in Uganda? Existing tools were built for Western markets, expensive, overly complex, and disconnected from how Ugandan operators actually work.
               </p>
               <p className="text-lg text-navy/60 leading-relaxed">
                 We set out to build the billing platform we wished existed, one that speaks MikroTik natively, accepts mobile money out of the box, and lets operators go from zero to collecting revenue in under 5 minutes.
@@ -47,7 +47,7 @@ export default function AboutPage() {
             </Reveal>
             <Reveal delay={120} className="relative">
               <div className="rounded-card overflow-hidden border border-black/[0.06] shadow-[0_24px_60px_rgba(0,1,42,0.12)]">
-                <Image src="/global-network.jpg" alt="Global network connectivity across Africa" width={728} height={408} className="w-full" />
+                <Image src="/global-network.jpg" alt="Network connectivity across Uganda" width={728} height={408} className="w-full" />
               </div>
               <div className="absolute -bottom-5 -right-5 bg-purple text-white rounded-card p-5 shadow-xl">
                 <div className="text-3xl font-extrabold">80+</div>
@@ -84,7 +84,7 @@ export default function AboutPage() {
         <div className="container-1200">
           <Reveal className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">Our journey</h2>
-            <p className="text-navy/60 max-w-xl mx-auto">From a weekend project to powering 80+ ISPs across Africa.</p>
+            <p className="text-navy/60 max-w-xl mx-auto">From a weekend project to powering 80+ ISPs across Uganda.</p>
           </Reveal>
           <div className="max-w-3xl mx-auto">
             <div className="relative">
@@ -114,7 +114,7 @@ export default function AboutPage() {
         <div className="container-1200">
           <Reveal className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-navy mb-4">Meet the team</h2>
-            <p className="text-navy/60 max-w-xl mx-auto">Engineers and operators building the future of ISP billing in Africa.</p>
+            <p className="text-navy/60 max-w-xl mx-auto">Engineers and operators building the future of ISP billing in Uganda.</p>
           </Reveal>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-4xl mx-auto">
             {team.map((member, i) => (
@@ -142,7 +142,7 @@ export default function AboutPage() {
             <Reveal>
               <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Join our mission</h2>
               <p className="text-white/70 leading-relaxed mb-6">
-                We&apos;re building the infrastructure that powers internet access for millions across Africa. If you&apos;re passionate about connectivity and impact, we&apos;d love to hear from you.
+                We&apos;re building the infrastructure that powers internet access for millions across Uganda. If you&apos;re passionate about connectivity and impact, we&apos;d love to hear from you.
               </p>
               <Link href="/contact" className="inline-flex items-center gap-2 bg-white text-purple px-6 py-3 rounded-btn text-sm font-semibold hover:bg-white/90 transition-colors">
                 View Open Roles <ArrowUpRight size={16} />

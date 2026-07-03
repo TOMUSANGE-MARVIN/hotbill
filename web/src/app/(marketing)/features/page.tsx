@@ -92,7 +92,7 @@ export default function FeaturesPage() {
             Services
           </span>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-[-1px] text-navy mb-6">
-            Built for African ISPs,{' '}
+            Built for Ugandan ISPs,{' '}
             <span className="text-purple">by operators</span>
           </h1>
           <p className="text-lg text-navy/60 max-w-2xl mx-auto leading-relaxed">
