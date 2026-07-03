@@ -8,6 +8,23 @@ import { format } from 'date-fns'
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api/v1'
 const SITE = 'https://hotbill.app'
 
+// Pre-render post pages as static HTML and refresh them in the background every
+// 5 minutes (ISR). This makes opening a post near-instant and lets <Link> fully
+// prefetch it, instead of server-rendering on every click.
+export const revalidate = 300
+export const dynamicParams = true // new posts not in the list still render on demand
+
+export async function generateStaticParams() {
+  try {
+    const res = await fetch(`${API}/blog/posts?per_page=100`, { next: { revalidate: 300 } })
+    if (!res.ok) return []
+    const json = await res.json()
+    return (json.data ?? []).map((p: { slug: string }) => ({ slug: p.slug }))
+  } catch {
+    return []
+  }
+}
+
 interface Post {
   id: number
   title: string
