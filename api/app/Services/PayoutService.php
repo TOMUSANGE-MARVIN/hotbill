@@ -71,39 +71,92 @@ class PayoutService
     /**
      * Handle a MarzPay disbursement webhook. Re-verifies against the API (the
      * webhook is unsigned) before completing or refunding. Idempotent.
+     *
+     * MarzPay's payout webhook carries its own `transaction.reference` and echoes
+     * OUR reference back as `provider_reference`, so we look the withdrawal up by
+     * either field (plus the stored marzpay_uuid) rather than assuming which one
+     * the webhook uses.
      */
     public function handleDisbursementWebhook(array $payload): void
     {
         $event = (string) ($payload['event_type'] ?? '');
-        $reference = $payload['transaction']['reference'] ?? null;
+        $txn = $payload['transaction'] ?? [];
 
-        if (!$reference || !str_starts_with($event, 'disbursement.')) {
+        if (!str_starts_with($event, 'disbursement.')) {
             return;
         }
 
-        $withdrawal = WalletTransaction::where('reference', $reference)
-            ->where('source', 'withdrawal')
-            ->where('type', 'debit')
-            ->first();
+        $candidates = array_filter([
+            $txn['provider_reference'] ?? null, // our reference, echoed back
+            $txn['reference'] ?? null,          // MarzPay's own reference
+            $txn['uuid'] ?? null,               // the send-money uuid we stored
+        ]);
 
-        if (!$withdrawal || in_array($withdrawal->status, ['completed', 'failed'])) {
-            return; // unknown or already settled
-        }
-
-        // Re-verify against MarzPay rather than trusting the webhook body.
-        $status = strtolower($payload['transaction']['status'] ?? '');
-        $uuid = $withdrawal->meta['marzpay_uuid'] ?? null;
-        if ($uuid) {
-            $details = $this->marzpay->getSendMoneyDetails($uuid);
-            $txn = $details['data']['transaction'] ?? $details['transaction'] ?? [];
-            if (!empty($txn['status'])) {
-                $status = strtolower($txn['status']);
+        $withdrawal = null;
+        foreach ($candidates as $ref) {
+            $withdrawal = WalletTransaction::where('source', 'withdrawal')
+                ->where('type', 'debit')
+                ->where(function ($q) use ($ref) {
+                    $q->where('reference', $ref)
+                      ->orWhere('meta->marzpay_uuid', $ref);
+                })
+                ->first();
+            if ($withdrawal) {
+                break;
             }
         }
 
-        if (in_array($status, ['completed', 'successful', 'success'])) {
+        if (!$withdrawal) {
+            return; // unknown transaction
+        }
+
+        // Prefer the authoritative MarzPay status (re-verified) over the webhook body.
+        $this->reconcile($withdrawal, strtolower($txn['status'] ?? ''));
+    }
+
+    /**
+     * Settle a single 'processing'/'pending' withdrawal by re-checking its real
+     * status at MarzPay (via the stored send-money uuid). Completes it, or refunds
+     * the reserved balance if the payout failed/reversed. Idempotent and safe to
+     * call from the webhook, the scheduled reconciler, or the admin queue.
+     *
+     * Returns the resulting status, or null if nothing was done.
+     *
+     * @param  string  $hint  optional status already known (e.g. from a webhook body)
+     */
+    public function reconcile(WalletTransaction $withdrawal, string $hint = ''): ?string
+    {
+        if (in_array($withdrawal->status, ['completed', 'failed'], true)) {
+            return null; // already settled
+        }
+
+        $status = $hint;
+        $uuid = $withdrawal->meta['marzpay_uuid'] ?? null;
+
+        // Re-verify against MarzPay rather than trusting any webhook body.
+        if ($uuid) {
+            try {
+                $details = $this->marzpay->getSendMoneyDetails($uuid);
+                $txn = $details['data']['transaction'] ?? $details['transaction'] ?? [];
+                if (!empty($txn['status'])) {
+                    $status = strtolower($txn['status']);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('Payout reconcile: MarzPay verify failed', [
+                    'withdrawal_id' => $withdrawal->id,
+                    'error' => $e->getMessage(),
+                ]);
+                return null; // leave it processing; try again next run
+            }
+        }
+
+        if (in_array($status, ['completed', 'successful', 'success'], true)) {
             $withdrawal->update(['status' => 'completed']);
-        } elseif (in_array($status, ['failed', 'declined', 'cancelled', 'reversed'])) {
+            Log::info('Payout reconciled to completed', ['withdrawal_id' => $withdrawal->id]);
+            return 'completed';
+        }
+
+        if (in_array($status, ['failed', 'declined', 'cancelled', 'reversed'], true)) {
             // Refund the reserved amount back to the operator wallet.
             $withdrawal->tenant?->postWallet('credit', (float) $withdrawal->amount, 'adjustment', [
                 'status' => 'completed',
@@ -111,6 +164,10 @@ class PayoutService
                 'description' => 'Refund: payout failed',
             ]);
             $withdrawal->update(['status' => 'failed']);
+            Log::info('Payout reconciled to failed (refunded)', ['withdrawal_id' => $withdrawal->id]);
+            return 'failed';
         }
+
+        return null; // still pending/processing at MarzPay — leave as is
     }
 }

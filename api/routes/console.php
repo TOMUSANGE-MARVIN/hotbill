@@ -11,3 +11,8 @@ Artisan::command('inspire', function () {
 // Settle voucher expiry centrally instead of on every list read.
 // onOneServer() uses the Redis cache lock so this stays correct if the api scales out.
 Schedule::command('vouchers:expire')->everyFiveMinutes()->onOneServer()->withoutOverlapping();
+
+// Safety net for operator payouts: settle any withdrawal left 'processing' because
+// its MarzPay disbursement webhook was missed. Re-verifies against MarzPay so it
+// never marks money paid without confirmation.
+Schedule::command('payouts:reconcile')->everyFiveMinutes()->onOneServer()->withoutOverlapping();
