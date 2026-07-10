@@ -156,8 +156,33 @@ export default function VouchersPage() {
     URL.revokeObjectURL(url)
   }
 
-  const printBatch = (id: number) =>
-    window.open(`${process.env.NEXT_PUBLIC_API_URL}/voucher-batches/${id}/print`, '_blank')
+  // Fetch server-generated files with the auth token attached (window.open
+  // can't send the bearer token, which is why the old print link 500'd), then
+  // trigger a client-side download from the returned blob.
+  const downloadFile = async (url: string, filename: string, params?: Record<string, string>) => {
+    try {
+      const res = await api.get(url, { params, responseType: 'blob' })
+      const blobUrl = URL.createObjectURL(res.data as Blob)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(blobUrl)
+    } catch {
+      alert('Download failed. Please try again.')
+    }
+  }
+
+  const printBatch = (id: number, name?: string) =>
+    downloadFile(`/voucher-batches/${id}/print`, `vouchers-${name ?? id}.pdf`)
+
+  const downloadDocx = (from: string, to: string) => {
+    const params: Record<string, string> = {}
+    if (from) params.from = from
+    if (to) params.to = to
+    const label = from || to ? `${from || 'all'}${to ? '_to_' + to : ''}` : format(new Date(), 'yyyy-MM-dd')
+    downloadFile('/vouchers/export-docx', `vouchers-${label}.docx`, params)
+  }
 
   const cols = ALL_COLUMNS.filter((c) => visibleCols.has(c.key))
   const dateRange = useMemo(() => {
@@ -223,6 +248,7 @@ export default function VouchersPage() {
         <div className="flex items-center gap-2">
           <ToolbarButton icon={LayoutGrid} label="Generate" onClick={() => setShowCreate(true)} primary />
           <DownloadByNoteMenu batches={batches} onPrint={printBatch} />
+          <DownloadDocxMenu onDownload={downloadDocx} />
           <ToolbarButton icon={Download} label="Export CSV" onClick={exportCsv} />
           <ViewMenu visible={visibleCols} setVisible={setVisibleCols} />
         </div>
@@ -465,7 +491,49 @@ function PackageMenu({
   )
 }
 
-function DownloadByNoteMenu({ batches, onPrint }: { batches: any[]; onPrint: (id: number) => void }) {
+function DownloadDocxMenu({ onDownload }: { onDownload: (from: string, to: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useClickOutside(() => setOpen(false))
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+      >
+        <FileText size={15} className="text-gray-500" />
+        Download DOCX
+        <ChevronDown size={13} className="text-gray-400" />
+      </button>
+      {open && (
+        <div className="absolute right-0 z-20 mt-1 w-72 rounded-lg border border-gray-200 bg-white p-3 shadow-lg">
+          <p className="mb-3 text-xs text-gray-500">
+            Exports only <span className="font-medium text-gray-700">unused</span> vouchers. Filter by creation date to avoid re-printing ones you already handed out.
+          </p>
+          <label className="mb-1 block text-xs font-medium text-gray-600">From</label>
+          <input
+            type="date" value={from} onChange={(e) => setFrom(e.target.value)}
+            className="mb-2 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
+          />
+          <label className="mb-1 block text-xs font-medium text-gray-600">To</label>
+          <input
+            type="date" value={to} onChange={(e) => setTo(e.target.value)}
+            className="mb-3 w-full rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm outline-none focus:border-brand-400"
+          />
+          <button
+            onClick={() => { onDownload(from, to); setOpen(false) }}
+            className="w-full rounded-lg bg-brand-600 py-2 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            Download .docx
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DownloadByNoteMenu({ batches, onPrint }: { batches: any[]; onPrint: (id: number, name?: string) => void }) {
   const [open, setOpen] = useState(false)
   const ref = useClickOutside(() => setOpen(false))
   return (
@@ -484,7 +552,7 @@ function DownloadByNoteMenu({ batches, onPrint }: { batches: any[]; onPrint: (id
           {batches.map((b) => (
             <button
               key={b.id}
-              onClick={() => { onPrint(b.id); setOpen(false) }}
+              onClick={() => { onPrint(b.id, b.name); setOpen(false) }}
               className="flex w-full items-center justify-between px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
             >
               <span className="truncate">{b.name}</span>

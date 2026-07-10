@@ -109,6 +109,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'business'])->group(function ()
 
     // Vouchers
     Route::get('vouchers', [VoucherController::class, 'index']);
+    Route::get('vouchers/export-docx', [VoucherController::class, 'exportDocx']);
     Route::post('vouchers/redeem', [VoucherController::class, 'redeem']);
     Route::post('vouchers/{voucher}/revoke', [VoucherController::class, 'revoke']);
     Route::get('voucher-batches', [VoucherController::class, 'batches']);
