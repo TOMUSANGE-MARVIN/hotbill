@@ -161,6 +161,14 @@ SCRIPT;
         $apiPort = $this->api_port;
         $name = $this->name;
 
+        // WiFi SSID customers see. Strip characters that would break the quoted
+        // RouterOS string and cap at the 32-char SSID limit.
+        $ssid = trim(preg_replace('/["\\\\]/', '', (string) $this->name));
+        $ssid = mb_substr($ssid, 0, 32);
+        if ($ssid === '') {
+            $ssid = 'HotBill';
+        }
+
         $this->provisionVpn();
 
         $vpnSection = '';
@@ -214,6 +222,18 @@ VPN;
 } on-error={
 :put "FAILED: could not set router identity"
 }
+
+:put "Setting WiFi network name..."
+:do {
+/interface wireless set [find] ssid="{$ssid}"
+} on-error={}
+:do {
+/interface wifiwave2 set [find] configuration.ssid="{$ssid}"
+} on-error={}
+:do {
+/interface wifi set [find] configuration.ssid="{$ssid}"
+} on-error={}
+:put "WiFi network name set to '{$ssid}' (on any radio this router has)"
 
 :put "Adding HotBill API user..."
 :do {
