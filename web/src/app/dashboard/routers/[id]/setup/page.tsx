@@ -8,5 +8,5 @@ export default function RouterSetupPage() {
   const routerId = params.id as string
   const navRouter = useRouter()
 
-  return <RouterSetupWizard routerId={routerId} onFinish={() => navRouter.push('/routers')} />
+  return <RouterSetupWizard routerId={routerId} onFinish={() => navRouter.push('/dashboard/routers')} />
 }

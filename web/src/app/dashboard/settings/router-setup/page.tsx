@@ -42,5 +42,5 @@ export default function RouterSetupSettingsPage() {
 
   const router = routers[0]
 
-  return <RouterSetupWizard routerId={String(router.id)} onFinish={() => navRouter.push('/routers')} />
+  return <RouterSetupWizard routerId={String(router.id)} onFinish={() => navRouter.push('/dashboard/routers')} />
 }

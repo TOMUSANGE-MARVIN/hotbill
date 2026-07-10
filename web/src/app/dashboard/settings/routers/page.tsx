@@ -219,7 +219,7 @@ function ActionsMenu({ router, onRename, onCopyAddress, onTest, onScript, onPass
         <div className="absolute right-0 mt-1 w-56 bg-white rounded-lg shadow-xl border border-gray-100 py-1.5 z-50 text-sm">
           <p className="px-3 py-1 text-xs font-semibold text-gray-400">Actions</p>
           <MenuItem icon={Pencil} label="Rename" onClick={() => run(onRename)} />
-          <Link href={`/routers/${router.id}/setup`} className="flex items-center gap-2.5 px-3 py-2 text-gray-700 hover:bg-gray-50">
+          <Link href={`/dashboard/routers/${router.id}/setup`} className="flex items-center gap-2.5 px-3 py-2 text-gray-700 hover:bg-gray-50">
             <Settings2 size={15} className="text-gray-400" /> Configuration
           </Link>
           <div className="border-t border-gray-100 my-1" />
