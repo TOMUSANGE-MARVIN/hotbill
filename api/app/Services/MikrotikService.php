@@ -187,23 +187,52 @@ class MikrotikService
         $users = $this->rows($this->command('/ip/hotspot/user/print'));
         $active = $this->rows($this->command('/ip/hotspot/active/print'));
 
-        $online = [];
+        // On MikroTik a stored user's byte counters only update when a session
+        // ENDS. For a currently-connected user the live counters live on their
+        // /ip hotspot active entry, so we add those in. This stays continuous
+        // across the session-end flush (no double counting): during the session
+        // total = stored + active; on logout the router moves active→stored, so
+        // total = stored + 0 = the same value.
+        $live = [];
         foreach ($active as $a) {
-            if (!empty($a['user'])) $online[$a['user']] = true;
+            $name = $a['user'] ?? null;
+            if (!$name) continue;
+            $live[$name] = [
+                'bytes_in' => (int) ($a['bytes-in'] ?? 0),
+                'bytes_out' => (int) ($a['bytes-out'] ?? 0),
+                'uptime' => $this->parseDuration($a['uptime'] ?? '0s'),
+            ];
         }
 
         $out = [];
+        $seen = [];
         foreach ($users as $u) {
             $name = $u['name'] ?? null;
             if (!$name || $name === 'default-trial') continue;
+            $s = $live[$name] ?? ['bytes_in' => 0, 'bytes_out' => 0, 'uptime' => 0];
             $out[] = [
                 'username' => $name,
-                'bytes_in' => (int) ($u['bytes-in'] ?? 0),
-                'bytes_out' => (int) ($u['bytes-out'] ?? 0),
-                'uptime_seconds' => $this->parseDuration($u['uptime'] ?? '0s'),
-                'active' => isset($online[$name]),
+                'bytes_in' => (int) ($u['bytes-in'] ?? 0) + $s['bytes_in'],
+                'bytes_out' => (int) ($u['bytes-out'] ?? 0) + $s['bytes_out'],
+                'uptime_seconds' => $this->parseDuration($u['uptime'] ?? '0s') + $s['uptime'],
+                'active' => isset($live[$name]),
+            ];
+            $seen[$name] = true;
+        }
+
+        // Active sessions with no persistent user record (MAC/trial/RADIUS
+        // logins) — record their live usage too so they aren't invisible.
+        foreach ($live as $name => $s) {
+            if (isset($seen[$name]) || $name === 'default-trial') continue;
+            $out[] = [
+                'username' => $name,
+                'bytes_in' => $s['bytes_in'],
+                'bytes_out' => $s['bytes_out'],
+                'uptime_seconds' => $s['uptime'],
+                'active' => true,
             ];
         }
+
         return $out;
     }
 

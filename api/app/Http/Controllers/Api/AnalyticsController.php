@@ -61,7 +61,13 @@ class AnalyticsController extends Controller
         $onlineRouters = $routers->filter(fn (Router $r) => $r->isOnline());
         $activeUsers = $onlineRouters->sum('active_users');
         $avgCpu = $onlineRouters->avg('cpu_load');
-        $totalDataGb = round($routers->sum('data_rx') / (1024 ** 3), 1);
+        // Real, measured hotspot data for the period (populated by
+        // CollectHotspotUsageJob). The per-router data_rx counter isn't
+        // reported by the heartbeat, so it can't be the source here.
+        $dataBytes = HotspotUsageDaily::where('tenant_id', $tenantId)
+            ->whereBetween('date', [substr($range[0], 0, 10), substr($range[1], 0, 10)])
+            ->sum('bytes');
+        $totalDataGb = round($dataBytes / (1024 ** 3), 1);
 
         // Subscribers
         $activeSubscribers = Subscriber::where('tenant_id', $tenantId)->where('status', 'active')->count();
