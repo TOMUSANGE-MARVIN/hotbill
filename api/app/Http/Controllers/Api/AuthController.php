@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\TwoFactorService;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,13 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    public function __construct(private TwoFactorService $twoFactor) {}
+
+    /**
+     * Create the workspace + owner account, but leave it unverified and issue
+     * NO token. A 6-digit code is emailed; the account is activated only once
+     * that code is confirmed via verifyEmail().
+     */
     public function register(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -46,19 +54,62 @@ class AuthController extends Controller
         // Membership for the first business (multi-location support).
         $user->tenants()->attach($tenant->id, ['role' => 'admin']);
 
+        $ttl = $this->twoFactor->sendCode($user, 'register');
+
         return response()->json([
-            'user' => $user,
-            'tenant' => $tenant,
-            'businesses' => BusinessController::businessesFor($request->merge([])->setUserResolver(fn () => $user)),
-            'token' => $user->createToken('api')->plainTextToken,
+            'requires_verification' => true,
+            'email' => $user->email,
+            'code_ttl_minutes' => $ttl,
+            'message' => "We've sent a 6-digit verification code to {$user->email}.",
         ], 201);
     }
 
+    /**
+     * Confirm the registration code, mark the email verified, and return the
+     * full authenticated payload (token) so the new user is signed in.
+     */
+    public function verifyEmail(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string',
+            'remember_device' => 'sometimes|boolean',
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+        if (!$user) {
+            throw ValidationException::withMessages(['email' => 'No account found for that email.']);
+        }
+
+        try {
+            $this->twoFactor->verifyCode($user, 'register', $data['code']);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['code' => $e->getMessage()]);
+        }
+
+        if (!$user->email_verified_at) {
+            $user->forceFill(['email_verified_at' => now()])->save();
+        }
+
+        $deviceToken = ($data['remember_device'] ?? false)
+            ? $this->twoFactor->trustDevice($user, $request)
+            : null;
+
+        return response()->json($this->authPayload($user, $request, $deviceToken));
+    }
+
+    /**
+     * Verify credentials, then branch:
+     *  - email not verified  → resend registration code (requires_verification)
+     *  - device already trusted → sign in directly
+     *  - otherwise → email a login code (requires_otp)
+     */
     public function login(Request $request): JsonResponse
     {
         $data = $request->validate([
             'email' => 'required|email',
             'password' => 'required|string',
+            'device_token' => 'sometimes|nullable|string',
         ]);
 
         $user = User::where('email', $data['email'])->with('tenant')->first();
@@ -71,12 +122,120 @@ class AuthController extends Controller
             return response()->json(['message' => 'Account suspended'], 403);
         }
 
+        // Unverified accounts must complete email verification before signing in.
+        if (!$user->email_verified_at) {
+            $ttl = $this->safeSend($user, 'register');
+            return response()->json([
+                'requires_verification' => true,
+                'email' => $user->email,
+                'code_ttl_minutes' => $ttl,
+                'message' => "Please verify your email. We've sent a code to {$user->email}.",
+            ], 200);
+        }
+
+        // Trusted device → skip the emailed code (this is the "periodic" part).
+        if ($this->twoFactor->isTrustedDevice($user, $data['device_token'] ?? null)) {
+            return response()->json($this->authPayload($user, $request));
+        }
+
+        $ttl = $this->safeSend($user, 'login');
+
         return response()->json([
+            'requires_otp' => true,
+            'email' => $user->email,
+            'code_ttl_minutes' => $ttl,
+            'message' => "For your security, we've sent a sign-in code to {$user->email}.",
+        ], 200);
+    }
+
+    /**
+     * Confirm a login 2FA code and return the authenticated payload. Optionally
+     * remembers the device so future logins from it skip the code.
+     */
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string',
+            'remember_device' => 'sometimes|boolean',
+        ]);
+
+        $user = User::where('email', $data['email'])->with('tenant')->first();
+        if (!$user) {
+            throw ValidationException::withMessages(['email' => 'No account found for that email.']);
+        }
+
+        try {
+            $this->twoFactor->verifyCode($user, 'login', $data['code']);
+        } catch (\RuntimeException $e) {
+            throw ValidationException::withMessages(['code' => $e->getMessage()]);
+        }
+
+        $deviceToken = ($data['remember_device'] ?? false)
+            ? $this->twoFactor->trustDevice($user, $request)
+            : null;
+
+        return response()->json($this->authPayload($user, $request, $deviceToken));
+    }
+
+    /**
+     * Re-send a code for the given purpose. Returns a generic response even if
+     * the account doesn't exist, so it can't be used to probe for emails.
+     */
+    public function resendCode(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'email' => 'required|email',
+            'purpose' => 'required|in:register,login',
+        ]);
+
+        $user = User::where('email', $data['email'])->first();
+
+        if ($user) {
+            // Don't re-send a registration code to an already-verified account.
+            $purpose = $data['purpose'];
+            if ($purpose === 'register' && $user->email_verified_at) {
+                $purpose = null;
+            }
+            if ($purpose) {
+                try {
+                    $this->twoFactor->sendCode($user, $purpose);
+                } catch (\RuntimeException $e) {
+                    return response()->json(['message' => $e->getMessage()], 429);
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => 'If an account exists for that email, a new code has been sent.',
+        ]);
+    }
+
+    /**
+     * Send a code, swallowing the resend-cooldown error so a rapid login retry
+     * still returns cleanly (the existing, still-valid code remains usable).
+     */
+    private function safeSend(User $user, string $purpose): ?int
+    {
+        try {
+            return $this->twoFactor->sendCode($user, $purpose);
+        } catch (\RuntimeException $e) {
+            return null;
+        }
+    }
+
+    /** Build the standard authenticated response (issues an API token). */
+    private function authPayload(User $user, Request $request, ?string $deviceToken = null): array
+    {
+        $user->load('tenant');
+
+        return [
             'user' => $user,
             'tenant' => $user->tenant,
             'businesses' => BusinessController::businessesFor($request->setUserResolver(fn () => $user)),
             'token' => $user->createToken('api')->plainTextToken,
-        ]);
+            'device_token' => $deviceToken,
+        ];
     }
 
     /**

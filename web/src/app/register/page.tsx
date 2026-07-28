@@ -8,15 +8,19 @@ import { Power, Eye, EyeOff, ArrowUpRight, Check } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import AuthBrand from '@/components/AuthBrand'
+import OtpVerify from '@/components/OtpVerify'
 
 const karla = Karla({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] })
 
 export default function RegisterPage() {
   const router = useRouter()
-  const { login } = useAuthStore()
+  const { finalizeAuth } = useAuthStore()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [show, setShow] = useState(false)
+  // After a successful register we switch to the email-verification step.
+  const [step, setStep] = useState<'form' | 'verify'>('form')
+  const [otpMessage, setOtpMessage] = useState('')
   const [form, setForm] = useState({
     tenant_name: '',
     name: '',
@@ -38,10 +42,9 @@ export default function RegisterPage() {
     setError('')
     try {
       const res = await api.post('/auth/register', form)
-      const { token } = res.data
-      localStorage.setItem('hotbill_token', token)
-      await login(form.email, form.password)
-      router.push('/dashboard')
+      // The account is created unverified — collect the emailed code next.
+      setOtpMessage(res.data.message ?? '')
+      setStep('verify')
     } catch (err: any) {
       const errors = err.response?.data?.errors
       if (errors) {
@@ -71,6 +74,22 @@ export default function RegisterPage() {
             <span className="text-xl font-extrabold tracking-tight">HOTBILL</span>
           </div>
 
+          {step === 'verify' ? (
+            <OtpVerify
+              email={form.email}
+              purpose="register"
+              message={otpMessage}
+              onVerified={(payload) => {
+                finalizeAuth(payload)
+                router.push('/dashboard')
+              }}
+              onBack={() => {
+                setStep('form')
+                setError('')
+              }}
+            />
+          ) : (
+          <>
           <h1 className="text-3xl font-extrabold mb-2">Create your account</h1>
           <p className="text-[#00012A]/55 mb-8">Set up your HotBill workspace — no card required.</p>
 
@@ -142,6 +161,8 @@ export default function RegisterPage() {
               Sign in
             </Link>
           </p>
+          </>
+          )}
         </div>
       </div>
     </div>

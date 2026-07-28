@@ -27,6 +27,10 @@ Route::prefix('v1')->group(function () {
     // Auth
     Route::post('auth/register', [AuthController::class, 'register']);
     Route::post('auth/login', [AuthController::class, 'login']);
+    // Email 2FA: verify registration / login codes, resend a code.
+    Route::post('auth/verify-email', [AuthController::class, 'verifyEmail']);
+    Route::post('auth/verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('auth/resend-code', [AuthController::class, 'resendCode']);
     Route::post('auth/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('auth/reset-password', [AuthController::class, 'resetPassword']);
 

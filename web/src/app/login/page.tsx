@@ -7,6 +7,7 @@ import { Karla } from 'next/font/google'
 import { Power, Eye, EyeOff, ArrowUpRight } from 'lucide-react'
 import { useAuthStore } from '@/store/auth'
 import AuthBrand from '@/components/AuthBrand'
+import OtpVerify from '@/components/OtpVerify'
 
 const karla = Karla({ subsets: ['latin'], weight: ['400', '500', '600', '700', '800'] })
 
@@ -16,18 +17,29 @@ export default function LoginPage() {
   const [show, setShow] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login } = useAuthStore()
+  // When the API requires a code, we switch to the OTP step.
+  const [step, setStep] = useState<'creds' | 'otp' | 'verify'>('creds')
+  const [otpMessage, setOtpMessage] = useState('')
+  const { login, finalizeAuth } = useAuthStore()
   const router = useRouter()
+
+  const goToApp = () => {
+    const user = useAuthStore.getState().user
+    router.push(user?.role === 'super_admin' ? '/admin' : '/dashboard')
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
-      const { useAuthStore } = await import('@/store/auth')
-      await login(email, password)
-      const user = useAuthStore.getState().user
-      router.push(user?.role === 'super_admin' ? '/admin' : '/dashboard')
+      const result = await login(email, password)
+      if (result.status === 'ok') {
+        goToApp()
+      } else {
+        setOtpMessage(result.message)
+        setStep(result.status === 'verify' ? 'verify' : 'otp')
+      }
     } catch (err: any) {
       setError(err.response?.data?.message ?? 'Invalid credentials')
     } finally {
@@ -52,6 +64,22 @@ export default function LoginPage() {
             <span className="text-xl font-extrabold tracking-tight">HOTBILL</span>
           </div>
 
+          {step !== 'creds' ? (
+            <OtpVerify
+              email={email}
+              purpose={step === 'verify' ? 'register' : 'login'}
+              message={otpMessage}
+              onVerified={(payload) => {
+                finalizeAuth(payload)
+                goToApp()
+              }}
+              onBack={() => {
+                setStep('creds')
+                setError('')
+              }}
+            />
+          ) : (
+          <>
           <h1 className="text-3xl font-extrabold mb-2">Welcome back</h1>
           <p className="text-[#00012A]/55 mb-8">Sign in to manage your hotspot network.</p>
 
@@ -114,6 +142,8 @@ export default function LoginPage() {
               Create one free
             </Link>
           </p>
+          </>
+          )}
         </div>
       </div>
     </div>

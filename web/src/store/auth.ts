@@ -29,12 +29,30 @@ interface User {
 }
 
 const BUSINESS_KEY = 'hotbill_business'
+const DEVICE_KEY = 'hotbill_device_token'
 
 function persistActiveBusiness(id: number | null) {
   if (typeof window === 'undefined') return
   if (id) localStorage.setItem(BUSINESS_KEY, String(id))
   else localStorage.removeItem(BUSINESS_KEY)
 }
+
+// The full authenticated payload returned once a session is established
+// (direct trusted-device login, or after an email code is verified).
+export interface AuthPayload {
+  user: User
+  tenant: Tenant
+  token: string
+  businesses?: Business[]
+  device_token?: string | null
+}
+
+// login() either establishes a session immediately (trusted device) or asks
+// the caller to collect an emailed code first.
+export type LoginResult =
+  | { status: 'ok' }
+  | { status: 'otp'; email: string; message: string }
+  | { status: 'verify'; email: string; message: string }
 
 interface AuthState {
   user: User | null
@@ -44,7 +62,8 @@ interface AuthState {
   activeBusinessId: number | null
   hasHydrated: boolean
   setHasHydrated: (v: boolean) => void
-  login: (email: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<LoginResult>
+  finalizeAuth: (payload: AuthPayload) => void
   logout: () => void
   setUser: (user: User) => void
   refreshBusinesses: () => Promise<void>
@@ -64,9 +83,28 @@ export const useAuthStore = create<AuthState>()(
       setHasHydrated: (v) => set({ hasHydrated: v }),
 
       login: async (email, password) => {
-        const res = await api.post('/auth/login', { email, password })
-        const { user, tenant, token, businesses = [] } = res.data
+        const device_token =
+          typeof window !== 'undefined' ? localStorage.getItem(DEVICE_KEY) : null
+        const res = await api.post('/auth/login', { email, password, device_token })
+
+        // Trusted device / already-verified session → we get a token straight away.
+        if (res.data.token) {
+          get().finalizeAuth(res.data)
+          return { status: 'ok' }
+        }
+        // Otherwise the API asks us to collect an emailed code first.
+        if (res.data.requires_verification) {
+          return { status: 'verify', email: res.data.email, message: res.data.message }
+        }
+        return { status: 'otp', email: res.data.email, message: res.data.message }
+      },
+
+      // Persist a completed session (used after trusted-device login and after
+      // an email verification / login code is confirmed).
+      finalizeAuth: (payload) => {
+        const { user, tenant, token, businesses = [], device_token } = payload
         localStorage.setItem('hotbill_token', token)
+        if (device_token) localStorage.setItem(DEVICE_KEY, device_token)
         persistActiveBusiness(tenant?.id ?? null)
         set({ user, tenant, token, businesses, activeBusinessId: tenant?.id ?? null })
       },
