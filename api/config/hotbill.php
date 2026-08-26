@@ -55,4 +55,18 @@ return [
         'peers_path' => env('WIREGUARD_PEERS_PATH', '/var/wireguard/peers'),
         'server_pubkey_path' => env('WIREGUARD_SERVER_PUBKEY_PATH', '/var/wireguard/server_public.key'),
     ],
+    // SSTP tunnel — the fallback for RouterOS v6 routers that lack WireGuard.
+    // Disabled by default: only turned on once the accel-ppp SSTP server is
+    // deployed and verified, so existing v6 installs keep skipping VPN cleanly
+    // until then. See Router::getProvisionScriptAttribute + docker-compose sstp.
+    'sstp' => [
+        'enabled' => filter_var(env('SSTP_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'server_endpoint' => env('SSTP_ENDPOINT', '207.180.249.87'),
+        'server_port' => (int) env('SSTP_PORT', 1443),
+        'subnet' => env('SSTP_SUBNET', '10.67.0.0/24'),
+        'server_vpn_ip' => env('SSTP_SERVER_IP', '10.67.0.1'),
+        // Shared volume where Laravel writes the chap-secrets file the accel-ppp
+        // container reads (username * password static-ip). Mounted in both.
+        'secrets_path' => env('SSTP_SECRETS_PATH', '/var/sstp/chap-secrets'),
+    ],
 ];

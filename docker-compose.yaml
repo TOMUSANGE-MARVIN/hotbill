@@ -35,6 +35,27 @@ services:
     volumes:
       - wg_data:/etc/wireguard
 
+  # SSTP VPN terminator — RouterOS-v6 fallback for WireGuard. Off unless
+  # SSTP_ENABLED=true on the api/queue side; the container is harmless idle.
+  sstp:
+    build:
+      context: ./sstp
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - "/dev/ppp:/dev/ppp"
+    sysctls:
+      - net.ipv4.ip_forward=1
+    environment:
+      SSTP_PORT: 1443
+      SSTP_SERVER_IP: 10.67.0.1
+    ports:
+      - "1443:1443/tcp"
+    volumes:
+      - sstp_data:/var/sstp
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
@@ -61,8 +82,12 @@ services:
         condition: service_healthy
       wireguard:
         condition: service_started
+      sstp:
+        condition: service_started
     volumes:
       - wg_data:/var/wireguard
+      # Shared chap-secrets file for the SSTP (v6) tunnel — rendered by Laravel.
+      - sstp_data:/var/sstp
       # Persist uploaded files (blog images) across redeploys.
       - api_storage:/var/www/html/storage/app/public
     environment:
@@ -85,6 +110,7 @@ services:
       QUEUE_CONNECTION: redis
       CACHE_STORE: redis
       RUN_MIGRATIONS: "true"
+      SSTP_ENABLED: ${SSTP_ENABLED:-false}
     ports:
       - "8090:80"
 
@@ -103,8 +129,11 @@ services:
         condition: service_healthy
       wireguard:
         condition: service_started
+      sstp:
+        condition: service_started
     volumes:
       - wg_data:/var/wireguard
+      - sstp_data:/var/sstp
     environment:
       APP_NAME: ${APP_NAME:-HotBill}
       APP_ENV: ${APP_ENV:-production}
@@ -122,6 +151,7 @@ services:
       REDIS_PORT: 6379
       SESSION_DRIVER: redis
       SESSION_SECURE_COOKIE: "true"
+      SSTP_ENABLED: ${SSTP_ENABLED:-false}
       QUEUE_CONNECTION: redis
       CACHE_STORE: redis
 
@@ -140,5 +170,6 @@ services:
 volumes:
   db_data:
   wg_data:
+  sstp_data:
   redis_data:
   api_storage:

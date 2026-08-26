@@ -27,4 +27,16 @@ if [ "${WIREGUARD_ENABLED:-true}" = "true" ]; then
     fi
 fi
 
+# Same for the SSTP (RouterOS v6) tunnel subnet, routed via the sstp container.
+if [ "${SSTP_ENABLED:-false}" = "true" ]; then
+    SSTP_HOST_IP=$(getent hosts sstp | awk '{ print $1 }' | head -n1)
+    if [ -n "$SSTP_HOST_IP" ]; then
+        ip route add 10.67.0.0/24 via "$SSTP_HOST_IP" 2>/dev/null \
+            && echo "Added route: 10.67.0.0/24 via $SSTP_HOST_IP (sstp)" \
+            || echo "Route to 10.67.0.0/24 already present or failed (continuing)"
+    else
+        echo "WARNING: could not resolve 'sstp' container — SSTP route not added"
+    fi
+fi
+
 exec "$@"

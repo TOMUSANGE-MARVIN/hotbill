@@ -1,0 +1,25 @@
+# pppd options for SSTP sessions (used by sstp-server via --pppd-config).
+# Auth comes from /etc/ppp/chap-secrets (symlinked to the shared HotBill file):
+#   <router-token>  *  <secret>  <pinned-ip>
+# The 4th column pins each router's tunnel IP so HotBill can reach it.
+name hotbill-sstp
+require-mschap-v2
+
+# TLS already encrypts the tunnel; MPPE matches RouterOS default-encryption.
+# If the host kernel lacks MPPE, switch RouterOS to profile=default and set
+# `nomppe` here (see the SSTP setup notes).
+mppe required,stateless
+
+# Server tunnel IP. The client (remote) IP is taken from chap-secrets.
+10.67.0.1:
+
+# Keepalives so dead sessions are reaped and routers reconnect.
+lcp-echo-interval 30
+lcp-echo-failure 4
+
+# This is a management tunnel only — never touch the router's default route
+# or proxy-arp on the server.
+nodefaultroute
+noproxyarp
+novj
+noccp
