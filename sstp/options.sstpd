@@ -10,8 +10,8 @@ require-mschap-v2
 # `nomppe` here (see the SSTP setup notes).
 mppe required,stateless
 
-# Server tunnel IP. The client (remote) IP is taken from chap-secrets.
-10.67.0.1:
+# The server (local) IP is supplied by sstpd via --local; the client (remote)
+# IP is taken from the chap-secrets 4th column. Don't pin IPs here too.
 
 # Keepalives so dead sessions are reaped and routers reconnect.
 lcp-echo-interval 30

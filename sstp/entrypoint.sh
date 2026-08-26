@@ -43,9 +43,12 @@ if [ -n "${DOCKER_IFACE:-}" ]; then
 fi
 
 echo "Starting sstp-server on 0.0.0.0:${SSTP_PORT} (server IP ${SERVER_IP})"
+# No --remote: pppd assigns each router its pinned IP from chap-secrets.
+# --local sets the server side of every ppp link to our gateway IP.
 exec sstpd \
     -c "$CERT" \
     -k "$KEY" \
     -l 0.0.0.0 \
     -p "$SSTP_PORT" \
+    --local "$SERVER_IP" \
     --pppd-config /etc/ppp/options.sstpd

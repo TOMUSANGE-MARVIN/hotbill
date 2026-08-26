@@ -8,13 +8,18 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ppp \
         python3 \
-        python3-pip \
         iproute2 \
         iptables \
         openssl \
         ca-certificates \
+    # Build deps for sstp-server's C extension (sstpd/codecmodule.c) — purged
+    # after the wheel is compiled and installed to keep the image small.
+    && apt-get install -y --no-install-recommends \
+        python3-pip \
+        python3-dev \
+        gcc \
     && pip3 install --break-system-packages --no-cache-dir sstp-server \
-    && apt-get purge -y python3-pip \
+    && apt-get purge -y python3-pip python3-dev gcc \
     && apt-get autoremove -y \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

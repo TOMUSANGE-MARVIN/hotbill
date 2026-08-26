@@ -35,8 +35,8 @@ services:
     volumes:
       - wg_data:/etc/wireguard
 
-  # SSTP VPN terminator — RouterOS-v6 fallback for WireGuard. Off unless
-  # SSTP_ENABLED=true on the api/queue side; the container is harmless idle.
+  # SSTP VPN terminator — RouterOS-v6 fallback for WireGuard. On by default;
+  # set SSTP_ENABLED=false to disable the api/queue provisioning + routing.
   sstp:
     build:
       context: ./sstp
@@ -110,7 +110,7 @@ services:
       QUEUE_CONNECTION: redis
       CACHE_STORE: redis
       RUN_MIGRATIONS: "true"
-      SSTP_ENABLED: ${SSTP_ENABLED:-false}
+      SSTP_ENABLED: ${SSTP_ENABLED:-true}
     ports:
       - "8090:80"
 
@@ -151,7 +151,7 @@ services:
       REDIS_PORT: 6379
       SESSION_DRIVER: redis
       SESSION_SECURE_COOKIE: "true"
-      SSTP_ENABLED: ${SSTP_ENABLED:-false}
+      SSTP_ENABLED: ${SSTP_ENABLED:-true}
       QUEUE_CONNECTION: redis
       CACHE_STORE: redis
 

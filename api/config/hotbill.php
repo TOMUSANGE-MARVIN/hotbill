@@ -60,7 +60,7 @@ return [
     // deployed and verified, so existing v6 installs keep skipping VPN cleanly
     // until then. See Router::getProvisionScriptAttribute + docker-compose sstp.
     'sstp' => [
-        'enabled' => filter_var(env('SSTP_ENABLED', false), FILTER_VALIDATE_BOOL),
+        'enabled' => filter_var(env('SSTP_ENABLED', true), FILTER_VALIDATE_BOOL),
         'server_endpoint' => env('SSTP_ENDPOINT', '207.180.249.87'),
         'server_port' => (int) env('SSTP_PORT', 1443),
         'subnet' => env('SSTP_SUBNET', '10.67.0.0/24'),
