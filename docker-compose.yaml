@@ -51,10 +51,18 @@ services:
     environment:
       SSTP_PORT: 1443
       SSTP_SERVER_IP: 10.67.0.1
-    ports:
-      - "1443:1443/tcp"
     volumes:
       - sstp_data:/var/sstp
+    # Exposed on 443 via the Coolify Traefik proxy using SNI passthrough:
+    # routers connect to vpn.hotbill.app:443 (looks like HTTPS, so it traverses
+    # ISP/host firewalls that block odd ports like 1443). Traefik forwards the
+    # raw TLS stream to this container's :1443 without terminating it.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.hotbill-sstp.rule=HostSNI(`vpn.hotbill.app`)"
+      - "traefik.tcp.routers.hotbill-sstp.entrypoints=https"
+      - "traefik.tcp.routers.hotbill-sstp.tls.passthrough=true"
+      - "traefik.tcp.services.hotbill-sstp.loadbalancer.server.port=1443"
 
   redis:
     image: redis:7-alpine

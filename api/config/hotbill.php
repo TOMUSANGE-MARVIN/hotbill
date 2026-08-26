@@ -61,8 +61,11 @@ return [
     // until then. See Router::getProvisionScriptAttribute + docker-compose sstp.
     'sstp' => [
         'enabled' => filter_var(env('SSTP_ENABLED', true), FILTER_VALIDATE_BOOL),
-        'server_endpoint' => env('SSTP_ENDPOINT', '207.180.249.87'),
-        'server_port' => (int) env('SSTP_PORT', 1443),
+        // Routers reach SSTP through Traefik on 443 (SNI passthrough) via this
+        // hostname — NOT the bare IP — so the TLS SNI matches the Traefik route
+        // and the traffic looks like ordinary HTTPS to intermediate firewalls.
+        'server_endpoint' => env('SSTP_ENDPOINT', 'vpn.hotbill.app'),
+        'server_port' => (int) env('SSTP_PORT', 443),
         'subnet' => env('SSTP_SUBNET', '10.67.0.0/24'),
         'server_vpn_ip' => env('SSTP_SERVER_IP', '10.67.0.1'),
         // Shared volume where Laravel writes the chap-secrets file the accel-ppp
