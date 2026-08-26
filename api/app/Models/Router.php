@@ -174,20 +174,22 @@ SCRIPT;
                 $privKey = $this->vpn_private_key;
                 $subnet = config('hotbill.wireguard.subnet');
 
+                // The WireGuard commands are wrapped in [:parse] so RouterOS only
+                // compiles them at runtime. On RouterOS v6 (no WireGuard menu) that
+                // parse fails and is caught by on-error, skipping VPN gracefully —
+                // whereas literal /interface wireguard lines would abort the whole
+                // /import at parse time ("expected end of command"), taking the
+                // identity/RADIUS/hotspot setup down with them.
                 $vpnSection = <<<VPN
 
 :put "Downloading VPN configuration..."
 :do {
-/interface wireguard peers remove [find interface=hotbill-vpn]
-/ip address remove [find interface=hotbill-vpn]
-/interface wireguard remove [find name=hotbill-vpn]
-/interface wireguard add name=hotbill-vpn private-key="{$privKey}" listen-port={$listenPort}
-/interface wireguard peers add interface=hotbill-vpn public-key="{$serverPubKey}" endpoint-address={$endpoint} endpoint-port={$port} allowed-address={$subnet} persistent-keepalive=25s
-/ip address add address={$vpnIp}/24 interface=hotbill-vpn
+:local hbwg [:parse "/interface wireguard peers remove [find interface=hotbill-vpn]; /ip address remove [find interface=hotbill-vpn]; /interface wireguard remove [find name=hotbill-vpn]; /interface wireguard add name=hotbill-vpn private-key=\"{$privKey}\" listen-port={$listenPort}; /interface wireguard peers add interface=hotbill-vpn public-key=\"{$serverPubKey}\" endpoint-address={$endpoint} endpoint-port={$port} allowed-address={$subnet} persistent-keepalive=25s; /ip address add address={$vpnIp}/24 interface=hotbill-vpn"]
+\$hbwg
 :put "VPN configuration applied successfully"
 } on-error={
-:put "VPN setup failed - this router's RouterOS version may not support WireGuard (requires 7.x)"
-:log warning "HotBill: WireGuard setup failed"
+:put "VPN setup skipped - this RouterOS version does not support WireGuard (requires v7)"
+:log warning "HotBill: WireGuard not supported on this router"
 }
 VPN;
             } catch (\Throwable $e) {
