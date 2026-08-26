@@ -17,7 +17,14 @@ class MikrotikService
 
     public function connect(): void
     {
-        $host = $this->router->vpn_ip ?: $this->router->ip_address;
+        // Reach the router over whichever tunnel it actually came up on: SSTP
+        // routers (RouterOS v6) live on sstp_ip, WireGuard routers on vpn_ip.
+        // vpn_type is resolved from the router's reported version on heartbeat;
+        // fall back to the public IP when no tunnel is established.
+        $tunnelIp = $this->router->vpn_type === 'sstp'
+            ? $this->router->sstp_ip
+            : $this->router->vpn_ip;
+        $host = $tunnelIp ?: $this->router->ip_address;
 
         $this->socket = @fsockopen(
             $host,

@@ -148,7 +148,19 @@ class RouterController extends Controller
 
         $data = $request->all();
 
+        // Resolve which tunnel this router reaches us over, from its RouterOS
+        // major version (heartbeat sends `osmajor`): v7 uses WireGuard, v6 uses
+        // SSTP. Set once, when first known.
+        $vpnType = $router->vpn_type;
+        if (!$vpnType) {
+            $major = (int) ($data['osmajor'] ?? $data['version'] ?? $router->ros_version);
+            if ($major > 0) {
+                $vpnType = $major >= 7 ? 'wireguard' : 'sstp';
+            }
+        }
+
         $router->update([
+            'vpn_type' => $vpnType,
             'cpu_load' => $data['cpu'] ?? null,
             'free_memory' => $data['memory'] ?? null,
             'total_memory' => $data['total_memory'] ?? null,

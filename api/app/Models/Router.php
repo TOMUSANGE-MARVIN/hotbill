@@ -16,9 +16,10 @@ class Router extends Model
         'cpu_load', 'free_memory', 'total_memory', 'uptime', 'active_users',
         'data_rx', 'data_tx', 'status', 'last_seen_at', 'is_active',
         'vpn_ip', 'vpn_private_key', 'vpn_public_key', 'vpn_listen_port', 'vpn_configured_at',
+        'vpn_type', 'sstp_ip', 'sstp_secret',
     ];
 
-    protected $hidden = ['api_password', 'token', 'radius_secret', 'vpn_private_key'];
+    protected $hidden = ['api_password', 'token', 'radius_secret', 'vpn_private_key', 'sstp_secret'];
 
     protected $casts = [
         'last_seen_at' => 'datetime',
@@ -130,6 +131,46 @@ class Router extends Model
     }
 
     /**
+     * Idempotently allocate SSTP credentials + a tunnel IP for this router and
+     * (re)write the accel-ppp chap-secrets file. This is the RouterOS-v6 path:
+     * a router is provisioned for BOTH WireGuard and SSTP because the server
+     * doesn't know its OS version yet — the router activates whichever its OS
+     * supports (see getProvisionScriptAttribute). Safe to call repeatedly.
+     */
+    public function provisionSstp(): void
+    {
+        if (!config('hotbill.sstp.enabled')) {
+            return;
+        }
+
+        $sstp = app(\App\Services\SstpService::class);
+
+        if (!$this->sstp_secret || !$this->sstp_ip) {
+            $secret = $this->sstp_secret ?: $sstp->generateSecret();
+
+            $attempt = 0;
+            while (true) {
+                $attempt++;
+
+                $this->sstp_secret = $secret;
+                $this->sstp_ip = $sstp->allocateIp();
+
+                try {
+                    $this->save();
+                    break;
+                } catch (\Illuminate\Database\QueryException $e) {
+                    if ($attempt >= 5 || !$this->isUniqueConstraintViolation($e)) {
+                        throw $e;
+                    }
+                    $this->sstp_ip = null; // collided — retry allocation
+                }
+            }
+        }
+
+        $sstp->syncSecrets();
+    }
+
+    /**
      * The single command the user pastes into the router terminal. It fetches and
      * runs provision_script, which contains the actual setup logic — nothing else
      * needs to be typed in (no IP, no credentials).
@@ -162,8 +203,17 @@ SCRIPT;
         $name = $this->name;
 
         $this->provisionVpn();
+        $this->provisionSstp();
 
-        $vpnSection = '';
+        // The router picks its tunnel at RUNTIME from its own RouterOS version:
+        // v7 → WireGuard, v6 → SSTP (v6 has no WireGuard menu). Both branches are
+        // emitted; the :if runs exactly one. RouterOS parses the whole file up
+        // front, so the WireGuard branch MUST stay behind [:parse] or a v6 box
+        // fails to parse it even though that branch never runs. The SSTP branch
+        // uses /interface sstp-client, which parses on both v6 and v7.
+
+        // --- WireGuard branch (RouterOS v7) ---
+        $wgBranch = ':put "WireGuard VPN is disabled on the server - skipping"';
         if (config('hotbill.wireguard.enabled')) {
             try {
                 $serverPubKey = app(\App\Services\WireguardService::class)->getServerPublicKey();
@@ -174,22 +224,15 @@ SCRIPT;
                 $privKey = $this->vpn_private_key;
                 $subnet = config('hotbill.wireguard.subnet');
 
-                // The WireGuard commands are wrapped in [:parse] so RouterOS only
-                // compiles them at runtime. On RouterOS v6 (no WireGuard menu) that
-                // parse fails and is caught by on-error, skipping VPN gracefully —
-                // whereas literal /interface wireguard lines would abort the whole
-                // /import at parse time ("expected end of command"), taking the
-                // identity/RADIUS/hotspot setup down with them.
-                $vpnSection = <<<VPN
-
-:put "Downloading VPN configuration..."
+                $wgBranch = <<<VPN
+:put "Configuring WireGuard VPN (RouterOS v7)..."
 :do {
-:local hbwg [:parse "/interface wireguard peers remove [find interface=hotbill-vpn]; /ip address remove [find interface=hotbill-vpn]; /interface wireguard remove [find name=hotbill-vpn]; /interface wireguard add name=hotbill-vpn private-key=\"{$privKey}\" listen-port={$listenPort}; /interface wireguard peers add interface=hotbill-vpn public-key=\"{$serverPubKey}\" endpoint-address={$endpoint} endpoint-port={$port} allowed-address={$subnet} persistent-keepalive=25s; /ip address add address={$vpnIp}/24 interface=hotbill-vpn"]
+:local hbwg [:parse "/interface wireguard peers remove [find interface=hotbill-vpn]; /ip address remove [find interface=hotbill-vpn]; /interface wireguard remove [find name=hotbill-vpn]; /interface wireguard add name=hotbill-vpn private-key=\\"{$privKey}\\" listen-port={$listenPort}; /interface wireguard peers add interface=hotbill-vpn public-key=\\"{$serverPubKey}\\" endpoint-address={$endpoint} endpoint-port={$port} allowed-address={$subnet} persistent-keepalive=25s; /ip address add address={$vpnIp}/24 interface=hotbill-vpn"]
 \$hbwg
-:put "VPN configuration applied successfully"
+:put "WireGuard VPN configured successfully"
 } on-error={
-:put "VPN setup skipped - this RouterOS version does not support WireGuard (requires v7)"
-:log warning "HotBill: WireGuard not supported on this router"
+:put "WireGuard setup failed on this router"
+:log warning "HotBill: WireGuard setup failed"
 }
 VPN;
             } catch (\Throwable $e) {
@@ -197,13 +240,42 @@ VPN;
                     'HotBill: skipping WireGuard provisioning block',
                     ['router_id' => $this->id, 'error' => $e->getMessage()]
                 );
-
-                $vpnSection = <<<VPN
-
-:put "VPN configuration not ready yet - skipping (will retry on next run)"
-VPN;
+                $wgBranch = ':put "WireGuard config not ready yet - skipping (will retry on next run)"';
             }
         }
+
+        // --- SSTP branch (RouterOS v6 fallback) ---
+        $sstpBranch = ':put "No v6 VPN configured - remote management will use the public IP when reachable"';
+        if (config('hotbill.sstp.enabled') && $this->sstp_ip && $this->sstp_secret) {
+            $sstpEndpoint = config('hotbill.sstp.server_endpoint');
+            $sstpPort = config('hotbill.sstp.server_port');
+            $sstpSecret = $this->sstp_secret;
+
+            $sstpBranch = <<<SSTP
+:put "Configuring SSTP VPN (RouterOS v6)..."
+:do {
+/interface sstp-client remove [find name=hotbill-vpn]
+/interface sstp-client add name=hotbill-vpn connect-to={$sstpEndpoint}:{$sstpPort} user="{$token}" password="{$sstpSecret}" profile=default-encryption verify-server-certificate=no add-default-route=no keepalive-timeout=30 disabled=no
+:put "SSTP VPN configured successfully"
+} on-error={
+:put "SSTP VPN setup failed on this router"
+:log warning "HotBill: SSTP setup failed"
+}
+SSTP;
+        }
+
+        $vpnSection = <<<VPN
+
+:put "Detecting RouterOS version for VPN setup..."
+:local hbver [/system resource get version]
+:local hbmajor [:tonum [:pick \$hbver 0 [:find \$hbver "."]]]
+:put ("Detected RouterOS major version: " . \$hbmajor)
+:if (\$hbmajor >= 7) do={
+{$wgBranch}
+} else={
+{$sstpBranch}
+}
+VPN;
 
         return <<<SCRIPT
 :put ""
@@ -250,7 +322,7 @@ VPN;
 :put "Scheduling heartbeat..."
 :do {
 /system scheduler remove [find name=hotbill-heartbeat]
-/system scheduler add name=hotbill-heartbeat interval=60s start-time=startup on-event=":local cpu [/system resource get cpu-load]; :local mem [/system resource get free-memory]; :local tmem [/system resource get total-memory]; :local upt [/system resource get uptime]; :local usr [/ip hotspot active print count-only]; :local ip \"\"; :local addrs [/ip address find disabled=no]; :if ([:len \\\$addrs] > 0) do={ :local cidr [/ip address get ([:pick \\\$addrs 0]) address]; :set ip [:pick \\\$cidr 0 [:find \\\$cidr \"/\"]] }; /tool fetch url=\"{$url}/api/v1/routers/heartbeat\" http-method=post http-header-field=\"Authorization: Bearer {$token}\" http-data=(\"cpu=\" . \\\$cpu . \"&memory=\" . \\\$mem . \"&total_memory=\" . \\\$tmem . \"&uptime=\" . \\\$upt . \"&active_users=\" . \\\$usr . \"&ip=\" . \\\$ip) keep-result=no"
+/system scheduler add name=hotbill-heartbeat interval=60s start-time=startup on-event=":local cpu [/system resource get cpu-load]; :local mem [/system resource get free-memory]; :local tmem [/system resource get total-memory]; :local upt [/system resource get uptime]; :local usr [/ip hotspot active print count-only]; :local osmajor [:pick [/system resource get version] 0 1]; :local ip \"\"; :local addrs [/ip address find disabled=no]; :if ([:len \\\$addrs] > 0) do={ :local cidr [/ip address get ([:pick \\\$addrs 0]) address]; :set ip [:pick \\\$cidr 0 [:find \\\$cidr \"/\"]] }; /tool fetch url=\"{$url}/api/v1/routers/heartbeat\" http-method=post http-header-field=\"Authorization: Bearer {$token}\" http-data=(\"cpu=\" . \\\$cpu . \"&memory=\" . \\\$mem . \"&total_memory=\" . \\\$tmem . \"&uptime=\" . \\\$upt . \"&active_users=\" . \\\$usr . \"&osmajor=\" . \\\$osmajor . \"&ip=\" . \\\$ip) keep-result=no"
 :put "Heartbeat scheduled successfully"
 } on-error={
 :put "FAILED: could not schedule heartbeat"
