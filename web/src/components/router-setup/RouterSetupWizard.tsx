@@ -198,6 +198,14 @@ function Step1({ script, copied, onCopy, isOnline, onContinue }: {
           <code className="bg-yellow-100 px-1 rounded">/system/device-mode/update mode=advanced</code>{' '}
           to unlock script execution capabilities, then reboot and try again.
         </div>
+
+        <div className="bg-blue-50 border border-blue-100 text-blue-700 text-xs rounded-lg p-3">
+          <span className="font-semibold">On RouterOS v6:</span> you&apos;ll see{' '}
+          <code className="bg-blue-100 px-1 rounded">VPN setup skipped — this RouterOS version does not support WireGuard</code>.
+          That&apos;s expected, not a failure — the router still runs billing, the captive portal, and RADIUS. Only
+          HotBill-initiated remote actions (reboot, password change, Test Connection) need the VPN, which requires
+          upgrading the router to RouterOS v7.
+        </div>
       </div>
 
       <div className="flex items-center justify-between p-6 border-t border-gray-100">
