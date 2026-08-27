@@ -211,7 +211,7 @@ class RouterSetupController extends Controller
             $lines[] = ":if ([:len [/ip dhcp-server network find address=\"{$networkCidr}\"]] = 0) do={ /ip dhcp-server network add address={$networkCidr} gateway={$gw} dns-server=8.8.8.8,1.1.1.1 }";
             // Hotspot profile (http-pap/chap so the external portal can auto-login;
             // no dns-name so *.local mDNS never breaks the portal).
-            $lines[] = ":if ([:len [/ip hotspot profile find name=\"{$profile}\"]] = 0) do={ /ip hotspot profile add name=\"{$profile}\" hotspot-address={$gw} dns-name=\"\" login-by=http-pap,http-chap } else={ /ip hotspot profile set [find name=\"{$profile}\"] dns-name=\"\" login-by=http-pap,http-chap }";
+            $lines[] = ":if ([:len [/ip hotspot profile find name=\"{$profile}\"]] = 0) do={ /ip hotspot profile add name=\"{$profile}\" hotspot-address={$gw} dns-name=\"\" login-by=mac-cookie,http-pap,http-chap } else={ /ip hotspot profile set [find name=\"{$profile}\"] dns-name=\"\" login-by=mac-cookie,http-pap,http-chap }";
             // Hotspot server.
             $lines[] = ":if ([:len [/ip hotspot find interface=\"{$name}\"]] = 0) do={ /ip hotspot add name=\"{$name}-hotspot\" interface=\"{$name}\" address-pool=\"{$pool}\" profile=\"{$profile}\" disabled=no }";
             // Authentication uses LOCAL hotspot users provisioned via the command

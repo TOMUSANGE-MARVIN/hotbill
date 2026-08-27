@@ -410,8 +410,12 @@ HTML;
             }
         }
 
+        // mac-cookie: after the first login the router remembers this device's
+        // MAC and auto-logs it back in on reconnect (until the package uptime is
+        // used up) — so leaving and rejoining the WiFi doesn't force re-entering
+        // the voucher. use-radius=no because RADIUS is unreachable behind NAT.
         $script = implode("\n", [
-            '/ip hotspot profile set [find] use-radius=no',
+            '/ip hotspot profile set [find] use-radius=no login-by=mac-cookie,http-pap,http-chap',
             "/ip hotspot user remove [find name=\"{$u}\"]",
             $add,
         ]);
@@ -526,10 +530,14 @@ HTML;
      */
     private function fulfill(PortalOrder $order, ?string $paymentMethod = null): void
     {
-        // Atomic claim — the webhook and the status-poll can fire fulfill() at the
-        // same time; only the caller that flips pending→paid proceeds, so the
-        // wallet is credited once and the transaction is inserted once.
-        $claimed = PortalOrder::whereKey($order->id)->where('status', '!=', 'paid')->update(['status' => 'paid']);
+        // Atomic claim — the webhook and the status-poll can both fire fulfill().
+        // Move to an intermediate 'fulfilling' state (NOT 'paid') so only one
+        // caller proceeds AND the status endpoint doesn't report 'paid' with a
+        // null username while we're still provisioning the router (~30s). The
+        // final update below flips it to 'paid' once the credentials exist.
+        $claimed = PortalOrder::whereKey($order->id)
+            ->whereNotIn('status', ['paid', 'fulfilling'])
+            ->update(['status' => 'fulfilling']);
         if ($claimed === 0) return;
 
         $package = $order->package;
