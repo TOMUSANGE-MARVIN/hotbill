@@ -2,6 +2,11 @@
 
 return [
     'radius_api_secret' => env('RADIUS_API_SECRET', ''),
+    // Shared RADIUS secret used by ALL routers. Routers sit behind NAT with
+    // changing public IPs, so FreeRADIUS authorises them via one wildcard client
+    // (0.0.0.0/0) with this secret rather than per-IP NAS entries. The install
+    // script configures the router's /radius with the same value.
+    'radius_shared_secret' => env('RADIUS_SHARED_SECRET', 'hotbill-radius-secret'),
     // Public-facing captive-portal web URL (the Next.js app).
     'portal_url' => rtrim(env('PORTAL_URL', 'https://hotbill.app'), '/'),
     'platform' => [

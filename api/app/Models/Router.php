@@ -202,6 +202,7 @@ SCRIPT;
         $apiPort = $this->api_port;
         $name = $this->name;
         $mode = str_starts_with($url, 'https://') ? 'https' : 'http';
+        $radiusSecret = config('hotbill.radius_shared_secret');
 
         $this->provisionVpn();
         $this->provisionSstp();
@@ -303,7 +304,7 @@ VPN;
 :put "Registering RADIUS server..."
 :do {
 /radius remove [find comment="hotbill"]
-/radius add address={$radiusHost} secret={$this->radius_secret} service=hotspot,ppp authentication-port=1812 accounting-port=1813 comment="hotbill"
+/radius add address={$radiusHost} secret={$radiusSecret} service=hotspot,ppp authentication-port=1812 accounting-port=1813 comment="hotbill"
 /ip hotspot profile set [find] use-radius=yes radius-accounting=yes
 :put "RADIUS server registered successfully"
 } on-error={

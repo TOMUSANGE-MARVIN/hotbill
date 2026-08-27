@@ -69,6 +69,27 @@ services:
       - "traefik.tcp.routers.hotbill-sstp.priority=1"
       - "traefik.tcp.services.hotbill-sstp.loadbalancer.server.port=1443"
 
+  # RADIUS server — authenticates hotspot clients against the radcheck/radreply
+  # tables the app writes. Routers reach it over UDP 1812/1813 (router→server,
+  # so it works behind NAT like the heartbeat).
+  freeradius:
+    build:
+      context: ./freeradius
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      DB_HOST: mariadb
+      DB_USERNAME: ${DB_USERNAME:-hotbill}
+      DB_PASSWORD: ${DB_PASSWORD:-hotbill_secret}
+      DB_DATABASE: ${DB_DATABASE:-hotbill}
+      RADIUS_SHARED_SECRET: ${RADIUS_SHARED_SECRET:-hotbill-radius-secret}
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+
   redis:
     image: redis:7-alpine
     restart: unless-stopped
