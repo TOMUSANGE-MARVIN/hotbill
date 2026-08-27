@@ -192,9 +192,12 @@ class RouterSetupController extends Controller
         $lines = [];
         // Bridge (create if missing).
         $lines[] = ":if ([:len [/interface bridge find name=\"{$name}\"]] = 0) do={ /interface bridge add name=\"{$name}\" }";
-        // Ports (add each if not already a member).
+        // Ports: a port can only belong to ONE bridge, so detach it from any
+        // bridge it's currently on (e.g. the router's default bridge1) before
+        // adding it to ours. remove [find] is a no-op if it's unattached.
         foreach ($bridge->ports as $port) {
-            $lines[] = ":if ([:len [/interface bridge port find bridge=\"{$name}\" interface=\"{$port}\"]] = 0) do={ /interface bridge port add bridge=\"{$name}\" interface=\"{$port}\" }";
+            $lines[] = "/interface bridge port remove [find interface=\"{$port}\"]";
+            $lines[] = "/interface bridge port add bridge=\"{$name}\" interface=\"{$port}\"";
         }
         // Gateway IP (reset any existing address on the bridge, then add).
         $lines[] = "/ip address remove [find interface=\"{$name}\"]";
