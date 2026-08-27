@@ -6,10 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Package;
 use App\Models\PortalOrder;
 use App\Models\Router;
+use App\Models\Subscriber;
 use App\Models\Transaction;
 use App\Models\Voucher;
 use App\Services\MarzPayService;
 use App\Services\MikrotikService;
+use App\Services\RadiusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -286,32 +288,31 @@ HTML;
         $username = 'V' . $voucher->code;
         $password = strtoupper(Str::random(6));
 
-        try {
-            $mikrotik = MikrotikService::connect_to($router);
-            $mikrotik->createHotspotSession(
-                $username,
-                $password,
-                $package->mikrotik_rate_limit,
-                $package->mikrotik_limit_uptime ?: null,
-                $package->data_limit_bytes,
-            );
-            // Log the device in directly so it connects without the browser.
-            if (!empty($data['mac']) && !empty($data['ip'])) {
-                try {
-                    $mikrotik->loginHotspotUser($username, $password, $data['mac'], $data['ip']);
-                } catch (\Throwable $e) {
-                    Log::warning('Voucher server-side login failed (browser fallback applies)', ['error' => $e->getMessage()]);
-                }
-            }
-            $mikrotik->disconnect();
-        } catch (\Throwable $e) {
-            Log::error('Portal voucher provisioning failed', ['voucher' => $voucher->id, 'error' => $e->getMessage()]);
-            return response()->json(['message' => 'Could not activate your voucher. Please try again.'], 502);
-        }
-
         $expiresAt = $package->mikrotik_limit_uptime
             ? now()->addDays($package->duration_days ?? 0)->addHours($package->duration_hours ?? 0)->addMinutes($package->duration_minutes ?? 0)
             : null;
+
+        // RADIUS-based activation — the hotspot authenticates the client against
+        // HotBill's RADIUS, so no live router API access is needed (this works
+        // behind NAT, unlike the old MikrotikService push). The portal then
+        // auto-submits the hotspot login form with these credentials, and the
+        // router validates them via RADIUS.
+        $subscriber = Subscriber::updateOrCreate(
+            ['username' => $username, 'tenant_id' => $router->tenant_id],
+            [
+                'password' => $password,
+                'router_id' => $router->id,
+                'package_id' => $package->id,
+                'type' => $package->type,
+                'status' => 'active',
+                'expires_at' => $expiresAt,
+                'activated_at' => now(),
+                'data_used_mb' => 0,
+                'data_limit_mb' => $package->data_limit_mb,
+            ]
+        );
+
+        app(RadiusService::class)->syncSubscriber($subscriber);
 
         $voucher->update([
             'status' => 'active',
@@ -486,26 +487,29 @@ HTML;
         $username = preg_replace('/\D/', '', $order->phone) ?: ('u' . $order->id);
         $password = strtoupper(Str::random(6));
 
-        $mikrotik = MikrotikService::connect_to($router);
-        $mikrotik->createHotspotSession(
-            $username,
-            $password,
-            $package->mikrotik_rate_limit,
-            $package->mikrotik_limit_uptime ?: null,
-            $package->data_limit_bytes,
+        // RADIUS-based activation — the client's hotspot login is authenticated
+        // against HotBill's RADIUS, so no live router API access is needed (works
+        // behind NAT). The portal auto-submits the login form with these creds.
+        $expiresAt = $package->mikrotik_limit_uptime
+            ? now()->addDays($package->duration_days ?? 0)->addHours($package->duration_hours ?? 0)->addMinutes($package->duration_minutes ?? 0)
+            : null;
+
+        $subscriber = Subscriber::updateOrCreate(
+            ['username' => $username, 'tenant_id' => $router->tenant_id],
+            [
+                'password' => $password,
+                'router_id' => $router->id,
+                'package_id' => $package->id,
+                'type' => $package->type,
+                'status' => 'active',
+                'expires_at' => $expiresAt,
+                'activated_at' => now(),
+                'data_used_mb' => 0,
+                'data_limit_mb' => $package->data_limit_mb,
+            ]
         );
-        // Log the device in directly so it connects without relying on the phone
-        // browser posting to the MikroTik login (mixed-content / DNS can block it).
-        if ($order->client_mac && $order->client_ip) {
-            try {
-                $mikrotik->loginHotspotUser($username, $password, $order->client_mac, $order->client_ip);
-            } catch (\Throwable $e) {
-                Log::warning('Hotspot server-side login failed (browser fallback applies)', [
-                    'order' => $order->id, 'error' => $e->getMessage(),
-                ]);
-            }
-        }
-        $mikrotik->disconnect();
+
+        app(RadiusService::class)->syncSubscriber($subscriber);
 
         // Fee split: payment-gateway fee + HotBill platform commission; operator keeps the rest.
         $gross = (float) $order->amount;
