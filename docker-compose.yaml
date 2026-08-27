@@ -53,15 +53,20 @@ services:
       SSTP_SERVER_IP: 10.67.0.1
     volumes:
       - sstp_data:/var/sstp
-    # Exposed on 443 via the Coolify Traefik proxy using SNI passthrough:
-    # routers connect to vpn.hotbill.app:443 (looks like HTTPS, so it traverses
-    # ISP/host firewalls that block odd ports like 1443). Traefik forwards the
-    # raw TLS stream to this container's :1443 without terminating it.
+    # Exposed on 443 via the Coolify Traefik proxy. RouterOS v6 SSTP clients do
+    # NOT send TLS SNI (SNI support landed only in RouterOS 7.15beta10), so we
+    # can't route them by hostname. Instead this is the SNI *fallback*: browsers
+    # always send SNI (hotbill.app / api.hotbill.app) and keep hitting the
+    # website's HTTP routers, while the SNI-less SSTP client falls through to
+    # HostSNI(`*`) and is passed through (raw TLS) to this container's :1443.
+    # Running on 443 also makes it look like HTTPS, traversing firewalls that
+    # block odd ports like 1443.
     labels:
       - "traefik.enable=true"
-      - "traefik.tcp.routers.hotbill-sstp.rule=HostSNI(`vpn.hotbill.app`)"
+      - "traefik.tcp.routers.hotbill-sstp.rule=HostSNI(`*`)"
       - "traefik.tcp.routers.hotbill-sstp.entrypoints=https"
       - "traefik.tcp.routers.hotbill-sstp.tls.passthrough=true"
+      - "traefik.tcp.routers.hotbill-sstp.priority=1"
       - "traefik.tcp.services.hotbill-sstp.loadbalancer.server.port=1443"
 
   redis:
