@@ -214,9 +214,10 @@ class RouterSetupController extends Controller
             $lines[] = ":if ([:len [/ip hotspot profile find name=\"{$profile}\"]] = 0) do={ /ip hotspot profile add name=\"{$profile}\" hotspot-address={$gw} dns-name=\"\" login-by=http-pap,http-chap } else={ /ip hotspot profile set [find name=\"{$profile}\"] dns-name=\"\" login-by=http-pap,http-chap }";
             // Hotspot server.
             $lines[] = ":if ([:len [/ip hotspot find interface=\"{$name}\"]] = 0) do={ /ip hotspot add name=\"{$name}-hotspot\" interface=\"{$name}\" address-pool=\"{$pool}\" profile=\"{$profile}\" disabled=no }";
-            // RADIUS + captive portal walled garden.
-            $lines[] = "/ip hotspot profile set [find name=\"{$profile}\"] use-radius=yes radius-accounting=yes";
-            $lines[] = "/radius incoming set accept=yes port=3799";
+            // Authentication uses LOCAL hotspot users provisioned via the command
+            // poller (RADIUS is unreachable behind NAT — UDP 1812 is blocked), so
+            // keep the profile off RADIUS to avoid login timeouts.
+            $lines[] = "/ip hotspot profile set [find name=\"{$profile}\"] use-radius=no";
             $lines[] = "/ip hotspot walled-garden remove [find comment=\"hotbill-portal\"]";
             $lines[] = "/ip hotspot walled-garden add dst-host=*hotbill* action=allow comment=\"hotbill-portal\"";
             // Replace MikroTik's default hotspot login page with HotBill's, which

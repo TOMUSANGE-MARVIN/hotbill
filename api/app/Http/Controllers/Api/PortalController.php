@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Package;
 use App\Models\PortalOrder;
 use App\Models\Router;
+use App\Models\RouterCommand;
 use App\Models\Subscriber;
 use App\Models\Transaction;
 use App\Models\Voucher;
@@ -312,7 +313,7 @@ HTML;
             ]
         );
 
-        app(RadiusService::class)->syncSubscriber($subscriber);
+        $this->provisionHotspotSession($router, $username, $password, $package);
 
         $voucher->update([
             'status' => 'active',
@@ -384,6 +385,56 @@ HTML;
             'password' => $password,
             'link_login' => $data['link_login'] ?? null,
         ]);
+    }
+
+    /**
+     * Provision the client's session by queuing a LOCAL hotspot user on the
+     * router (RADIUS is unreachable behind NAT — UDP 1812 is firewall-blocked —
+     * so we can't authenticate via RADIUS). The router's command poller pulls
+     * this over outbound HTTPS and applies it; we wait up to ~35s so the portal's
+     * auto-login finds the user immediately. Also flips the hotspot off RADIUS so
+     * logins resolve against the local user instead of timing out.
+     */
+    private function provisionHotspotSession(Router $router, string $username, string $password, ?Package $package): string
+    {
+        $u = str_replace(['"', '\\'], '', $username);
+        $p = str_replace(['"', '\\'], '', $password);
+
+        $add = "/ip hotspot user add name=\"{$u}\" password=\"{$p}\"";
+        if ($package) {
+            if ($package->mikrotik_limit_uptime) {
+                $add .= ' limit-uptime=' . $package->mikrotik_limit_uptime;
+            }
+            if ($package->data_limit_bytes) {
+                $add .= ' limit-bytes-total=' . $package->data_limit_bytes;
+            }
+        }
+
+        $script = implode("\n", [
+            '/ip hotspot profile set [find] use-radius=no',
+            "/ip hotspot user remove [find name=\"{$u}\"]",
+            $add,
+        ]);
+
+        $command = RouterCommand::create([
+            'router_id' => $router->id,
+            'kind' => 'hotspot-user',
+            'label' => "Activate {$username}",
+            'script' => $script,
+            'status' => 'pending',
+        ]);
+
+        // Wait for the router to apply it (poller runs on its own interval).
+        $deadline = time() + 35;
+        while (time() < $deadline) {
+            usleep(2_000_000);
+            $status = RouterCommand::whereKey($command->id)->value('status');
+            if ($status === 'done' || $status === 'failed') {
+                return $status;
+            }
+        }
+
+        return 'pending';
     }
 
     /**
@@ -509,7 +560,7 @@ HTML;
             ]
         );
 
-        app(RadiusService::class)->syncSubscriber($subscriber);
+        $this->provisionHotspotSession($router, $username, $password, $package);
 
         // Fee split: payment-gateway fee + HotBill platform commission; operator keeps the rest.
         $gross = (float) $order->amount;
