@@ -37,6 +37,10 @@ Route::prefix('v1')->group(function () {
     // Router heartbeat & install script (authenticated by router bearer token, not user token)
     Route::post('routers/heartbeat', [RouterController::class, 'heartbeat']);
     Route::get('routers/scripts/install', [RouterController::class, 'installScript']);
+    // Poll-based remote management (XenFi model): router pulls pending scripts
+    // and reports results, all over outbound HTTPS. Bearer = router token.
+    Route::get('routers/commands', [RouterController::class, 'commands']);
+    Route::post('routers/commands/{command}/result', [RouterController::class, 'commandResult']);
 
     // RADIUS callbacks (secured by X-Radius-Secret header)
     Route::prefix('radius')->group(function () {

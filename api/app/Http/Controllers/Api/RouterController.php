@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Router;
+use App\Models\RouterCommand;
 use App\Models\RouterStat;
 use App\Services\MikrotikService;
 use App\Services\RadiusService;
@@ -189,6 +190,81 @@ class RouterController extends Controller
 
         // Pull real per-customer hotspot usage in the background (queue worker).
         \App\Jobs\CollectHotspotUsageJob::dispatch($router->id);
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * Poll endpoint (the XenFi model): the router's `hotbill-commands` scheduler
+     * calls this over outbound HTTPS every ~30s and runs whatever RouterOS
+     * script we return — so HotBill manages routers behind NAT without ever
+     * reaching into them. Each pending command is wrapped so the router reports
+     * success/failure back to us, then executed via [:parse] on the router.
+     */
+    public function commands(Request $request)
+    {
+        $token = $request->bearerToken();
+        $router = Router::where('token', $token)->first();
+
+        if (!$router) {
+            return response('Unauthorized', 401);
+        }
+
+        $pending = RouterCommand::where('router_id', $router->id)
+            ->where('status', 'pending')
+            ->orderBy('id')
+            ->get();
+
+        if ($pending->isEmpty()) {
+            return response('', 200)->header('Content-Type', 'text/plain');
+        }
+
+        $url = rtrim(config('app.url'), '/');
+        $blocks = [];
+
+        foreach ($pending as $cmd) {
+            $doneUrl = "{$url}/api/v1/routers/commands/{$cmd->id}/result?status=done";
+            $failUrl = "{$url}/api/v1/routers/commands/{$cmd->id}/result?status=failed";
+
+            // Run the command body; on success or failure the router phones the
+            // matching result URL so the dashboard reflects what actually happened.
+            $blocks[] = <<<CMD
+:do {
+{$cmd->script}
+/tool fetch url="{$doneUrl}" http-method=post http-header-field="Authorization: Bearer {$token}" keep-result=no
+} on-error={
+/tool fetch url="{$failUrl}" http-method=post http-header-field="Authorization: Bearer {$token}" keep-result=no
+}
+CMD;
+        }
+
+        // Mark delivered so we don't hand the same command out on the next poll.
+        RouterCommand::whereIn('id', $pending->pluck('id'))
+            ->update(['status' => 'sent', 'sent_at' => now()]);
+
+        return response(implode("\n", $blocks) . "\n", 200)
+            ->header('Content-Type', 'text/plain');
+    }
+
+    /**
+     * The router reports the outcome of a command it pulled (done|failed).
+     */
+    public function commandResult(Request $request, RouterCommand $command)
+    {
+        $token = $request->bearerToken();
+        $router = Router::where('token', $token)->first();
+
+        if (!$router || $command->router_id !== $router->id) {
+            return response('Unauthorized', 401);
+        }
+
+        $status = $request->query('status') === 'failed' ? 'failed' : 'done';
+
+        $command->update([
+            'status' => $status,
+            'completed_at' => now(),
+            'result' => $request->input('result'),
+        ]);
 
         return response()->json(['status' => 'ok']);
     }

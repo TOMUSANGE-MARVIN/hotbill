@@ -663,10 +663,11 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
 
       {/* Bootstrap script modal */}
       {scriptModal && (
-        <Modal title="Service Installation Required" onClose={() => setScriptModal(null)}>
+        <Modal title="Bridge queued — applying automatically" onClose={() => setScriptModal(null)}>
           <p className="text-sm text-gray-600 mb-4">
-            The <span className="font-mono">{scriptModal.bridgeName}</span> bridge has been deployed. Now copy and
-            run this command in your MikroTik terminal to finish wiring up RADIUS and the captive portal.
+            The <span className="font-mono">{scriptModal.bridgeName}</span> bridge configuration has been queued.
+            Your router pulls and applies it automatically within ~30 seconds — no VPN or manual step needed.
+            If you&apos;d rather apply it right now, you can paste this into your MikroTik terminal instead.
           </p>
           <div className="relative mb-3">
             <pre className="bg-gray-900 text-brand-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap font-mono max-h-64 overflow-y-auto">
@@ -684,14 +685,14 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
             </button>
           </div>
           <div className="bg-blue-50 border border-blue-100 text-blue-700 text-xs rounded-lg p-3 mb-4">
-            This script enables NAT for your hotspot subnet, wires the RADIUS-based captive portal, and
-            configures the walled garden.
+            This creates the bridge and its ports, assigns the gateway IP, and (for a hotspot) stands up DHCP,
+            the RADIUS-based captive portal, the walled garden, and NAT. It runs on your router automatically.
           </div>
           <button
             onClick={() => setScriptModal(null)}
             className="w-full bg-gray-900 text-white rounded-lg py-2.5 text-sm font-semibold"
           >
-            I&apos;ve run the command
+            Done
           </button>
         </Modal>
       )}

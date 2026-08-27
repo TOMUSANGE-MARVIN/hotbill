@@ -201,6 +201,7 @@ SCRIPT;
         $apiPass = $this->api_password;
         $apiPort = $this->api_port;
         $name = $this->name;
+        $mode = str_starts_with($url, 'https://') ? 'https' : 'http';
 
         $this->provisionVpn();
         $this->provisionSstp();
@@ -326,6 +327,15 @@ VPN;
 :put "Heartbeat scheduled successfully"
 } on-error={
 :put "FAILED: could not schedule heartbeat"
+}
+
+:put "Scheduling command poller..."
+:do {
+/system scheduler remove [find name=hotbill-commands]
+/system scheduler add name=hotbill-commands interval=30s start-time=startup on-event="/tool fetch url=\"{$url}/api/v1/routers/commands\" http-header-field=\"Authorization: Bearer {$token}\" mode={$mode} dst-path=\"hotbill-cmd.rsc\" keep-result=yes; :delay 1s; :if ([:len [/file find name=\"hotbill-cmd.rsc\"]] > 0) do={ :if ([/file get hotbill-cmd.rsc size] > 2) do={ /import file-name=\"hotbill-cmd.rsc\" }; /file remove \"hotbill-cmd.rsc\" }"
+:put "Command poller scheduled successfully"
+} on-error={
+:put "FAILED: could not schedule command poller"
 }
 
 :put "=== HotBill: provisioning complete ==="

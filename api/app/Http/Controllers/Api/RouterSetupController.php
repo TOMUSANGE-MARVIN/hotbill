@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Router;
 use App\Models\RouterBridge;
+use App\Models\RouterCommand;
 use App\Services\MikrotikService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -145,75 +146,95 @@ class RouterSetupController extends Controller
             ]
         );
 
-        try {
-            $mikrotik = MikrotikService::connect_to($router);
+        $networkCidr = $this->networkAddress($data['gateway_ip'], $data['subnet_prefix']) . '/' . $data['subnet_prefix'];
 
-            // Safety: never bridge the WAN/uplink port — it would drop the
-            // router's internet and the management tunnel. Reject up-front,
-            // before changing anything on the device.
-            $wan = $mikrotik->getWanInterfaces();
-            $badPorts = array_intersect($data['ports'], $wan);
-            if (!empty($badPorts)) {
-                $mikrotik->disconnect();
-                $names = implode(', ', $badPorts);
-                $bridge->update(['status' => 'failed', 'deploy_error' => "WAN port(s) cannot be bridged: {$names}"]);
-                return response()->json([
-                    'message' => "Cannot add the WAN/uplink port ({$names}) to a hotspot bridge — that would cut the router's internet. Remove it from the selected ports.",
-                ], 422);
-            }
+        // Poll model (XenFi-style): rather than reach into the router over a VPN
+        // (which fails behind NAT), we queue the full bridge script. The router's
+        // hotbill-commands poller pulls it over outbound HTTPS and applies it,
+        // then reports back — so this works on any RouterOS behind any firewall.
+        $script = $this->bridgeScript($bridge, $networkCidr);
 
-            $mikrotik->addBridge($data['name']);
+        $command = RouterCommand::create([
+            'router_id' => $router->id,
+            'kind' => 'bridge',
+            'label' => "Deploy bridge {$bridge->name}",
+            'script' => $script,
+            'status' => 'pending',
+        ]);
 
-            foreach ($data['ports'] as $port) {
-                $mikrotik->addBridgePort($data['name'], $port);
-            }
+        return response()->json([
+            'bridge' => $bridge,
+            'queued' => true,
+            'command_id' => $command->id,
+            'message' => 'Bridge configuration queued — the router will apply it within ~30 seconds.',
+            // Kept so operators who prefer manual application can still paste it.
+            'bootstrap_script' => $script,
+        ]);
+    }
 
-            $cidr = $data['gateway_ip'] . '/' . $data['subnet_prefix'];
-            $mikrotik->addIpAddress($cidr, $data['name']);
+    /**
+     * Full, idempotent RouterOS script that creates the bridge, adds its ports,
+     * assigns the gateway IP, and (optionally) stands up the DHCP + hotspot +
+     * RADIUS + captive-portal walled garden — the script equivalent of what
+     * MikrotikService used to do over the live API. Runs on RouterOS v6 and v7.
+     */
+    private function bridgeScript(RouterBridge $bridge, string $networkCidr): string
+    {
+        $name = $bridge->name;
+        $gw = $bridge->gateway_ip;
+        $cidr = $gw . '/' . $bridge->subnet_prefix;
+        [$network, $prefix] = explode('/', $networkCidr);
+        $rangeStart = $this->offsetIp($network, 2);
+        $rangeEnd = $this->broadcastMinusOne($network, (int) $prefix);
+        $pool = $name . '-pool';
+        $profile = $name . '-profile';
 
-            $networkCidr = $this->networkAddress($data['gateway_ip'], $data['subnet_prefix']) . '/' . $data['subnet_prefix'];
-
-            if ($data['hotspot_enabled'] ?? false) {
-                $mikrotik->setupHotspot($data['name'], $networkCidr, $data['gateway_ip']);
-
-                // Wire the HotBill captive portal (walled garden + login redirect).
-                // Non-fatal: a failure here shouldn't fail the whole bridge deploy.
-                try {
-                    $portalHost = parse_url(config('hotbill.portal_url'), PHP_URL_HOST);
-                    $apiHost = parse_url(config('app.url'), PHP_URL_HOST);
-                    $loginUrl = rtrim(config('app.url'), '/') . '/api/v1/portal/routers/' . $router->id . '/login.html';
-                    $mikrotik->configureCaptivePortal($loginUrl, array_filter([
-                        $portalHost,
-                        $apiHost,
-                    ]));
-                } catch (\Throwable $e) {
-                    Log::warning('HotBill: captive portal config failed (bridge still deployed)', [
-                        'router_id' => $router->id,
-                        'error' => $e->getMessage(),
-                    ]);
-                }
-            }
-
-            $mikrotik->disconnect();
-
-            $bridge->update(['status' => 'deployed', 'deployed_at' => now()]);
-
-            return response()->json([
-                'bridge' => $bridge,
-                'bootstrap_script' => $this->bootstrapScript($bridge, $networkCidr),
-            ]);
-        } catch (\Exception $e) {
-            Log::error('HotBill: bridge deployment failed', [
-                'router_id' => $router->id,
-                'bridge' => $data['name'],
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            $bridge->update(['status' => 'failed', 'deploy_error' => $e->getMessage()]);
-
-            return response()->json(['message' => $e->getMessage()], 422);
+        $lines = [];
+        // Bridge (create if missing).
+        $lines[] = ":if ([:len [/interface bridge find name=\"{$name}\"]] = 0) do={ /interface bridge add name=\"{$name}\" }";
+        // Ports (add each if not already a member).
+        foreach ($bridge->ports as $port) {
+            $lines[] = ":if ([:len [/interface bridge port find bridge=\"{$name}\" interface=\"{$port}\"]] = 0) do={ /interface bridge port add bridge=\"{$name}\" interface=\"{$port}\" }";
         }
+        // Gateway IP (reset any existing address on the bridge, then add).
+        $lines[] = "/ip address remove [find interface=\"{$name}\"]";
+        $lines[] = "/ip address add address={$cidr} interface=\"{$name}\"";
+
+        if ($bridge->hotspot_enabled) {
+            // IP pool.
+            $lines[] = ":if ([:len [/ip pool find name=\"{$pool}\"]] = 0) do={ /ip pool add name=\"{$pool}\" ranges={$rangeStart}-{$rangeEnd} }";
+            // DHCP server + network.
+            $lines[] = ":if ([:len [/ip dhcp-server find interface=\"{$name}\"]] = 0) do={ /ip dhcp-server add name=\"{$name}-dhcp\" interface=\"{$name}\" address-pool=\"{$pool}\" lease-time=1h disabled=no }";
+            $lines[] = ":if ([:len [/ip dhcp-server network find address=\"{$networkCidr}\"]] = 0) do={ /ip dhcp-server network add address={$networkCidr} gateway={$gw} dns-server=8.8.8.8,1.1.1.1 }";
+            // Hotspot profile (http-pap/chap so the external portal can auto-login;
+            // no dns-name so *.local mDNS never breaks the portal).
+            $lines[] = ":if ([:len [/ip hotspot profile find name=\"{$profile}\"]] = 0) do={ /ip hotspot profile add name=\"{$profile}\" hotspot-address={$gw} dns-name=\"\" login-by=http-pap,http-chap } else={ /ip hotspot profile set [find name=\"{$profile}\"] dns-name=\"\" login-by=http-pap,http-chap }";
+            // Hotspot server.
+            $lines[] = ":if ([:len [/ip hotspot find interface=\"{$name}\"]] = 0) do={ /ip hotspot add name=\"{$name}-hotspot\" interface=\"{$name}\" address-pool=\"{$pool}\" profile=\"{$profile}\" disabled=no }";
+            // RADIUS + captive portal walled garden.
+            $lines[] = "/ip hotspot profile set [find name=\"{$profile}\"] use-radius=yes radius-accounting=yes";
+            $lines[] = "/radius incoming set accept=yes port=3799";
+            $lines[] = "/ip hotspot walled-garden remove [find comment=\"hotbill-portal\"]";
+            $lines[] = "/ip hotspot walled-garden add dst-host=*hotbill* action=allow comment=\"hotbill-portal\"";
+        }
+
+        // NAT so the hotspot subnet reaches the internet.
+        $lines[] = "/ip firewall nat remove [find comment=\"hotbill-masquerade-{$name}\"]";
+        $lines[] = "/ip firewall nat add chain=srcnat src-address={$networkCidr} action=masquerade comment=\"hotbill-masquerade-{$name}\"";
+
+        return implode("\n", $lines);
+    }
+
+    private function offsetIp(string $networkAddress, int $offset): string
+    {
+        return long2ip(ip2long($networkAddress) + $offset);
+    }
+
+    private function broadcastMinusOne(string $networkAddress, int $prefix): string
+    {
+        $long = ip2long($networkAddress);
+        $broadcast = $long | ((1 << (32 - $prefix)) - 1);
+        return long2ip($broadcast - 1);
     }
 
     /**
