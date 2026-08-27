@@ -212,6 +212,9 @@ class RouterSetupController extends Controller
             // Hotspot profile (http-pap/chap so the external portal can auto-login;
             // no dns-name so *.local mDNS never breaks the portal).
             $lines[] = ":if ([:len [/ip hotspot profile find name=\"{$profile}\"]] = 0) do={ /ip hotspot profile add name=\"{$profile}\" hotspot-address={$gw} dns-name=\"\" login-by=mac-cookie,http-pap,http-chap } else={ /ip hotspot profile set [find name=\"{$profile}\"] dns-name=\"\" login-by=mac-cookie,http-pap,http-chap }";
+            // mac-cookie needs to be enabled on the USER profile too (add-mac-cookie),
+            // or reconnects always fall back to a fresh login — see PortalController.
+            $lines[] = "/ip hotspot user profile set [find name=default] add-mac-cookie=yes mac-cookie-timeout=30d";
             // Hotspot server.
             $lines[] = ":if ([:len [/ip hotspot find interface=\"{$name}\"]] = 0) do={ /ip hotspot add name=\"{$name}-hotspot\" interface=\"{$name}\" address-pool=\"{$pool}\" profile=\"{$profile}\" disabled=no }";
             // Authentication uses LOCAL hotspot users provisioned via the command

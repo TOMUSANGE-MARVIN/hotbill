@@ -414,8 +414,15 @@ HTML;
         // MAC and auto-logs it back in on reconnect (until the package uptime is
         // used up) — so leaving and rejoining the WiFi doesn't force re-entering
         // the voucher. use-radius=no because RADIUS is unreachable behind NAT.
+        //
+        // IMPORTANT: MikroTik requires mac-cookie to be enabled on BOTH the
+        // hotspot SERVER profile (login-by=...,mac-cookie) AND the hotspot USER
+        // profile (add-mac-cookie=yes, mac-cookie-timeout=...) — missing either
+        // one makes it silently do nothing (this was the bug: only the server
+        // profile was set, so reconnects always fell back to "sign in").
         $script = implode("\n", [
             '/ip hotspot profile set [find] use-radius=no login-by=mac-cookie,http-pap,http-chap',
+            '/ip hotspot user profile set [find name=default] add-mac-cookie=yes mac-cookie-timeout=30d',
             "/ip hotspot user remove [find name=\"{$u}\"]",
             $add,
         ]);
