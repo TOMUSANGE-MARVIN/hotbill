@@ -219,6 +219,11 @@ class RouterSetupController extends Controller
             $lines[] = "/radius incoming set accept=yes port=3799";
             $lines[] = "/ip hotspot walled-garden remove [find comment=\"hotbill-portal\"]";
             $lines[] = "/ip hotspot walled-garden add dst-host=*hotbill* action=allow comment=\"hotbill-portal\"";
+            // Replace MikroTik's default hotspot login page with HotBill's, which
+            // redirects clients to the branded portal (packages / vouchers /
+            // payment). Without this the router shows its stock login screen.
+            $loginUrl = rtrim(config('app.url'), '/') . '/api/v1/portal/routers/' . $bridge->router_id . '/login.html';
+            $lines[] = "/tool fetch url=\"{$loginUrl}\" dst-path=hotspot/login.html mode=https";
         }
 
         // NAT so the hotspot subnet reaches the internet.
