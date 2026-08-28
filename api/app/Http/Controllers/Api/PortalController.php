@@ -164,15 +164,16 @@ function redeem(){
 }
 function wait(ref){
   app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Check your phone</h3><p class="muted">Enter your Mobile Money PIN on the prompt.<br>This page updates automatically.</p></div>';
-  var n=0;var t=setInterval(function(){
+  var n=0,shownConnecting=false;var t=setInterval(function(){
     n++;
     fetch(API+"/portal/orders/"+ref+"/status",{headers:{Accept:"application/json"}})
     .then(function(r){return r.json();})
     .then(function(d){
       if(d.status==="paid"){clearInterval(t);done(d);}
       else if(d.status==="failed"||d.status==="expired"){clearInterval(t);app.innerHTML=head()+'<div class="center"><h3>Payment not completed</h3><p class="muted">Please try again.</p><button class="btn" onclick="location.reload()" style="margin-top:8px">Try again</button></div>';}
+      else if(d.status==="provisioning_failed"&&!shownConnecting){shownConnecting=true;app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Payment received</h3><p class="muted">Connecting you now, this can take a minute.<br>Please keep this page open.</p></div>';}
     }).catch(function(){});
-    if(n>75){clearInterval(t);}
+    if(n>90){clearInterval(t);app.innerHTML=head()+'<div class="center"><h3>Still connecting</h3><p class="muted">Your payment was received but this is taking longer than expected.<br>Please contact support and mention reference:<br><b>'+esc(ref)+'</b></p></div>';}
   },4000);
 }
 function done(d){
@@ -313,7 +314,21 @@ HTML;
             ]
         );
 
-        $this->provisionHotspotSession($router, $username, $password, $package);
+        $result = $this->provisionHotspotSession($router, $username, $password, $package);
+
+        if ($result !== 'done') {
+            // The router never confirmed the hotspot user was created — do NOT
+            // burn the voucher or charge the commission. The code stays 'unused'
+            // so the same customer can retry with the same voucher; nothing was
+            // taken from them (vouchers are pre-paid in cash, not charged here).
+            Log::error('Voucher redeem: hotspot provisioning did not complete', [
+                'voucher_id' => $voucher->id, 'router_id' => $router->id, 'result' => $result,
+            ]);
+
+            return response()->json([
+                'message' => 'Could not connect you right now. Please try again in a moment — your voucher has not been used.',
+            ], 502);
+        }
 
         $voucher->update([
             'status' => 'active',
@@ -395,7 +410,7 @@ HTML;
      * auto-login finds the user immediately. Also flips the hotspot off RADIUS so
      * logins resolve against the local user instead of timing out.
      */
-    private function provisionHotspotSession(Router $router, string $username, string $password, ?Package $package): string
+    public function provisionHotspotSession(Router $router, string $username, string $password, ?Package $package, int $attempts = 2): string
     {
         $u = str_replace(['"', '\\'], '', $username);
         $p = str_replace(['"', '\\'], '', $password);
@@ -427,25 +442,37 @@ HTML;
             $add,
         ]);
 
-        $command = RouterCommand::create([
-            'router_id' => $router->id,
-            'kind' => 'hotspot-user',
-            'label' => "Activate {$username}",
-            'script' => $script,
-            'status' => 'pending',
-        ]);
+        $status = 'pending';
+        for ($i = 0; $i < max(1, $attempts); $i++) {
+            $command = RouterCommand::create([
+                'router_id' => $router->id,
+                'kind' => 'hotspot-user',
+                'label' => "Activate {$username}",
+                'script' => $script,
+                'status' => 'pending',
+            ]);
 
-        // Wait for the router to apply it (poller runs on its own interval).
-        $deadline = time() + 35;
-        while (time() < $deadline) {
-            usleep(2_000_000);
-            $status = RouterCommand::whereKey($command->id)->value('status');
-            if ($status === 'done' || $status === 'failed') {
-                return $status;
+            // Wait for the router to apply it (poller runs on its own interval).
+            $deadline = time() + 35;
+            $status = 'pending';
+            while (time() < $deadline) {
+                usleep(2_000_000);
+                $status = RouterCommand::whereKey($command->id)->value('status');
+                if ($status === 'done' || $status === 'failed') {
+                    break;
+                }
             }
+
+            if ($status === 'done') {
+                return 'done';
+            }
+
+            Log::warning('Hotspot provisioning attempt failed', [
+                'router_id' => $router->id, 'username' => $username, 'attempt' => $i + 1, 'status' => $status,
+            ]);
         }
 
-        return 'pending';
+        return $status;
     }
 
     /**
@@ -543,7 +570,7 @@ HTML;
         // null username while we're still provisioning the router (~30s). The
         // final update below flips it to 'paid' once the credentials exist.
         $claimed = PortalOrder::whereKey($order->id)
-            ->whereNotIn('status', ['paid', 'fulfilling'])
+            ->whereNotIn('status', ['paid', 'fulfilling', 'provisioning_failed'])
             ->update(['status' => 'fulfilling']);
         if ($claimed === 0) return;
 
@@ -575,7 +602,13 @@ HTML;
             ]
         );
 
-        $this->provisionHotspotSession($router, $username, $password, $package);
+        $result = $this->provisionHotspotSession($router, $username, $password, $package);
+
+        if ($result !== 'done') {
+            Log::error('Paid order: hotspot provisioning did not complete', [
+                'order' => $order->id, 'router_id' => $router->id, 'result' => $result,
+            ]);
+        }
 
         // Fee split: payment-gateway fee + HotBill platform commission; operator keeps the rest.
         $gross = (float) $order->amount;
@@ -583,8 +616,15 @@ HTML;
         $platformFee = round($gross * (float) config('hotbill.platform.commission_percent') / 100, 2);
         $operatorNet = round($gross - $gatewayFee - $platformFee, 2);
 
+        // The money has genuinely been collected either way, so the payment
+        // bookkeeping (credentials generated, fees, wallet credit, transaction)
+        // always happens here. But the order is only marked 'paid' — which is
+        // what unlocks the credentials on the /status endpoint — once the
+        // router actually confirms the hotspot user exists. Otherwise it goes
+        // to 'provisioning_failed' and a scheduled retry (RetryOrderProvisioning)
+        // keeps trying with these same stored credentials until it succeeds.
         $order->update([
-            'status' => 'paid',
+            'status' => $result === 'done' ? 'paid' : 'provisioning_failed',
             'paid_at' => now(),
             'payment_method' => $paymentMethod,
             'hotspot_username' => $username,

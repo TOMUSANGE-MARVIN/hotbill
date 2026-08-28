@@ -16,3 +16,8 @@ Schedule::command('vouchers:expire')->everyFiveMinutes()->onOneServer()->without
 // its MarzPay disbursement webhook was missed. Re-verifies against MarzPay so it
 // never marks money paid without confirmation.
 Schedule::command('payouts:reconcile')->everyFiveMinutes()->onOneServer()->withoutOverlapping();
+
+// Safety net for paid orders whose hotspot user creation never got confirmed by
+// the router (customer was charged but never connected) — retries the same
+// stored credentials until the router confirms, then flips the order to 'paid'.
+Schedule::command('orders:retry-provisioning')->everyMinute()->onOneServer()->withoutOverlapping();
