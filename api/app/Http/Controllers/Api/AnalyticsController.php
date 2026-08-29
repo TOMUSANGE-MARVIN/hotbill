@@ -8,6 +8,7 @@ use App\Models\HotspotUsageDaily;
 use App\Models\Package;
 use App\Models\Router;
 use App\Models\Subscriber;
+use App\Models\Tenant;
 use App\Models\Transaction;
 use App\Models\SubscriberSession;
 use Carbon\Carbon;
@@ -55,12 +56,19 @@ class AnalyticsController extends Controller
         $mmSales = (clone $salesBase)->whereIn('method', ['mtn_momo', 'airtel_money'])->sum('amount');
         $agentCommission = (clone $salesBase)->whereNotNull('agent_id')->sum('commission');
         $mmCommission = (clone $salesBase)->whereIn('method', ['mtn_momo', 'airtel_money'])->sum('commission');
+        $voucherSales = (clone $salesBase)->where('type', 'voucher')->sum('amount');
+        $salesToday = Transaction::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->whereDate('paid_at', today())
+            ->count();
 
         // System insights — "live" figures only count routers reporting right now.
         $routers = Router::where('tenant_id', $tenantId)->get();
         $onlineRouters = $routers->filter(fn (Router $r) => $r->isOnline());
         $activeUsers = $onlineRouters->sum('active_users');
         $avgCpu = $onlineRouters->avg('cpu_load');
+        $systemOnline = $onlineRouters->isNotEmpty();
+        $balance = (float) (Tenant::find($tenantId)?->wallet_balance ?? 0);
         // Real, measured hotspot data for the period (populated by
         // CollectHotspotUsageJob). The per-router data_rx counter isn't
         // reported by the heartbeat, so it can't be the source here.
@@ -77,10 +85,27 @@ class AnalyticsController extends Controller
         // Recent sales
         $recentSales = Transaction::where('tenant_id', $tenantId)
             ->where('status', 'completed')
-            ->with('subscriber:id,full_name,username')
+            ->with(['subscriber:id,full_name,username', 'voucher:id,code'])
             ->latest('paid_at')
-            ->limit(10)
-            ->get(['id', 'subscriber_id', 'amount', 'method', 'paid_at']);
+            ->limit(20)
+            ->get(['id', 'subscriber_id', 'voucher_id', 'type', 'amount', 'method', 'paid_at']);
+
+        // Filter options for the Overview chart dropdown — distinct subscribers
+        // who bought something in range, so the dropdown mirrors real activity.
+        $subscriberFilters = Transaction::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->whereBetween('paid_at', $range)
+            ->whereNotNull('subscriber_id')
+            ->with('subscriber:id,full_name,username,email')
+            ->get(['subscriber_id'])
+            ->pluck('subscriber')
+            ->filter()
+            ->unique('id')
+            ->map(fn ($s) => [
+                'id' => $s->id,
+                'label' => $s->email ?: ($s->full_name ?: $s->username),
+            ])
+            ->values();
 
         // Daily chart
         $daily = Transaction::where('tenant_id', $tenantId)
@@ -97,6 +122,7 @@ class AnalyticsController extends Controller
             'commission' => $commission,
             'agent_sales' => $agentSales,
             'mm_sales' => $mmSales,
+            'voucher_sales' => $voucherSales,
             'agent_commission' => $agentCommission,
             'mm_commission' => $mmCommission,
             'active_users' => $activeUsers,
@@ -105,9 +131,49 @@ class AnalyticsController extends Controller
             'active_subscribers' => $activeSubscribers,
             'expired_today' => $expiredToday,
             'account_credit' => 0, // prepaid balance — extend later
+            'balance' => $balance,
+            'system_online' => $systemOnline,
+            'sales_today' => $salesToday,
             'recent_sales' => $recentSales,
+            'subscriber_filters' => $subscriberFilters,
             'daily' => $daily,
         ];
+    }
+
+    /**
+     * Per-day breakdown for the Overview chart, filterable by channel or a
+     * single subscriber — kept separate from dashboard() so switching the
+     * filter never invalidates the (cached) KPI cards / recent sales above it.
+     */
+    public function series(Request $request): JsonResponse
+    {
+        $tenantId = $request->user()->tenant_id;
+        $start = $request->input('start', $request->input('start_date')) ?? now()->startOfMonth()->toDateString();
+        $end = $request->input('end', $request->input('end_date')) ?? now()->toDateString();
+        $channel = $request->input('channel', 'all'); // all | mobile_money | vouchers
+        $subscriberId = $request->input('subscriber_id');
+
+        $range = [$start . ' 00:00:00', $end . ' 23:59:59'];
+
+        $query = Transaction::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->whereBetween('paid_at', $range);
+
+        if ($subscriberId) {
+            $query->where('subscriber_id', $subscriberId);
+        } elseif ($channel === 'mobile_money') {
+            $query->whereIn('method', ['mtn_momo', 'airtel_money']);
+        } elseif ($channel === 'vouchers') {
+            $query->where('type', 'voucher');
+        }
+
+        $daily = $query
+            ->selectRaw('DATE(paid_at) as date, SUM(net_amount) as net_revenue, SUM(commission) as commission, SUM(amount) as gross_revenue')
+            ->groupBy('date')
+            ->orderBy('date')
+            ->get();
+
+        return response()->json(['daily' => $daily]);
     }
 
     /**

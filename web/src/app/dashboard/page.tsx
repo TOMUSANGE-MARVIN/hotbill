@@ -5,12 +5,13 @@ import api from '@/lib/api'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
   RadialBarChart, RadialBar,
 } from 'recharts'
 import {
   TrendingUp, DollarSign, Users, Cpu, Wifi, HardDrive, ArrowUpRight,
+  Ticket, UserCircle2, Wallet, ChevronDown, Sigma,
 } from 'lucide-react'
 import { useState } from 'react'
 import { format, subDays } from 'date-fns'
@@ -31,9 +32,28 @@ export default function DashboardPage() {
     end: format(new Date(), 'yyyy-MM-dd'),
   })
 
+  const [overviewFilter, setOverviewFilter] = useState<{
+    type: 'all' | 'mobile_money' | 'vouchers' | 'subscriber'
+    subscriberId?: number
+    label: string
+  }>({ type: 'all', label: 'All' })
+  const [filterOpen, setFilterOpen] = useState(false)
+  const [showTotals, setShowTotals] = useState(false)
+
   const { data, isLoading } = useQuery({
     queryKey: ['dashboard', range],
     queryFn: () => api.get('/analytics/dashboard', { params: range }).then((r) => r.data),
+  })
+
+  const { data: seriesData } = useQuery({
+    queryKey: ['dashboard-series', range, overviewFilter.type, overviewFilter.subscriberId],
+    queryFn: () => api.get('/analytics/dashboard/series', {
+      params: {
+        ...range,
+        channel: overviewFilter.type === 'subscriber' ? undefined : overviewFilter.type,
+        subscriber_id: overviewFilter.type === 'subscriber' ? overviewFilter.subscriberId : undefined,
+      },
+    }).then((r) => r.data),
   })
 
   if (isLoading) {
@@ -62,6 +82,21 @@ export default function DashboardPage() {
 
   const cpu = Number(d.avg_cpu ?? 0)
 
+  const overviewRaw = (seriesData?.daily ?? []).map((r: any) => ({
+    ...r,
+    net_revenue: Number(r.net_revenue),
+    gross_revenue: Number(r.gross_revenue),
+    commission: Number(r.commission),
+  }))
+  const overviewChart = showTotals ? toCumulative(overviewRaw) : overviewRaw
+
+  const filterOptions: { type: 'all' | 'mobile_money' | 'vouchers'; label: string }[] = [
+    { type: 'all', label: 'All' },
+    { type: 'mobile_money', label: 'Mobile Money' },
+    { type: 'vouchers', label: 'Printed Vouchers' },
+  ]
+  const subscriberOptions: { id: number; label: string }[] = d.subscriber_filters ?? []
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -80,10 +115,17 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard title="Net Sales" value={formatCurrency(d.net_sales ?? 0, currency)}
-          sub={`Gross ${formatCurrency(d.gross_sales ?? 0, currency)}`} icon={<TrendingUp size={18} />}
+          sub={`MM: ${formatCurrency(d.mm_sales ?? 0, currency)} | Vouchers: ${formatCurrency(d.voucher_sales ?? 0, currency)}`}
+          icon={<TrendingUp size={18} />}
           color={C.indigo} spark={daily} sparkKey="net_revenue" />
+        <KpiCard title="Vouchers Sales" value={formatCurrency(d.voucher_sales ?? 0, currency)}
+          sub="Total sales from physical vouchers" icon={<Ticket size={18} />}
+          color={C.teal} />
+        <KpiCard title="Balance" value={formatCurrency(d.balance ?? 0, currency)}
+          sub="Net balance on account." icon={<Wallet size={18} />}
+          color={C.sky} />
         <KpiCard title="Commission" value={formatCurrency(d.commission ?? 0, currency)}
           sub={`Agents ${formatCurrency(d.agent_commission ?? 0, currency)}`} icon={<DollarSign size={18} />}
           color={C.emerald} spark={daily} sparkKey="commission" />
@@ -93,6 +135,112 @@ export default function DashboardPage() {
         <KpiCard title="Active Users" value={String(d.active_users ?? 0)}
           sub={`${d.total_data_gb ?? 0} GB used`} icon={<Wifi size={18} />}
           color={C.rose} />
+      </div>
+
+      {/* Overview + recent sales */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div>
+              <h2 className="font-semibold text-slate-900">Overview</h2>
+              <p className="text-xs text-slate-400 mt-0.5">{range.start} – {range.end}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowTotals((v) => !v)}
+                className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full transition ${
+                  showTotals ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}>
+                <Sigma size={13} /> Totals
+              </button>
+              <div className="relative">
+                <button onClick={() => setFilterOpen((v) => !v)}
+                  className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50">
+                  {overviewFilter.label} <ChevronDown size={13} />
+                </button>
+                {filterOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setFilterOpen(false)} />
+                    <div className="absolute right-0 mt-1.5 w-56 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg z-20 py-1">
+                      {filterOptions.map((opt) => (
+                        <button key={opt.type} onClick={() => { setOverviewFilter({ type: opt.type, label: opt.label }); setFilterOpen(false) }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 text-left">
+                          {opt.label}
+                          {overviewFilter.type === opt.type && <span className="text-slate-900">✓</span>}
+                        </button>
+                      ))}
+                      {subscriberOptions.length > 0 && <div className="my-1 border-t border-slate-100" />}
+                      {subscriberOptions.map((s) => (
+                        <button key={s.id}
+                          onClick={() => { setOverviewFilter({ type: 'subscriber', subscriberId: s.id, label: s.label }); setFilterOpen(false) }}
+                          className="w-full flex items-center justify-between px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 text-left truncate">
+                          <span className="truncate">{s.label}</span>
+                          {overviewFilter.type === 'subscriber' && overviewFilter.subscriberId === s.id && <span className="text-slate-900">✓</span>}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={280}>
+            <ComposedChart data={overviewChart} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+                tickFormatter={(v) => format(new Date(v), 'MMM d')} />
+              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={38} />
+              <Tooltip content={<OverviewTip currency={currency} />} cursor={{ fill: '#f8fafc' }} />
+              <Bar dataKey="net_revenue" name="Net Proceeds" fill={C.emerald} radius={[5, 5, 0, 0]} maxBarSize={26} />
+              <Bar dataKey="commission" name="Agent Commission" fill={C.slate} radius={[5, 5, 0, 0]} maxBarSize={26} />
+              <Line type="monotone" dataKey="gross_revenue" name="Gross Revenue" stroke={C.violet} strokeWidth={2}
+                dot={{ r: 3, fill: C.violet, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+            </ComposedChart>
+          </ResponsiveContainer>
+          <Legend2 items={[
+            { label: 'Net Proceeds', color: C.emerald },
+            { label: 'Agent Commission', color: C.slate },
+            { label: 'Gross Revenue', color: C.violet },
+          ]} />
+          {overviewChart.length === 0 && <p className="text-sm text-slate-400 text-center py-4">No sales in this range.</p>}
+        </Card>
+
+        <Card>
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-slate-900">Recent Sales</h2>
+              <p className="text-xs text-slate-400 mt-0.5">You made {d.sales_today ?? 0} sales today.</p>
+            </div>
+            <span className="text-xs text-slate-400 flex items-center gap-1">Scroll for more <ChevronDown size={12} /></span>
+          </div>
+          <div className="divide-y divide-slate-100 max-h-[420px] overflow-y-auto pr-1">
+            {(d.recent_sales ?? []).map((sale: any) => {
+              const isVoucher = sale.type === 'voucher'
+              const name = isVoucher ? (sale.voucher?.code ?? 'Voucher') : (sale.subscriber?.full_name ?? sale.subscriber?.username ?? 'Unknown')
+              const subtitle = isVoucher ? 'Printed Voucher' : (sale.method?.replace('_', ' ') ?? '')
+              return (
+                <div key={sale.id} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                      isVoucher ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-400'
+                    }`}>
+                      {isVoucher ? <Ticket size={17} /> : <UserCircle2 size={20} />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{name}</p>
+                      <p className="text-xs text-slate-400 capitalize">{subtitle} · {formatDateTime(sale.paid_at)}</p>
+                    </div>
+                  </div>
+                  <span className="flex items-center gap-1 text-sm font-semibold text-emerald-600 shrink-0">
+                    <ArrowUpRight size={14} />{formatCurrency(sale.amount, currency)}
+                  </span>
+                </div>
+              )
+            })}
+            {(d.recent_sales ?? []).length === 0 && <p className="text-sm text-slate-400 text-center py-6">No recent sales.</p>}
+          </div>
+          <p className="text-xs text-slate-400 text-center mt-3">Showing {d.recent_sales?.length ?? 0} recent sales</p>
+        </Card>
       </div>
 
       {/* Revenue trend + channel donut */}
@@ -176,7 +324,16 @@ export default function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHead title="System Insights" subtitle="Live router health" />
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h2 className="font-semibold text-slate-900">System Insights</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Live router health</p>
+            </div>
+            <span className={`flex items-center gap-1.5 text-xs font-medium ${d.system_online ? 'text-emerald-600' : 'text-rose-500'}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${d.system_online ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+              {d.system_online ? 'Online' : 'Offline'}
+            </span>
+          </div>
           <div className="relative">
             <ResponsiveContainer width="100%" height={170}>
               <RadialBarChart innerRadius="72%" outerRadius="100%" data={[{ value: cpu, fill: cpu > 80 ? C.rose : C.sky }]}
@@ -195,33 +352,6 @@ export default function DashboardPage() {
           </div>
         </Card>
       </div>
-
-      {/* Recent sales */}
-      <Card>
-        <CardHead title="Recent Sales" subtitle={`Latest ${d.recent_sales?.length ?? 0} transactions`} />
-        <div className="divide-y divide-slate-100">
-          {(d.recent_sales ?? []).map((sale: any) => (
-            <div key={sale.id} className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                  style={{ background: `linear-gradient(135deg,${C.indigo},${C.violet})` }}>
-                  {(sale.subscriber?.full_name ?? sale.subscriber?.username ?? '?')[0].toUpperCase()}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-800">
-                    {sale.subscriber?.full_name ?? sale.subscriber?.username ?? 'Unknown'}
-                  </p>
-                  <p className="text-xs text-slate-400">{formatDateTime(sale.paid_at)} · {sale.method?.replace('_', ' ')}</p>
-                </div>
-              </div>
-              <span className="flex items-center gap-1 text-sm font-semibold text-emerald-600">
-                <ArrowUpRight size={14} />{formatCurrency(sale.amount, currency)}
-              </span>
-            </div>
-          ))}
-          {(d.recent_sales ?? []).length === 0 && <p className="text-sm text-slate-400 text-center py-6">No recent sales.</p>}
-        </div>
-      </Card>
     </div>
   )
 }
@@ -303,6 +433,45 @@ function ChartTip({ active, payload, label, currency }: any) {
           {p.name}: <span className="font-semibold">{formatCurrency(Number(p.value), currency)}</span>
         </p>
       ))}
+    </div>
+  )
+}
+
+function toCumulative(rows: any[]) {
+  let net = 0
+  let commission = 0
+  let gross = 0
+  return rows.map((r) => {
+    net += r.net_revenue
+    commission += r.commission
+    gross += r.gross_revenue
+    return { ...r, net_revenue: net, commission, gross_revenue: gross }
+  })
+}
+
+function OverviewTip({ active, payload, label, currency }: any) {
+  if (!active || !payload?.length) return null
+  const row = payload[0]?.payload ?? {}
+  const commission = Number(row.commission ?? 0)
+  const net = Number(row.net_revenue ?? 0)
+  const gross = Number(row.gross_revenue ?? 0)
+  return (
+    <div className="bg-white rounded-lg shadow-lg border border-slate-100 px-3 py-2.5 text-xs min-w-[200px]">
+      {label && <p className="font-semibold text-slate-700 mb-2">{format(new Date(label), 'EEE, MMMM d yyyy')}</p>}
+      <div className="space-y-1">
+        <p className="flex items-center justify-between gap-4 text-slate-600">
+          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-slate-800" />Agent Commission</span>
+          <span className="font-semibold">{formatCurrency(commission, currency)}</span>
+        </p>
+        <p className="flex items-center justify-between gap-4 text-slate-600">
+          <span className="flex items-center gap-2"><span className="w-2 h-2 rounded-full bg-emerald-500" />Net Proceeds</span>
+          <span className="font-semibold">{formatCurrency(net, currency)}</span>
+        </p>
+      </div>
+      <div className="border-t border-slate-100 mt-2 pt-2 flex items-center justify-between gap-4">
+        <span className="text-slate-500">Total (Gross)</span>
+        <span className="font-semibold text-slate-800">{formatCurrency(gross, currency)}</span>
+      </div>
     </div>
   )
 }

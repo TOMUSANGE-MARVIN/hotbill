@@ -82,6 +82,7 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'business'])->group(function ()
 
     // Dashboard & Analytics
     Route::get('analytics/dashboard', [AnalyticsController::class, 'dashboard']);
+    Route::get('analytics/dashboard/series', [AnalyticsController::class, 'series']);
     Route::get('analytics/usage', [AnalyticsController::class, 'usageAnalytics']);
 
     // Routers
