@@ -12,6 +12,12 @@ Artisan::command('inspire', function () {
 // onOneServer() uses the Redis cache lock so this stays correct if the api scales out.
 Schedule::command('vouchers:expire')->everyFiveMinutes()->onOneServer()->withoutOverlapping();
 
+// The actual network-side enforcement: nothing else ever removes a hotspot
+// user or kicks their session when their access window passes, so an
+// expired subscriber otherwise stays connected indefinitely (mac-cookie +
+// limit-uptime only cap connected time, not calendar time).
+Schedule::command('subscribers:expire')->everyMinute()->onOneServer()->withoutOverlapping();
+
 // Safety net for operator payouts: settle any withdrawal left 'processing' because
 // its MarzPay disbursement webhook was missed. Re-verifies against MarzPay so it
 // never marks money paid without confirmation.
