@@ -156,11 +156,15 @@ function pay(){
 function redeem(){
   var code=document.getElementById("vc").value.trim();
   if(!code){return;}
-  var vb=document.getElementById("vbtn");vb.disabled=true;vb.textContent="...";document.getElementById("ver").textContent="";
+  // Activation can take up to ~a minute (waiting on the router to confirm).
+  // The old UI just showed "..." on the button with no explanation, so
+  // people assumed it had failed, gave up, and tried a second voucher while
+  // the first was silently succeeding a few seconds later.
+  app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Activating your voucher</h3><p class="muted">This can take up to a minute.<br>Please don\'t close this page or try another voucher.</p></div>';
   fetch(API+"/portal/redeem",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,code:code,mac:MAC,ip:IP,link_login:LINK})})
   .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
   .then(function(o){if(!o.ok){throw new Error(o.j.message||"Invalid voucher");}done(o.j);})
-  .catch(function(e){vb.disabled=false;vb.textContent="Redeem";document.getElementById("ver").textContent=e.message;});
+  .catch(function(e){view();document.getElementById("vc").value=code;document.getElementById("ver").textContent=e.message;});
 }
 function wait(ref){
   app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Check your phone</h3><p class="muted">Enter your Mobile Money PIN on the prompt.<br>This page updates automatically.</p></div>';
