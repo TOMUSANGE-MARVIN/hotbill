@@ -294,6 +294,24 @@ HTML;
             ? now()->addDays($package->duration_days ?? 0)->addHours($package->duration_hours ?? 0)->addMinutes($package->duration_minutes ?? 0)
             : null;
 
+        // Atomically claim the voucher before provisioning (not just check-then-act):
+        // provisioning can take up to ~70s, long enough for the customer's browser to
+        // time out and retry with the same code while the first request is still
+        // running. Without this, both requests would pass the earlier status check,
+        // race to provision, and double-charge the commission. Reverted below if
+        // provisioning fails, so a genuine retry still works.
+        $claimed = Voucher::whereKey($voucher->id)->where('status', 'unused')->update([
+            'status' => 'active',
+            'router_id' => $router->id,
+            'used_by_username' => $username,
+            'used_at' => now(),
+            'expires_at' => $expiresAt,
+        ]);
+
+        if (!$claimed) {
+            return response()->json(['message' => 'Invalid or already-used voucher code.'], 422);
+        }
+
         // RADIUS-based activation — the hotspot authenticates the client against
         // HotBill's RADIUS, so no live router API access is needed (this works
         // behind NAT, unlike the old MikrotikService push). The portal then
@@ -317,10 +335,18 @@ HTML;
         $result = $this->provisionHotspotSession($router, $username, $password, $package);
 
         if ($result !== 'done') {
-            // The router never confirmed the hotspot user was created — do NOT
-            // burn the voucher or charge the commission. The code stays 'unused'
-            // so the same customer can retry with the same voucher; nothing was
-            // taken from them (vouchers are pre-paid in cash, not charged here).
+            // The router never confirmed the hotspot user was created — release the
+            // claim so the code goes back to 'unused' and the same customer can
+            // retry with it; nothing was taken from them (vouchers are pre-paid in
+            // cash, not charged here).
+            Voucher::whereKey($voucher->id)->update([
+                'status' => 'unused',
+                'router_id' => null,
+                'used_by_username' => null,
+                'used_at' => null,
+                'expires_at' => null,
+            ]);
+
             Log::error('Voucher redeem: hotspot provisioning did not complete', [
                 'voucher_id' => $voucher->id, 'router_id' => $router->id, 'result' => $result,
             ]);
@@ -329,14 +355,6 @@ HTML;
                 'message' => 'Could not connect you right now. Please try again in a moment — your voucher has not been used.',
             ], 502);
         }
-
-        $voucher->update([
-            'status' => 'active',
-            'router_id' => $router->id,
-            'used_by_username' => $username,
-            'used_at' => now(),
-            'expires_at' => $expiresAt,
-        ]);
 
         // Vouchers are bought with physical cash, so the sale value is NEVER
         // credited to the wallet (the operator already holds the cash). We only
