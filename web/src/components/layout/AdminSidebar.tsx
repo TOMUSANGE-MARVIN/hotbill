@@ -1,11 +1,12 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import {
-  ShieldCheck, LayoutDashboard, Building2, Wallet,
+  LayoutDashboard, Building2, Wallet,
   CreditCard, Router as RouterIcon, LogOut, X, FileText,
 } from 'lucide-react'
 
@@ -27,9 +28,7 @@ export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
       {/* Logo */}
       <div className="p-4 border-b border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-brand-500 flex items-center justify-center">
-            <ShieldCheck size={14} className="text-white" />
-          </div>
+          <Image src="/hotbill-logo.png" alt="HotBill" width={176} height={107} className="h-7 w-auto object-contain" />
           <div>
             <span className="font-bold text-white text-sm">HotBill</span>
             <p className="text-xs text-brand-400 font-medium">Platform Admin</p>

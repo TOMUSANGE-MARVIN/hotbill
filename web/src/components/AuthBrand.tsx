@@ -1,7 +1,6 @@
 'use client'
 
 import Image from 'next/image'
-import { Power } from 'lucide-react'
 
 export default function AuthBrand() {
   return (
@@ -12,9 +11,7 @@ export default function AuthBrand() {
 
       {/* logo */}
       <div className="relative flex items-center gap-2.5 w-fit">
-        <span className="w-9 h-9 rounded-full bg-[#4F4AD7] flex items-center justify-center">
-          <Power size={18} className="text-white" strokeWidth={2.5} />
-        </span>
+        <Image src="/hotbill-logo.png" alt="HotBill" width={176} height={107} priority className="h-9 w-auto object-contain" />
         <span className="text-xl font-extrabold tracking-tight">HOTBILL</span>
       </div>
 

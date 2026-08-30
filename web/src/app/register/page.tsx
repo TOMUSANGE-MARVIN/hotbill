@@ -4,7 +4,8 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Karla } from 'next/font/google'
-import { Power, Eye, EyeOff, ArrowUpRight, Check } from 'lucide-react'
+import Image from 'next/image'
+import { Eye, EyeOff, ArrowUpRight, Check } from 'lucide-react'
 import api from '@/lib/api'
 import { useAuthStore } from '@/store/auth'
 import AuthBrand from '@/components/AuthBrand'
@@ -68,9 +69,7 @@ export default function RegisterPage() {
         <div className="w-full max-w-md">
           {/* mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-2.5 mb-10">
-            <span className="w-9 h-9 rounded-full bg-[#4F4AD7] flex items-center justify-center">
-              <Power size={18} className="text-white" strokeWidth={2.5} />
-            </span>
+            <Image src="/hotbill-logo.png" alt="HotBill" width={176} height={107} priority className="h-9 w-auto object-contain" />
             <span className="text-xl font-extrabold tracking-tight">HOTBILL</span>
           </div>
 
