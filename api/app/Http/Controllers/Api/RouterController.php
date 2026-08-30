@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Router;
 use App\Models\RouterCommand;
 use App\Models\RouterStat;
+use App\Services\HotspotUsageRecorder;
 use App\Services\MikrotikService;
 use App\Services\RadiusService;
 use Illuminate\Http\JsonResponse;
@@ -189,7 +190,84 @@ class RouterController extends Controller
         ]);
 
         // Pull real per-customer hotspot usage in the background (queue worker).
+        // Only actually succeeds if the router's VPN tunnel is reachable — most
+        // NAT/CGNAT routers rely on usageReport() below instead.
         \App\Jobs\CollectHotspotUsageJob::dispatch($router->id);
+
+        return response()->json(['status' => 'ok']);
+    }
+
+    /**
+     * NAT-safe usage reporting: the router's `hotbill-usage` scheduler builds
+     * this itself from `/ip hotspot user print` + `/ip hotspot active print`
+     * and posts it here every 5 minutes, over the same outbound HTTPS channel
+     * as the heartbeat/command poller. Needed because CollectHotspotUsageJob's
+     * direct API pull only works when the router's VPN tunnel is reachable,
+     * which it usually isn't for CGNAT'd routers — those routers were never
+     * getting any usage recorded at all before this existed.
+     *
+     * Payload: `data=<records>` where each record is `type|username|bytes_in|
+     * bytes_out|uptime` separated by `;` — type `u` is a persistent hotspot
+     * user's stored counters, `a` is an active session's live counters. Merged
+     * the same way MikrotikService::getHotspotUsageSnapshot() does: a user's
+     * total is stored + live, and they're "active" iff an `a` record exists.
+     */
+    public function usageReport(Request $request): JsonResponse
+    {
+        $token = $request->bearerToken();
+        $router = Router::where('token', $token)->first();
+
+        if (!$router) {
+            return response()->json(['message' => 'Unauthorized'], 401);
+        }
+
+        $persistent = [];
+        $live = [];
+
+        foreach (array_filter(explode(';', (string) $request->input('data', ''))) as $entry) {
+            $parts = explode('|', $entry);
+            if (count($parts) !== 5) continue;
+            [$type, $username, $bytesIn, $bytesOut, $uptime] = $parts;
+            if ($username === '' || $username === 'default-trial') continue;
+
+            $row = [
+                'bytes_in' => (int) $bytesIn,
+                'bytes_out' => (int) $bytesOut,
+                'uptime' => MikrotikService::parseDuration($uptime),
+            ];
+
+            if ($type === 'a') {
+                $live[$username] = $row;
+            } else {
+                $persistent[$username] = $row;
+            }
+        }
+
+        $snapshot = [];
+        $seen = [];
+        foreach ($persistent as $username => $p) {
+            $l = $live[$username] ?? ['bytes_in' => 0, 'bytes_out' => 0, 'uptime' => 0];
+            $snapshot[] = [
+                'username' => $username,
+                'bytes_in' => $p['bytes_in'] + $l['bytes_in'],
+                'bytes_out' => $p['bytes_out'] + $l['bytes_out'],
+                'uptime_seconds' => $p['uptime'] + $l['uptime'],
+                'active' => isset($live[$username]),
+            ];
+            $seen[$username] = true;
+        }
+        foreach ($live as $username => $l) {
+            if (isset($seen[$username])) continue;
+            $snapshot[] = [
+                'username' => $username,
+                'bytes_in' => $l['bytes_in'],
+                'bytes_out' => $l['bytes_out'],
+                'uptime_seconds' => $l['uptime'],
+                'active' => true,
+            ];
+        }
+
+        HotspotUsageRecorder::record($router, $snapshot);
 
         return response()->json(['status' => 'ok']);
     }

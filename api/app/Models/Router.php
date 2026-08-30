@@ -204,6 +204,31 @@ SCRIPT;
         $mode = str_starts_with($url, 'https://') ? 'https' : 'http';
         $radiusSecret = config('hotbill.radius_shared_secret');
 
+        // Built with single-quoted PHP strings (not the heredoc below) so RouterOS's
+        // own $var syntax passes through untouched — no backslash-escaping the
+        // heredoc would otherwise force on every $. Only the quotes need escaping
+        // for the outer on-event="..." attribute they end up inside.
+        $usageEvent =
+            ':local data ""; ' .
+            ':foreach i in=[/ip hotspot user find] do={ ' .
+            ':local uname [/ip hotspot user get $i name]; ' .
+            ':if ($uname != "default-trial") do={ ' .
+            ':local bin [/ip hotspot user get $i bytes-in]; ' .
+            ':local bout [/ip hotspot user get $i bytes-out]; ' .
+            ':local upt [/ip hotspot user get $i uptime]; ' .
+            ':set data ($data . "u|" . $uname . "|" . $bin . "|" . $bout . "|" . $upt . ";") ' .
+            '} }; ' .
+            ':foreach i in=[/ip hotspot active find] do={ ' .
+            ':local uname [/ip hotspot active get $i user]; ' .
+            ':local bin [/ip hotspot active get $i bytes-in]; ' .
+            ':local bout [/ip hotspot active get $i bytes-out]; ' .
+            ':local upt [/ip hotspot active get $i uptime]; ' .
+            ':set data ($data . "a|" . $uname . "|" . $bin . "|" . $bout . "|" . $upt . ";") ' .
+            '}; ' .
+            '/tool fetch url="' . $url . '/api/v1/routers/usage-report" http-method=post http-header-field="Authorization: Bearer ' . $token . '" http-data=("data=" . $data) keep-result=no';
+        $usageSchedulerLine = '/system scheduler add name=hotbill-usage interval=5m start-time=startup on-event="'
+            . str_replace('"', '\"', $usageEvent) . '"';
+
         $this->provisionVpn();
         $this->provisionSstp();
 
@@ -337,6 +362,15 @@ VPN;
 :put "Command poller scheduled successfully"
 } on-error={
 :put "FAILED: could not schedule command poller"
+}
+
+:put "Scheduling usage reporter..."
+:do {
+/system scheduler remove [find name=hotbill-usage]
+{$usageSchedulerLine}
+:put "Usage reporter scheduled successfully"
+} on-error={
+:put "FAILED: could not schedule usage reporter"
 }
 
 :put "=== HotBill: provisioning complete ==="

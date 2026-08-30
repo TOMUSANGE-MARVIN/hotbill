@@ -36,6 +36,7 @@ Route::prefix('v1')->group(function () {
 
     // Router heartbeat & install script (authenticated by router bearer token, not user token)
     Route::post('routers/heartbeat', [RouterController::class, 'heartbeat']);
+    Route::post('routers/usage-report', [RouterController::class, 'usageReport']);
     Route::get('routers/scripts/install', [RouterController::class, 'installScript']);
     // Poll-based remote management (XenFi model): router pulls pending scripts
     // and reports results, all over outbound HTTPS. Bearer = router token.

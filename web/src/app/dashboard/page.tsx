@@ -5,12 +5,11 @@ import api from '@/lib/api'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import {
-  AreaChart, Area, BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid,
+  BarChart, Bar, ComposedChart, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
-  RadialBarChart, RadialBar,
 } from 'recharts'
 import {
-  TrendingUp, DollarSign, Users, Cpu, Wifi, HardDrive, ArrowUpRight,
+  TrendingUp, Cpu, Wifi, HardDrive, ArrowUpRight,
   Ticket, UserCircle2, Wallet, ChevronDown, Sigma,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -115,7 +114,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard title="Net Sales" value={formatCurrency(d.net_sales ?? 0, currency)}
           sub={`MM: ${formatCurrency(d.mm_sales ?? 0, currency)} | Vouchers: ${formatCurrency(d.voucher_sales ?? 0, currency)}`}
           icon={<TrendingUp size={18} />}
@@ -124,17 +123,9 @@ export default function DashboardPage() {
           sub="Total sales from physical vouchers" icon={<Ticket size={18} />}
           color={C.teal} />
         <KpiCard title="Balance" value={formatCurrency(d.balance ?? 0, currency)}
-          sub="Net balance on account." icon={<Wallet size={18} />}
+          sub={`Commission: ${formatCurrency(d.commission ?? 0, currency)}`} icon={<Wallet size={18} />}
           color={C.sky} />
-        <KpiCard title="Commission" value={formatCurrency(d.commission ?? 0, currency)}
-          sub={`Agents ${formatCurrency(d.agent_commission ?? 0, currency)}`} icon={<DollarSign size={18} />}
-          color={C.emerald} spark={daily} sparkKey="commission" />
-        <KpiCard title="Active Subscribers" value={String(d.active_subscribers ?? 0)}
-          sub={`${d.expired_today ?? 0} expiring today`} icon={<Users size={18} />}
-          color={C.amber} />
-        <KpiCard title="Active Users" value={String(d.active_users ?? 0)}
-          sub={`${d.total_data_gb ?? 0} GB used`} icon={<Wifi size={18} />}
-          color={C.rose} />
+        <SystemKpiCard online={!!d.system_online} activeUsers={d.active_users ?? 0} cpu={cpu} dataGb={d.total_data_gb ?? 0} />
       </div>
 
       {/* Overview + recent sales */}
@@ -248,26 +239,16 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHead title="Revenue Trend" subtitle={`${range.start} – ${range.end}`} />
           <ResponsiveContainer width="100%" height={280}>
-            <AreaChart data={daily} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="gGross" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.indigo} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={C.indigo} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="gNet" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.emerald} stopOpacity={0.4} />
-                  <stop offset="100%" stopColor={C.emerald} stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <LineChart data={daily} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => format(new Date(v), 'MMM d')} />
               <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={38} />
               <Tooltip content={<ChartTip currency={currency} />} />
-              <Area type="monotone" dataKey="gross_revenue" name="Gross" stroke={C.indigo} strokeWidth={2.5} fill="url(#gGross)" />
-              <Area type="monotone" dataKey="net_revenue" name="Net" stroke={C.emerald} strokeWidth={2.5} fill="url(#gNet)" />
-            </AreaChart>
+              <Line type="monotone" dataKey="gross_revenue" name="Gross" stroke={C.indigo} strokeWidth={2.5} dot={false} />
+              <Line type="monotone" dataKey="net_revenue" name="Net" stroke={C.emerald} strokeWidth={2.5} dot={false} />
+            </LineChart>
           </ResponsiveContainer>
           <Legend2 items={[{ label: 'Gross Revenue', color: C.indigo }, { label: 'Net Revenue', color: C.emerald }]} />
         </Card>
@@ -304,54 +285,23 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Daily breakdown + system insights */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <Card className="lg:col-span-2">
-          <CardHead title="Daily Revenue & Commission" subtitle="Per-day breakdown" />
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={daily} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barGap={4}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
-                tickFormatter={(v) => format(new Date(v), 'MMM d')} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
-                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={38} />
-              <Tooltip content={<ChartTip currency={currency} />} cursor={{ fill: '#f8fafc' }} />
-              <Bar dataKey="net_revenue" name="Net Revenue" fill={C.violet} radius={[5, 5, 0, 0]} maxBarSize={26} />
-              <Bar dataKey="commission" name="Commission" fill={C.cyan} radius={[5, 5, 0, 0]} maxBarSize={26} />
-            </BarChart>
-          </ResponsiveContainer>
-          <Legend2 items={[{ label: 'Net Revenue', color: C.violet }, { label: 'Commission', color: C.cyan }]} />
-        </Card>
-
-        <Card>
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h2 className="font-semibold text-slate-900">System Insights</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Live router health</p>
-            </div>
-            <span className={`flex items-center gap-1.5 text-xs font-medium ${d.system_online ? 'text-emerald-600' : 'text-rose-500'}`}>
-              <span className={`w-1.5 h-1.5 rounded-full ${d.system_online ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-              {d.system_online ? 'Online' : 'Offline'}
-            </span>
-          </div>
-          <div className="relative">
-            <ResponsiveContainer width="100%" height={170}>
-              <RadialBarChart innerRadius="72%" outerRadius="100%" data={[{ value: cpu, fill: cpu > 80 ? C.rose : C.sky }]}
-                startAngle={210} endAngle={-30}>
-                <RadialBar background={{ fill: '#eef2f7' }} dataKey="value" cornerRadius={20} />
-              </RadialBarChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-3xl font-bold text-slate-900">{cpu}%</span>
-              <span className="text-xs text-slate-400 flex items-center gap-1"><Cpu size={12} /> Avg CPU</span>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mt-2">
-            <MiniStat icon={<Wifi size={15} className="text-indigo-500" />} label="Active Users" value={String(d.active_users ?? 0)} />
-            <MiniStat icon={<HardDrive size={15} className="text-emerald-500" />} label="Data Used" value={`${d.total_data_gb ?? 0} GB`} />
-          </div>
-        </Card>
-      </div>
+      {/* Daily breakdown */}
+      <Card>
+        <CardHead title="Daily Revenue & Commission" subtitle="Per-day breakdown" />
+        <ResponsiveContainer width="100%" height={260}>
+          <BarChart data={daily} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barGap={4}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eef2f7" vertical={false} />
+            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+              tickFormatter={(v) => format(new Date(v), 'MMM d')} />
+            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+              tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} width={38} />
+            <Tooltip content={<ChartTip currency={currency} />} cursor={{ fill: '#f8fafc' }} />
+            <Bar dataKey="net_revenue" name="Net Revenue" fill={C.violet} radius={[5, 5, 0, 0]} maxBarSize={26} />
+            <Bar dataKey="commission" name="Commission" fill={C.cyan} radius={[5, 5, 0, 0]} maxBarSize={26} />
+          </BarChart>
+        </ResponsiveContainer>
+        <Legend2 items={[{ label: 'Net Revenue', color: C.violet }, { label: 'Commission', color: C.cyan }]} />
+      </Card>
     </div>
   )
 }
@@ -385,15 +335,9 @@ function KpiCard({ title, value, sub, icon, color, spark, sparkKey }: {
       {spark && sparkKey && spark.length > 1 && (
         <div className="h-10 mt-2 -mx-1">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id={`s-${sparkKey}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={color} stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area type="monotone" dataKey={sparkKey} stroke={color} strokeWidth={2} fill={`url(#s-${sparkKey})`} />
-            </AreaChart>
+            <LineChart data={spark} margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+              <Line type="monotone" dataKey={sparkKey} stroke={color} strokeWidth={2} dot={false} />
+            </LineChart>
           </ResponsiveContainer>
         </div>
       )}
@@ -401,11 +345,35 @@ function KpiCard({ title, value, sub, icon, color, spark, sparkKey }: {
   )
 }
 
-function MiniStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function SystemKpiCard({ online, activeUsers, cpu, dataGb }: {
+  online: boolean; activeUsers: number; cpu: number; dataGb: number
+}) {
   return (
-    <div className="bg-slate-50 rounded-xl p-3">
-      <div className="flex items-center gap-1.5 text-xs text-slate-400 mb-1">{icon}{label}</div>
-      <p className="text-lg font-bold text-slate-900">{value}</p>
+    <div className="rounded-2xl p-5 bg-white border border-slate-200 shadow-sm overflow-hidden">
+      <div className="flex items-start justify-between">
+        <span className="text-sm font-medium text-slate-500">System</span>
+        <span className={`flex items-center gap-1.5 text-xs font-medium ${online ? 'text-emerald-600' : 'text-rose-500'}`}>
+          <span className={`w-1.5 h-1.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+          {online ? 'Online' : 'Offline'}
+        </span>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mt-4">
+        <div className="text-center">
+          <Wifi size={16} className="mx-auto text-indigo-500 mb-1" />
+          <p className="text-base font-bold text-slate-900">{activeUsers}</p>
+          <p className="text-[11px] text-slate-400">Active</p>
+        </div>
+        <div className="text-center">
+          <Cpu size={16} className="mx-auto text-sky-500 mb-1" />
+          <p className="text-base font-bold text-slate-900">{cpu}%</p>
+          <p className="text-[11px] text-slate-400">CPU</p>
+        </div>
+        <div className="text-center">
+          <HardDrive size={16} className="mx-auto text-emerald-500 mb-1" />
+          <p className="text-base font-bold text-slate-900">{dataGb} GB</p>
+          <p className="text-[11px] text-slate-400">Data Usage</p>
+        </div>
+      </div>
     </div>
   )
 }

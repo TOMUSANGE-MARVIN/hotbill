@@ -244,7 +244,7 @@ class MikrotikService
     }
 
     /** Parse a RouterOS duration like "1w2d3h4m5s" into seconds. */
-    private function parseDuration(string $s): int
+    public static function parseDuration(string $s): int
     {
         $units = ['w' => 604800, 'd' => 86400, 'h' => 3600, 'm' => 60, 's' => 1];
         $total = 0;
