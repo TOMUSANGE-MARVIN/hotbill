@@ -178,8 +178,16 @@ function wait(ref){
 }
 function done(d){
   var tick='<div class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4F4AD7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
-  app.innerHTML=head()+'<div class="center">'+tick+'<h3>You are connected!</h3><p class="muted">'+(d.package?esc(d.package)+" is now active. ":"")+'Enjoy your internet.</p></div>';
-  if(d.username&&LINK){try{var f=document.createElement("form");f.method="post";f.action=LINK;var u=document.createElement("input");u.name="username";u.value=d.username;var p=document.createElement("input");p.name="password";p.value=d.password||"";f.appendChild(u);f.appendChild(p);document.body.appendChild(f);f.submit();}catch(e){}}
+  if(d.username&&LINK){
+    app.innerHTML=head()+'<div class="center">'+tick+'<h3>You are connected!</h3><p class="muted">'+(d.package?esc(d.package)+" is now active. ":"")+'Enjoy your internet.</p></div>';
+    try{var f=document.createElement("form");f.method="post";f.action=LINK;var u=document.createElement("input");u.name="username";u.value=d.username;var p=document.createElement("input");p.name="password";p.value=d.password||"";f.appendChild(u);f.appendChild(p);document.body.appendChild(f);f.submit();}catch(e){}
+  }else{
+    // The router didn't hand us a login-submit URL (page opened outside its
+    // own captive redirect, or a stale/cached load) — the account was created
+    // successfully server-side, but we can't auto-login. Say so honestly
+    // instead of claiming "connected" with no login ever submitted.
+    app.innerHTML=head()+'<div class="center">'+tick+'<h3>Account ready</h3><p class="muted">'+(d.package?esc(d.package)+" is active, but ":"")+'we could not complete login automatically.<br>Please reconnect to the WiFi and reopen this page, or enter these details on the WiFi login screen:</p><p class="muted"><b>Username:</b> '+esc(d.username||"")+'<br><b>Password:</b> '+esc(d.password||"")+'</p></div>';
+  }
 }
 load();
 </script>
