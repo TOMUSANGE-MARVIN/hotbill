@@ -18,12 +18,17 @@ Schedule::command('vouchers:expire')->everyFiveMinutes()->onOneServer()->without
 // limit-uptime only cap connected time, not calendar time).
 Schedule::command('subscribers:expire')->everyMinute()->onOneServer()->withoutOverlapping();
 
+// Real hotspot data usage - a router-side scheduler for this failed silently
+// (see CollectUsageReports), so the server queues the same command through
+// the already-reliable poll/command queue instead.
+Schedule::command('usage:collect')->everyFiveMinutes()->onOneServer()->withoutOverlapping();
+
 // Safety net for operator payouts: settle any withdrawal left 'processing' because
 // its MarzPay disbursement webhook was missed. Re-verifies against MarzPay so it
 // never marks money paid without confirmation.
 Schedule::command('payouts:reconcile')->everyFiveMinutes()->onOneServer()->withoutOverlapping();
 
 // Safety net for paid orders whose hotspot user creation never got confirmed by
-// the router (customer was charged but never connected) — retries the same
+// the router (customer was charged but never connected) - retries the same
 // stored credentials until the router confirms, then flips the order to 'paid'.
 Schedule::command('orders:retry-provisioning')->everyMinute()->onOneServer()->withoutOverlapping();

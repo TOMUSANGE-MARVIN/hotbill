@@ -36,7 +36,7 @@ class Router extends Model
             $router->nas_identifier = $router->nas_identifier ?? $router->name;
             $router->radius_secret = $router->radius_secret ?? Str::random(32);
 
-            // Auto-provisioned by the install script — the user never types these in.
+            // Auto-provisioned by the install script - the user never types these in.
             if (empty($router->api_username)) {
                 $router->api_username = 'hotbill';
             }
@@ -82,7 +82,7 @@ class Router extends Model
     /**
      * Idempotently allocate WireGuard keys/VPN IP for this router if not already
      * present, and (re)write its peer config so the wireguard container picks it
-     * up. Safe to call repeatedly — also how lazy backfill happens for routers
+     * up. Safe to call repeatedly - also how lazy backfill happens for routers
      * provisioned before VPN support existed.
      */
     public function provisionVpn(): void
@@ -134,7 +134,7 @@ class Router extends Model
      * Idempotently allocate SSTP credentials + a tunnel IP for this router and
      * (re)write the accel-ppp chap-secrets file. This is the RouterOS-v6 path:
      * a router is provisioned for BOTH WireGuard and SSTP because the server
-     * doesn't know its OS version yet — the router activates whichever its OS
+     * doesn't know its OS version yet - the router activates whichever its OS
      * supports (see getProvisionScriptAttribute). Safe to call repeatedly.
      */
     public function provisionSstp(): void
@@ -162,7 +162,7 @@ class Router extends Model
                     if ($attempt >= 5 || !$this->isUniqueConstraintViolation($e)) {
                         throw $e;
                     }
-                    $this->sstp_ip = null; // collided — retry allocation
+                    $this->sstp_ip = null; // collided - retry allocation
                 }
             }
         }
@@ -172,7 +172,7 @@ class Router extends Model
 
     /**
      * The single command the user pastes into the router terminal. It fetches and
-     * runs provision_script, which contains the actual setup logic — nothing else
+     * runs provision_script, which contains the actual setup logic - nothing else
      * needs to be typed in (no IP, no credentials).
      */
     public function getScriptAttribute(): string
@@ -203,31 +203,6 @@ SCRIPT;
         $name = $this->name;
         $mode = str_starts_with($url, 'https://') ? 'https' : 'http';
         $radiusSecret = config('hotbill.radius_shared_secret');
-
-        // Built with single-quoted PHP strings (not the heredoc below) so RouterOS's
-        // own $var syntax passes through untouched — no backslash-escaping the
-        // heredoc would otherwise force on every $. Only the quotes need escaping
-        // for the outer on-event="..." attribute they end up inside.
-        $usageEvent =
-            ':local data ""; ' .
-            ':foreach i in=[/ip hotspot user find] do={ ' .
-            ':local uname [/ip hotspot user get $i name]; ' .
-            ':if ($uname != "default-trial") do={ ' .
-            ':local bin [/ip hotspot user get $i bytes-in]; ' .
-            ':local bout [/ip hotspot user get $i bytes-out]; ' .
-            ':local upt [/ip hotspot user get $i uptime]; ' .
-            ':set data ($data . "u|" . $uname . "|" . $bin . "|" . $bout . "|" . $upt . ";") ' .
-            '} }; ' .
-            ':foreach i in=[/ip hotspot active find] do={ ' .
-            ':local uname [/ip hotspot active get $i user]; ' .
-            ':local bin [/ip hotspot active get $i bytes-in]; ' .
-            ':local bout [/ip hotspot active get $i bytes-out]; ' .
-            ':local upt [/ip hotspot active get $i uptime]; ' .
-            ':set data ($data . "a|" . $uname . "|" . $bin . "|" . $bout . "|" . $upt . ";") ' .
-            '}; ' .
-            '/tool fetch url="' . $url . '/api/v1/routers/usage-report" http-method=post http-header-field="Authorization: Bearer ' . $token . '" http-data=("data=" . $data) keep-result=no';
-        $usageSchedulerLine = '/system scheduler add name=hotbill-usage interval=5m start-time=startup on-event="'
-            . str_replace('"', '\"', $usageEvent) . '"';
 
         $this->provisionVpn();
         $this->provisionSstp();
@@ -364,18 +339,45 @@ VPN;
 :put "FAILED: could not schedule command poller"
 }
 
-:put "Scheduling usage reporter..."
-:do {
-/system scheduler remove [find name=hotbill-usage]
-{$usageSchedulerLine}
-:put "Usage reporter scheduled successfully"
-} on-error={
-:put "FAILED: could not schedule usage reporter"
-}
-
 :put "=== HotBill: provisioning complete ==="
 :put "Services configured successfully"
 :log info "HotBill: provisioning complete"
 SCRIPT;
+    }
+
+    /**
+     * Script queued periodically (see CollectUsageReports) rather than run from
+     * a router-side scheduler: a router-native `hotbill-usage` scheduler entry
+     * was tried first, but it silently failed on this multi-step script every
+     * time (RouterOS reported it as having run, but the report never arrived),
+     * while the identical script delivered through the poll/command queue
+     * works reliably - so the server drives this one too, like everything else.
+     */
+    public function getUsageReportScriptAttribute(): string
+    {
+        $url = config('app.url');
+        $token = $this->token;
+
+        // Single-quoted PHP strings so RouterOS's own $var syntax passes through
+        // untouched - this is delivered as a plain command body, so (unlike the
+        // provision script's on-event="...") no outer-quote escaping is needed.
+        return
+            ':local data ""; ' .
+            ':foreach i in=[/ip hotspot user find] do={ ' .
+            ':local uname [/ip hotspot user get $i name]; ' .
+            ':if ($uname != "default-trial") do={ ' .
+            ':local bin [/ip hotspot user get $i bytes-in]; ' .
+            ':local bout [/ip hotspot user get $i bytes-out]; ' .
+            ':local upt [/ip hotspot user get $i uptime]; ' .
+            ':set data ($data . "u|" . $uname . "|" . $bin . "|" . $bout . "|" . $upt . ";") ' .
+            '} }; ' .
+            ':foreach i in=[/ip hotspot active find] do={ ' .
+            ':local uname [/ip hotspot active get $i user]; ' .
+            ':local bin [/ip hotspot active get $i bytes-in]; ' .
+            ':local bout [/ip hotspot active get $i bytes-out]; ' .
+            ':local upt [/ip hotspot active get $i uptime]; ' .
+            ':set data ($data . "a|" . $uname . "|" . $bin . "|" . $bout . "|" . $upt . ";") ' .
+            '}; ' .
+            '/tool fetch url="' . $url . '/api/v1/routers/usage-report" http-method=post http-header-field="Authorization: Bearer ' . $token . '" http-data=("data=" . $data) keep-result=no';
     }
 }
