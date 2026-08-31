@@ -11,7 +11,7 @@ use RuntimeException;
 /**
  * SSTP is the RouterOS-v6 fallback tunnel (v6 has no WireGuard). The accel-ppp
  * container terminates SSTP and authenticates routers from a chap-secrets file
- * that this service renders from the database — the same "render the whole file
+ * that this service renders from the database - the same "render the whole file
  * from the source of truth" approach the WireGuard container uses for peers,
  * which sidesteps partial-line races when a router is (de)provisioned.
  */
@@ -66,7 +66,7 @@ class SstpService
                 File::makeDirectory($dir, 0755, true);
             }
 
-            $lines = ['# Managed by HotBill — do not edit. username server password ip'];
+            $lines = ['# Managed by HotBill - do not edit. username server password ip'];
             Router::whereNotNull('sstp_secret')
                 ->whereNotNull('sstp_ip')
                 ->get(['token', 'sstp_secret', 'sstp_ip'])
@@ -78,7 +78,7 @@ class SstpService
             File::put($tmp, implode("\n", $lines) . "\n");
             File::move($tmp, $path); // atomic replace on the same filesystem
         } catch (\Throwable $e) {
-            // Never let a VPN-file write failure break router provisioning — the
+            // Never let a VPN-file write failure break router provisioning - the
             // router still comes up; the tunnel just won't authenticate until
             // the file is synced. Surface it in logs for the operator.
             Log::warning('HotBill: failed to sync SSTP chap-secrets', [

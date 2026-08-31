@@ -95,7 +95,7 @@ export function RouterSetupWizard({ routerId, onFinish }: { routerId: string; on
         <h1 className="text-2xl font-bold text-gray-900">Automatic Router Setup</h1>
         <p className="text-sm text-gray-500 mt-1">
           Configure your MikroTik RouterOS device with HotBill
-          {routerData?.name ? ` — ${routerData.name}` : ''}. First, install the secure
+          {routerData?.name ? ` - ${routerData.name}` : ''}. First, install the secure
           remote access agent, then visually design your network topology.
         </p>
       </div>
@@ -201,8 +201,8 @@ function Step1({ script, copied, onCopy, isOnline, onContinue }: {
 
         <div className="bg-blue-50 border border-blue-100 text-blue-700 text-xs rounded-lg p-3">
           <span className="font-semibold">On RouterOS v6:</span> you&apos;ll see{' '}
-          <code className="bg-blue-100 px-1 rounded">VPN setup skipped — this RouterOS version does not support WireGuard</code>.
-          That&apos;s expected, not a failure — the router still runs billing, the captive portal, and RADIUS. Only
+          <code className="bg-blue-100 px-1 rounded">VPN setup skipped - this RouterOS version does not support WireGuard</code>.
+          That&apos;s expected, not a failure - the router still runs billing, the captive portal, and RADIUS. Only
           HotBill-initiated remote actions (reboot, password change, Test Connection) need the VPN, which requires
           upgrading the router to RouterOS v7.
         </div>
@@ -330,7 +330,7 @@ function ManualPanel({ onBack, onFinish }: { onBack: () => void; onFinish: () =>
           <code className="bg-gray-100 px-1 rounded">IP &gt; Hotspot &gt; Setup</code>) bound to the bridge.
         </li>
         <li>
-          Enable RADIUS on the hotspot profile (<code className="bg-gray-100 px-1 rounded">use-radius=yes</code>) —
+          Enable RADIUS on the hotspot profile (<code className="bg-gray-100 px-1 rounded">use-radius=yes</code>) -
           HotBill already registered this router as a RADIUS client in Step 1.
         </li>
         <li>
@@ -340,7 +340,7 @@ function ManualPanel({ onBack, onFinish }: { onBack: () => void; onFinish: () =>
       </ol>
 
       <div className="bg-blue-50 border border-blue-100 text-blue-700 text-xs rounded-lg p-3">
-        Need help? Switch back to <span className="font-medium">Automatic Deployment</span> at any time —
+        Need help? Switch back to <span className="font-medium">Automatic Deployment</span> at any time -
         HotBill will configure the bridge, hotspot, and RADIUS wiring for you.
       </div>
 
@@ -411,7 +411,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
     toggleInterface.mutate({ name: iface.name, enabled: willEnable })
   }
 
-  // Wire a port onto a bridge — a port belongs to exactly one bridge, and the
+  // Wire a port onto a bridge - a port belongs to exactly one bridge, and the
   // WAN uplink can never be bridged (it would cut the router's internet).
   const connectPort = useCallback(
     (bridgeId: string, portName: string) => {
@@ -513,7 +513,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
       <div className="p-6 space-y-4">
         {offline && (
           <div className="bg-amber-50 border border-amber-100 text-amber-700 text-xs rounded-lg p-3">
-            Couldn&apos;t reach the router live — showing a sample port layout so you can design the topology.
+            Couldn&apos;t reach the router live - showing a sample port layout so you can design the topology.
             It will be applied next time the router connects.
           </div>
         )}
@@ -530,7 +530,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
         <div>
           <p className="text-sm font-medium text-gray-700 mb-1">Controls</p>
           <p className="text-xs text-gray-500">
-            Drag from the blue dot at the bottom of a port onto a bridge to connect it — each physical port can
+            Drag from the blue dot at the bottom of a port onto a bridge to connect it - each physical port can
             belong to only one bridge. Drag a bridge card to rearrange it. Double-click a wireless port to
             activate it, and click a connected port&apos;s tag to disconnect it.
           </p>
@@ -635,7 +635,7 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
                     <Toggle checked={false} onChange={() => {}} disabled />
                   </div>
                   <p className="text-[11px] text-amber-700 bg-amber-50 rounded p-2">
-                    PPPoE is not currently available — contact support.
+                    PPPoE is not currently available - contact support.
                   </p>
                 </div>
 
@@ -663,10 +663,10 @@ function Step3({ routerId, onBack, onFinish }: { routerId: string; onBack: () =>
 
       {/* Bootstrap script modal */}
       {scriptModal && (
-        <Modal title="Bridge queued — applying automatically" onClose={() => setScriptModal(null)}>
+        <Modal title="Bridge queued - applying automatically" onClose={() => setScriptModal(null)}>
           <p className="text-sm text-gray-600 mb-4">
             The <span className="font-mono">{scriptModal.bridgeName}</span> bridge configuration has been queued.
-            Your router pulls and applies it automatically within ~30 seconds — no VPN or manual step needed.
+            Your router pulls and applies it automatically within ~30 seconds - no VPN or manual step needed.
             If you&apos;d rather apply it right now, you can paste this into your MikroTik terminal instead.
           </p>
           <div className="relative mb-3">
@@ -729,7 +729,7 @@ function PortNode({ data }: NodeProps) {
       )}
       title={
         isWan
-          ? 'WAN / internet uplink — locked. Bridging it would cut the router’s internet.'
+          ? 'WAN / internet uplink - locked. Bridging it would cut the router’s internet.'
           : wireless
           ? 'Double-click to toggle wireless'
           : 'Drag the dot onto a bridge to connect'
@@ -864,7 +864,7 @@ function TopologyCanvas({
         id: `port-${iface.name}`,
         type: 'port',
         position: posById.get(`port-${iface.name}`) ?? { x: 24 + i * 140, y: 24 },
-        // Ports stay put — you connect them by dragging the handle, not the card.
+        // Ports stay put - you connect them by dragging the handle, not the card.
         draggable: false,
         data: { iface, onToggle: onToggleInterface } as unknown as Record<string, unknown>,
       }))

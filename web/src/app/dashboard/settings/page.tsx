@@ -19,10 +19,10 @@ export default function SettingsPage() {
         <div className="p-6">
           <h2 className="font-semibold text-gray-800 mb-4">Account</h2>
           <div className="space-y-3 text-sm">
-            <Row label="Organization" value={tenant?.name ?? '—'} />
+            <Row label="Organization" value={tenant?.name ?? '-'} />
             <Row label="Plan" value={<span className="px-2 py-0.5 bg-brand-50 text-brand-700 rounded text-xs capitalize">{tenant?.plan}</span>} />
             <Row label="Currency" value={tenant?.currency ?? 'UGX'} />
-            <Row label="Admin Email" value={user?.email ?? '—'} />
+            <Row label="Admin Email" value={user?.email ?? '-'} />
           </div>
         </div>
 

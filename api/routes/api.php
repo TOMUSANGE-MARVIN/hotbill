@@ -49,7 +49,7 @@ Route::prefix('v1')->group(function () {
         Route::post('accounting', [RadiusController::class, 'accounting']);
     });
 
-    // Captive portal (public — hotspot clients pre-auth)
+    // Captive portal (public - hotspot clients pre-auth)
     Route::prefix('portal')->group(function () {
         Route::get('routers/{router}/packages', [PortalController::class, 'packages']);
         Route::get('routers/{router}/login.html', [PortalController::class, 'loginTemplate']);

@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
  * If that webhook is never delivered (or can't be matched), the withdrawal would
  * otherwise stay 'processing' forever even though the money already moved. This
  * command re-verifies each such withdrawal against MarzPay via its stored
- * send-money uuid and settles it — the same logic the webhook runs, so it's the
+ * send-money uuid and settles it - the same logic the webhook runs, so it's the
  * safety net for missed webhooks.
  *
  * We give the webhook a short head start (only reconcile rows older than a couple

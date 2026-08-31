@@ -59,7 +59,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
         provider,
         mac, ip, link_login: linkLogin,
       })
-      // Prompt has been sent to the phone — poll inline until confirmed.
+      // Prompt has been sent to the phone - poll inline until confirmed.
       setPendingRef(res.data.reference)
     } catch (e: any) {
       setError(e.response?.data?.message ?? 'Could not start payment. Please try again.')
@@ -157,7 +157,7 @@ function Select({ routerId, mac, ip, linkLogin }: { routerId: string; mac?: stri
           >
             {paying ? <><Loader2 size={16} className="animate-spin" /> Starting payment…</> : `Pay ${data?.currency} ${Number(selected.price).toLocaleString()}`}
           </button>
-          <p className="text-[11px] text-gray-400 text-center">A payment prompt will be sent to your phone — enter your mobile-money PIN to complete.</p>
+          <p className="text-[11px] text-gray-400 text-center">A payment prompt will be sent to your phone - enter your mobile-money PIN to complete.</p>
         </div>
       )}
 
@@ -234,7 +234,7 @@ function Verify({ reference }: { reference: string }) {
   return <Connected data={order} />
 }
 
-/** Shared "you're connected" view — auto-submits the hotspot login. Used by
+/** Shared "you're connected" view - auto-submits the hotspot login. Used by
  * both the paid flow and voucher redemption. */
 function Connected({ data }: { data: any }) {
   const formRef = useRef<HTMLFormElement>(null)

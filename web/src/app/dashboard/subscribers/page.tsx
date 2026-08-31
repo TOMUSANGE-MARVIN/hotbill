@@ -107,8 +107,8 @@ export default function SubscribersPage() {
             {subs.map((sub: any) => (
               <tr key={sub.id} className="hover:bg-gray-50">
                 <td className="px-5 py-3 font-mono text-gray-800">{sub.username}</td>
-                <td className="px-5 py-3 text-gray-700">{sub.full_name ?? '—'}</td>
-                <td className="px-5 py-3 text-gray-600">{sub.package?.name ?? '—'}</td>
+                <td className="px-5 py-3 text-gray-700">{sub.full_name ?? '-'}</td>
+                <td className="px-5 py-3 text-gray-600">{sub.package?.name ?? '-'}</td>
                 <td className="px-5 py-3">
                   <span className="px-2 py-0.5 rounded text-xs bg-blue-50 text-blue-700">{sub.type}</span>
                 </td>

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  * When MarzPay payouts are enabled (config hotbill.marzpay.payouts_enabled) the
  * withdrawal is disbursed automatically via send-money and finalised by the
  * disbursement webhook. Otherwise it is left 'pending' for manual release in the
- * admin withdrawals queue — the ledger debit already reserved the balance, so no
+ * admin withdrawals queue - the ledger debit already reserved the balance, so no
  * money is ever silently lost.
  */
 class PayoutService
@@ -41,7 +41,7 @@ class PayoutService
         }
 
         try {
-            // The operator bears MarzPay's withdrawal fee — send the net amount.
+            // The operator bears MarzPay's withdrawal fee - send the net amount.
             $net = (float) ($withdrawal->meta['net_payout'] ?? $withdrawal->amount);
 
             $result = $this->marzpay->sendMoney(
@@ -168,6 +168,6 @@ class PayoutService
             return 'failed';
         }
 
-        return null; // still pending/processing at MarzPay — leave as is
+        return null; // still pending/processing at MarzPay - leave as is
     }
 }

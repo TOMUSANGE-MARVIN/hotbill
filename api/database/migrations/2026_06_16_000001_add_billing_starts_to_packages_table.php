@@ -9,8 +9,8 @@ return new class extends Migration {
     {
         Schema::table('packages', function (Blueprint $table) {
             // When the package validity clock starts counting.
-            //   first_use  — when the subscriber first connects (default)
-            //   on_purchase — immediately at payment time
+            //   first_use  - when the subscriber first connects (default)
+            //   on_purchase - immediately at payment time
             $table->string('billing_starts', 20)->default('first_use')->after('pool_name');
         });
     }

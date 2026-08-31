@@ -26,7 +26,7 @@ export default function AddBusinessModal({ onClose }: { onClose: () => void }) {
     setBusy(true); setError(null)
     try {
       const biz = await addBusiness(businessName.trim())
-      // We've switched to the new (empty) business — clear stale cached data.
+      // We've switched to the new (empty) business - clear stale cached data.
       qc.invalidateQueries()
       setCreated(biz)
       setStep('router')

@@ -102,7 +102,7 @@ export default function TransactionsPage() {
                 <tr key={tx.id} className="hover:bg-gray-50">
                   <td className="px-5 py-3 font-mono text-xs text-gray-500">{tx.reference}</td>
                   <td className="px-5 py-3 text-gray-700">
-                    <div>{tx.subscriber?.full_name ?? tx.subscriber?.username ?? '—'}</div>
+                    <div>{tx.subscriber?.full_name ?? tx.subscriber?.username ?? '-'}</div>
                     {tx.voucher?.code && (
                       <div className="text-xs text-gray-400 font-mono">Voucher {tx.voucher.code}</div>
                     )}
@@ -116,7 +116,7 @@ export default function TransactionsPage() {
                   </td>
                   <td className="px-5 py-3 text-brand-600 font-medium">{formatCurrency(tx.net_amount, currency)}</td>
                   <td className="px-5 py-3 text-gray-600">
-                    {tx.meta?.balance_after != null ? formatCurrency(tx.meta.balance_after, currency) : '—'}
+                    {tx.meta?.balance_after != null ? formatCurrency(tx.meta.balance_after, currency) : '-'}
                   </td>
                   <td className="px-5 py-3">
                     <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{methodLabel[tx.method] ?? tx.method}</span>
@@ -124,7 +124,7 @@ export default function TransactionsPage() {
                   <td className="px-5 py-3">
                     <span className={cn('px-2 py-0.5 rounded-full text-xs', statusColor(tx.status))}>{tx.status}</span>
                   </td>
-                  <td className="px-5 py-3 text-xs text-gray-400">{tx.paid_at ? formatDateTime(tx.paid_at) : '—'}</td>
+                  <td className="px-5 py-3 text-xs text-gray-400">{tx.paid_at ? formatDateTime(tx.paid_at) : '-'}</td>
                 </tr>
               ))}
               {!isLoading && txList.length === 0 && (

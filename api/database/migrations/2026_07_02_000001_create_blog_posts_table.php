@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Platform-level blog (marketing site). Not tenant-scoped — posts are authored
+ * Platform-level blog (marketing site). Not tenant-scoped - posts are authored
  * by platform super-admins and shown on the public site at /blogs.
  */
 return new class extends Migration

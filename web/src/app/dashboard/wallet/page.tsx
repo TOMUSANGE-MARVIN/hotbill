@@ -74,7 +74,7 @@ export default function WalletPage() {
       {!data?.payouts_enabled && (
         <div className="flex items-start gap-2 bg-amber-50 text-amber-700 text-xs rounded-lg px-4 py-3 max-w-2xl">
           <AlertCircle size={15} className="mt-0.5 shrink-0" />
-          <span>Automatic payouts aren&apos;t enabled yet — withdrawal requests are queued as <b>processing</b> and released manually until the disbursement provider is switched on.</span>
+          <span>Automatic payouts aren&apos;t enabled yet - withdrawal requests are queued as <b>processing</b> and released manually until the disbursement provider is switched on.</span>
         </div>
       )}
 
@@ -135,7 +135,7 @@ export default function WalletPage() {
             <div className="p-6 space-y-4">
               {error && <div className="bg-red-50 text-red-600 text-sm rounded-lg px-3 py-2">{error}</div>}
               <p className="text-sm text-gray-500">
-                Sent to <span className="font-medium text-gray-800">{data?.payout_phone ?? '—'}</span>.{' '}
+                Sent to <span className="font-medium text-gray-800">{data?.payout_phone ?? '-'}</span>.{' '}
                 {!data?.payout_phone && <Link href="/dashboard/settings" className="text-brand-600 underline">Set a number</Link>}
               </p>
               <div>

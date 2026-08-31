@@ -8,7 +8,7 @@ return new class extends Migration {
     public function up(): void
     {
         // One-time email codes for account verification (registration) and
-        // periodic login 2FA. The plaintext code is never stored — only a hash.
+        // periodic login 2FA. The plaintext code is never stored - only a hash.
         Schema::create('email_otps', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -23,7 +23,7 @@ return new class extends Migration {
         });
 
         // Devices a user has verified via login 2FA. While a device's token is
-        // valid, login skips the emailed code — this is what makes 2FA
+        // valid, login skips the emailed code - this is what makes 2FA
         // "periodic" (re-prompted per new device and after the window lapses).
         Schema::create('user_trusted_devices', function (Blueprint $table) {
             $table->id();

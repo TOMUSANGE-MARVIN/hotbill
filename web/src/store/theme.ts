@@ -13,7 +13,7 @@ interface ThemeState {
 
 /**
  * Tenant-dashboard theme. The `dark` class is applied on the dashboard root
- * wrapper (not <html>), so it only affects the tenant side — the marketing
+ * wrapper (not <html>), so it only affects the tenant side - the marketing
  * site and platform-admin area keep their own styling.
  */
 export const useThemeStore = create<ThemeState>()(

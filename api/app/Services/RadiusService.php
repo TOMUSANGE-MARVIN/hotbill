@@ -17,7 +17,7 @@ class RadiusService
         DB::table('radusergroup')->where('username', $username)->delete();
 
         if ($subscriber->status !== 'active') {
-            return; // Revoked — no entries = access denied
+            return; // Revoked - no entries = access denied
         }
 
         // Auth: Cleartext-Password

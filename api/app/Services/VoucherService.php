@@ -85,7 +85,7 @@ class VoucherService
         ]);
 
         // Platform commission: a % of the voucher value, taken when the voucher is
-        // used. Debited from the operator's wallet (may go negative — settled later).
+        // used. Debited from the operator's wallet (may go negative - settled later).
         $commissionPercent = (float) config('hotbill.platform.voucher_commission_percent');
         $value = (float) $voucher->price;
         $commission = round($value * $commissionPercent / 100, 2);
@@ -117,7 +117,7 @@ class VoucherService
             $walletTxn = $voucher->tenant->postWallet('debit', $commission, 'voucher_commission', [
                 'reference' => $transaction->reference,
                 'status' => 'completed',
-                'description' => "Platform fee {$commissionPercent}% — voucher {$voucher->code}",
+                'description' => "Platform fee {$commissionPercent}% - voucher {$voucher->code}",
                 'meta' => [
                     'voucher_id' => $voucher->id,
                     'voucher_code' => $voucher->code,

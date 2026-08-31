@@ -144,7 +144,7 @@ export default async function BlogPostPage({
         </div>
       )}
 
-      {/* Body — content authored by platform admins via the CMS editor. */}
+      {/* Body - content authored by platform admins via the CMS editor. */}
       <div className="max-w-3xl mx-auto px-5 py-14 lg:py-16">
         <div className="blog-content" dangerouslySetInnerHTML={{ __html: post.content ?? '' }} />
       </div>

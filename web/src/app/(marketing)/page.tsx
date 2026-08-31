@@ -25,7 +25,7 @@ export default function HomePage() {
   )
 }
 
-/* ───────────────────────── SECTION 2 — HERO ───────────────────────── */
+/* ───────────────────────── SECTION 2 - HERO ───────────────────────── */
 function Hero() {
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
@@ -38,7 +38,7 @@ function Hero() {
   const tl = isMobile ? 44 : 68
   // Only the top-left badge cutout is carved into the card now. The bottom-right
   // "Get Started" button instead nests via a uniform white moat (box-shadow ring)
-  // so its gap follows the button's exact shape — perfectly parallel curves.
+  // so its gap follows the button's exact shape - perfectly parallel curves.
   const cardMask = `radial-gradient(circle ${tl}px at left top, transparent 0 ${tl - 1}px, #000 ${tl}px)`
 
   return (
@@ -97,7 +97,7 @@ function Hero() {
             </div>
           </div>
 
-          {/* CENTER — purple anchor card with concave top-left cutout */}
+          {/* CENTER - purple anchor card with concave top-left cutout */}
           <div className="order-1 lg:order-2 relative">
             <div
               className="relative bg-purple aspect-[16/11] overflow-hidden"
@@ -124,7 +124,7 @@ function Hero() {
 
             {/* Get Started button nested into the bottom-right corner. The white
                 box-shadow ring is a uniform "moat" that traces the button's exact
-                shape — where it overlaps the purple card it carves a perfectly
+                shape - where it overlaps the purple card it carves a perfectly
                 parallel concave notch; where it pokes past, it blends into white. */}
             <Link
               href={loginUrl}
@@ -134,7 +134,7 @@ function Hero() {
             </Link>
           </div>
 
-          {/* RIGHT — stats */}
+          {/* RIGHT - stats */}
           <div className="order-3 space-y-8 lg:space-y-10">
             <StatCounter value={5} label="Years Experience" />
             <StatCounter value={1200} label="Clients Connected" />
@@ -146,7 +146,7 @@ function Hero() {
   )
 }
 
-/* ──────────────────── SECTION 3 — DARK TAGLINE + VIDEO ─────────────── */
+/* ──────────────────── SECTION 3 - DARK TAGLINE + VIDEO ─────────────── */
 function DarkVideo() {
   return (
     <section className="bg-navy text-white pt-24 pb-0 relative overflow-hidden">
@@ -212,7 +212,7 @@ function Marquee() {
   )
 }
 
-/* ────────────────────────── SECTION 4 — SERVICES ───────────────────── */
+/* ────────────────────────── SECTION 4 - SERVICES ───────────────────── */
 const services = [
   {
     num: '001',
@@ -252,7 +252,7 @@ function Services() {
           </div>
         </Reveal>
 
-        {/* Service list — click a row to expand its details */}
+        {/* Service list - click a row to expand its details */}
         <div className="border-t border-black/10">
           {services.map((s, i) => {
             const isActive = active === i
@@ -306,7 +306,7 @@ function Services() {
   )
 }
 
-/* ─────────────────── SECTION 4.5 — PRODUCT GALLERY ─────────────────── */
+/* ─────────────────── SECTION 4.5 - PRODUCT GALLERY ─────────────────── */
 const galleryTop = [
   { src: '/gallery/dashboard.png', label: 'Dashboard' },
   { src: '/gallery/usage-analytics.png', label: 'Usage Analytics' },
@@ -381,7 +381,7 @@ function Gallery() {
   )
 }
 
-/* ───────────────────────── SECTION 5 — PROJECTS ────────────────────── */
+/* ───────────────────────── SECTION 5 - PROJECTS ────────────────────── */
 const projects = [
   {
     name: 'City Mesh Network Rollout',
@@ -442,13 +442,13 @@ function Projects() {
   )
 }
 
-/* ───────────────────────── SECTION 6 — FOUNDER ─────────────────────── */
+/* ───────────────────────── SECTION 6 - FOUNDER ─────────────────────── */
 function Founder() {
   return (
     <section className="bg-purple text-white pb-0 relative overflow-hidden">
       <div className="container-1200">
         <div className="grid lg:grid-cols-2 gap-10 items-end">
-          {/* Left — message */}
+          {/* Left - message */}
           <div className="pb-24 lg:pb-32">
             <span className="inline-block border border-white/40 rounded-pill px-5 py-1.5 text-xs font-medium mb-8">
               Message From Founder
@@ -470,7 +470,7 @@ function Founder() {
             </div>
           </div>
 
-          {/* Right — founder */}
+          {/* Right - founder */}
           <div className="relative flex items-end justify-center lg:justify-end">
             <div className="flex items-start gap-5 self-start pt-4">
               <span className="w-px h-16 bg-white/40 mt-1" />
@@ -497,7 +497,7 @@ function Founder() {
   )
 }
 
-/* ─────────────────────── SECTION 7 — TESTIMONIALS ──────────────────── */
+/* ─────────────────────── SECTION 7 - TESTIMONIALS ──────────────────── */
 const testimonials = [
   {
     quote: 'HotBill transformed our WiFi business. Customers pay via mobile money and get instant access, no more manual vouchers. As an operator, it changed everything.',
@@ -567,7 +567,7 @@ function Testimonials() {
           </div>
         </div>
 
-        {/* sliding track — shows two at a time, scrolls left on arrow click */}
+        {/* sliding track - shows two at a time, scrolls left on arrow click */}
         <div className="overflow-hidden">
           <div
             className="flex transition-transform duration-500 ease-out"
@@ -602,7 +602,7 @@ function Testimonials() {
   )
 }
 
-/* ─────────────────────── SECTION 8 — COMPATIBLE WITH ───────────────── */
+/* ─────────────────────── SECTION 8 - COMPATIBLE WITH ───────────────── */
 const brands = [
   { name: 'MikroTik', file: 'mikrotik.svg' },
   { name: 'Cisco', file: 'cisco.svg' },

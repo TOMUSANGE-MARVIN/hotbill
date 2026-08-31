@@ -17,7 +17,7 @@ return new class extends Migration
         Schema::create('router_commands', function (Blueprint $table) {
             $table->id();
             $table->foreignId('router_id')->constrained()->cascadeOnDelete();
-            // What this command is (bridge, reboot, password, script) — for the UI.
+            // What this command is (bridge, reboot, password, script) - for the UI.
             $table->string('kind', 30)->default('script');
             // The RouterOS script the router runs locally.
             $table->text('script');

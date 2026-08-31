@@ -22,7 +22,7 @@ class RouterController extends Controller
             ->get();
 
         // Only report live metrics for routers that have sent a recent heartbeat.
-        // A router that stopped reporting is offline — never show its last-known
+        // A router that stopped reporting is offline - never show its last-known
         // CPU / users / memory / uptime as if they were current.
         $routers->each(function (Router $r) {
             if (! $r->isOnline()) {
@@ -190,7 +190,7 @@ class RouterController extends Controller
         ]);
 
         // Pull real per-customer hotspot usage in the background (queue worker).
-        // Only actually succeeds if the router's VPN tunnel is reachable — most
+        // Only actually succeeds if the router's VPN tunnel is reachable - most
         // NAT/CGNAT routers rely on usageReport() below instead.
         \App\Jobs\CollectHotspotUsageJob::dispatch($router->id);
 
@@ -203,11 +203,11 @@ class RouterController extends Controller
      * and posts it here every 5 minutes, over the same outbound HTTPS channel
      * as the heartbeat/command poller. Needed because CollectHotspotUsageJob's
      * direct API pull only works when the router's VPN tunnel is reachable,
-     * which it usually isn't for CGNAT'd routers — those routers were never
+     * which it usually isn't for CGNAT'd routers - those routers were never
      * getting any usage recorded at all before this existed.
      *
      * Payload: `data=<records>` where each record is `type|username|bytes_in|
-     * bytes_out|uptime` separated by `;` — type `u` is a persistent hotspot
+     * bytes_out|uptime` separated by `;` - type `u` is a persistent hotspot
      * user's stored counters, `a` is an active session's live counters. Merged
      * the same way MikrotikService::getHotspotUsageSnapshot() does: a user's
      * total is stored + live, and they're "active" iff an `a` record exists.
@@ -275,7 +275,7 @@ class RouterController extends Controller
     /**
      * Poll endpoint (the XenFi model): the router's `hotbill-commands` scheduler
      * calls this over outbound HTTPS every ~30s and runs whatever RouterOS
-     * script we return — so HotBill manages routers behind NAT without ever
+     * script we return - so HotBill manages routers behind NAT without ever
      * reaching into them. Each pending command is wrapped so the router reports
      * success/failure back to us, then executed via [:parse] on the router.
      */
@@ -394,7 +394,7 @@ CMD;
             $router->update(['status' => 'offline']);
             return response()->json(['success' => true, 'message' => 'Reboot command sent']);
         } catch (\Exception $e) {
-            // The router drops the API socket as it goes down — expected after reboot is issued.
+            // The router drops the API socket as it goes down - expected after reboot is issued.
             if (str_contains($e->getMessage(), 'connection closed')) {
                 $router->update(['status' => 'offline']);
                 return response()->json(['success' => true, 'message' => 'Reboot command sent']);

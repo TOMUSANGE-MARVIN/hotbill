@@ -29,7 +29,7 @@
 <body>
 <div class="header">
   <h1>{{ $tenant->name }}</h1>
-  <p>WiFi Vouchers — {{ $batch->name }}</p>
+  <p>WiFi Vouchers - {{ $batch->name }}</p>
   <p>{{ now()->format('d M Y') }} | {{ count($vouchers) }} vouchers</p>
 </div>
 <table class="grid">

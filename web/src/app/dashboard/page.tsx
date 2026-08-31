@@ -102,7 +102,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-400">Welcome back — here&apos;s how {tenant?.name ?? 'your network'} is performing.</p>
+          <p className="text-sm text-slate-400">Welcome back - here&apos;s how {tenant?.name ?? 'your network'} is performing.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl px-2 py-1.5 shadow-sm">
           <input type="date" value={range.start} onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}

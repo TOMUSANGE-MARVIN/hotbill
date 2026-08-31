@@ -30,7 +30,7 @@ function TransactionsList() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">All Transactions</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Global sales log across all operators — gross, the fee we deducted, and the operator&apos;s balance after each sale.</p>
+          <p className="text-sm text-gray-500 mt-0.5">Global sales log across all operators - gross, the fee we deducted, and the operator&apos;s balance after each sale.</p>
         </div>
         <div className="flex gap-4 text-right">
           <div>
@@ -58,7 +58,7 @@ function TransactionsList() {
             <tbody className="divide-y divide-gray-100">
               {data.map((t) => (
                 <tr key={t.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{t.tenant?.name ?? '—'}</td>
+                  <td className="px-4 py-3 font-medium text-gray-900">{t.tenant?.name ?? '-'}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${t.type === 'voucher' ? 'bg-amber-50 text-amber-700' : 'bg-brand-50 text-brand-700'}`}>
                       {t.type}
@@ -73,7 +73,7 @@ function TransactionsList() {
                   </td>
                   <td className="px-4 py-3 text-gray-700">{formatCurrency(t.net_amount ?? 0, t.currency ?? 'UGX')}</td>
                   <td className="px-4 py-3 text-gray-500">
-                    {t.meta?.balance_after != null ? formatCurrency(t.meta.balance_after, t.currency ?? 'UGX') : '—'}
+                    {t.meta?.balance_after != null ? formatCurrency(t.meta.balance_after, t.currency ?? 'UGX') : '-'}
                   </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${t.status === 'completed' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{t.status}</span>

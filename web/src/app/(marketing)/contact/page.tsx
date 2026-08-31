@@ -32,7 +32,7 @@ export default function ContactPage() {
     setSending(true)
     try {
       // AJAX submit (Accept: application/json) so Formspree returns JSON instead
-      // of redirecting to its thank-you page — the user stays right here.
+      // of redirecting to its thank-you page - the user stays right here.
       const res = await fetch(FORMSPREE_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },

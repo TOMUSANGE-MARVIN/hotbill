@@ -14,7 +14,7 @@ use Symfony\Component\HttpFoundation\Response;
  * of that business we override their `tenant_id` in memory for this request only
  * (no DB write), so every existing `$request->user()->tenant_id` query is scoped
  * to the selected business. Missing/invalid headers fall back to the user's
- * persisted home tenant — keeping older clients working.
+ * persisted home tenant - keeping older clients working.
  */
 class ResolveBusiness
 {

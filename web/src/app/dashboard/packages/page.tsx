@@ -227,8 +227,8 @@ export default function PackagesPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3 font-semibold text-brand-600">{formatCurrency(pkg.price, currency)}</td>
-                  <td className="px-5 py-3 text-gray-600">{pkg.speed_label ?? '—'}</td>
-                  <td className="px-5 py-3 text-gray-600">{pkg.duration_label ?? '—'}</td>
+                  <td className="px-5 py-3 text-gray-600">{pkg.speed_label ?? '-'}</td>
+                  <td className="px-5 py-3 text-gray-600">{pkg.duration_label ?? '-'}</td>
                   <td className="px-5 py-3 text-gray-600">{pkg.data_limit_mb ? `${(pkg.data_limit_mb / 1024).toFixed(1)} GB` : 'Unlimited'}</td>
                   <td className="px-5 py-3 text-gray-700">{pkg.subscribers_count ?? 0}</td>
                   <td className="px-5 py-3">

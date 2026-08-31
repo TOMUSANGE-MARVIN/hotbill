@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * MarzPay client — direct MTN/Airtel collections (the customer gets a PIN
+ * MarzPay client - direct MTN/Airtel collections (the customer gets a PIN
  * prompt straight on their phone, no hosted redirect) and automatic
  * disbursements (send-money) for operator payouts.
  *

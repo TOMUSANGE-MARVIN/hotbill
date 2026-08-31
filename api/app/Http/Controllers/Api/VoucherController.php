@@ -148,7 +148,7 @@ class VoucherController extends Controller
         foreach ($vouchers as $v) {
             $rows .= $this->docxRow([
                 $v->code,
-                $v->package->name ?? '—',
+                $v->package->name ?? '-',
                 number_format((float) $v->price, 0) . ' ' . $currency,
             ], false);
         }
@@ -156,7 +156,7 @@ class VoucherController extends Controller
         $border = fn ($e) => '<w:' . $e . ' w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/>';
         $documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
             . '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>'
-            . $this->docxHeading(($tenant->name ?? 'HotBill') . ' — WiFi Vouchers')
+            . $this->docxHeading(($tenant->name ?? 'HotBill') . ' - WiFi Vouchers')
             . $this->docxPara($meta)
             . '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblBorders>'
             . $border('top') . $border('left') . $border('bottom') . $border('right')

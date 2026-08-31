@@ -62,7 +62,7 @@ class AnalyticsController extends Controller
             ->whereDate('paid_at', today())
             ->count();
 
-        // System insights — "live" figures only count routers reporting right now.
+        // System insights - "live" figures only count routers reporting right now.
         $routers = Router::where('tenant_id', $tenantId)->get();
         $onlineRouters = $routers->filter(fn (Router $r) => $r->isOnline());
         $activeUsers = $onlineRouters->sum('active_users');
@@ -90,7 +90,7 @@ class AnalyticsController extends Controller
             ->limit(20)
             ->get(['id', 'subscriber_id', 'voucher_id', 'type', 'amount', 'method', 'paid_at']);
 
-        // Filter options for the Overview chart dropdown — distinct subscribers
+        // Filter options for the Overview chart dropdown - distinct subscribers
         // who bought something in range, so the dropdown mirrors real activity.
         $subscriberFilters = Transaction::where('tenant_id', $tenantId)
             ->where('status', 'completed')
@@ -130,7 +130,7 @@ class AnalyticsController extends Controller
             'total_data_gb' => $totalDataGb,
             'active_subscribers' => $activeSubscribers,
             'expired_today' => $expiredToday,
-            'account_credit' => 0, // prepaid balance — extend later
+            'account_credit' => 0, // prepaid balance - extend later
             'balance' => $balance,
             'system_online' => $systemOnline,
             'sales_today' => $salesToday,
@@ -142,7 +142,7 @@ class AnalyticsController extends Controller
 
     /**
      * Per-day breakdown for the Overview chart, filterable by channel or a
-     * single subscriber — kept separate from dashboard() so switching the
+     * single subscriber - kept separate from dashboard() so switching the
      * filter never invalidates the (cached) KPI cards / recent sales above it.
      */
     public function series(Request $request): JsonResponse

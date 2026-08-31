@@ -228,7 +228,7 @@ class MikrotikService
         }
 
         // Active sessions with no persistent user record (MAC/trial/RADIUS
-        // logins) — record their live usage too so they aren't invisible.
+        // logins) - record their live usage too so they aren't invisible.
         foreach ($live as $name => $s) {
             if (isset($seen[$name]) || $name === 'default-trial') continue;
             $out[] = [
@@ -359,7 +359,7 @@ class MikrotikService
             '=password=' . $password,
             '=server=' . $server,
         ];
-        // RouterOS hotspot users don't take rate-limit directly — it lives on a
+        // RouterOS hotspot users don't take rate-limit directly - it lives on a
         // user-profile, so create/reuse one for this speed and assign it.
         if ($rateLimit && $rateLimit !== '0/0') {
             $attrs[] = '=profile=' . $this->ensureHotspotUserProfile($rateLimit);
@@ -371,7 +371,7 @@ class MikrotikService
     }
 
     /**
-     * Log a client into the hotspot server-side by MAC/IP — reliable regardless
+     * Log a client into the hotspot server-side by MAC/IP - reliable regardless
      * of the captive-portal browser (avoids HTTPS→HTTP mixed-content and DNS
      * issues with the login page). RouterOS enforces the user's profile/time.
      */
@@ -473,7 +473,7 @@ class MikrotikService
 
     /**
      * Interfaces that carry the router's internet uplink (the default route).
-     * These must NEVER be added to a hotspot bridge — doing so drops the WAN,
+     * These must NEVER be added to a hotspot bridge - doing so drops the WAN,
      * which also kills the WireGuard management tunnel.
      */
     public function getWanInterfaces(): array
@@ -614,13 +614,13 @@ class MikrotikService
         //
         // NB: cookie login is deliberately excluded. With `cookie` enabled, MikroTik
         // re-authenticates a returning device straight from its stored cookie WITHOUT
-        // asking RADIUS — so a 3-hour voucher would keep working until the cookie
+        // asking RADIUS - so a 3-hour voucher would keep working until the cookie
         // expired (days later). Dropping cookie forces every reconnect back through
         // RADIUS, which enforces the voucher's real remaining time.
         $loginBy = 'http-pap,http-chap';
         // IMPORTANT: do NOT use a `.local` dns-name. The `.local` TLD is reserved
         // for mDNS (RFC 6762), so Linux (avahi/systemd-resolved), macOS and iOS all
-        // resolve `*.local` via multicast DNS instead of asking the hotspot's DNS —
+        // resolve `*.local` via multicast DNS instead of asking the hotspot's DNS -
         // the lookup fails with NXDOMAIN and the captive portal never loads. Leaving
         // dns-name empty makes MikroTik serve the login page from the gateway IP, so
         // no DNS lookup happens at all and the portal works on every device.

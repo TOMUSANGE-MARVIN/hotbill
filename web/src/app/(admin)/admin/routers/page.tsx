@@ -51,9 +51,9 @@ function RoutersList() {
                       {r.name}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-600">{r.tenant?.name ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{r.model ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs font-mono">{r.ros_version ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-600">{r.tenant?.name ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{r.model ?? '-'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs font-mono">{r.ros_version ?? '-'}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${r.status === 'online' ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-500'}`}>
                       {r.status}
@@ -63,13 +63,13 @@ function RoutersList() {
                     <div className="flex items-center gap-1.5">
                       <Cpu size={12} className="text-gray-400" />
                       <span className={`text-xs font-medium ${(r.cpu_load ?? 0) > 80 ? 'text-red-600' : 'text-gray-700'}`}>
-                        {r.cpu_load != null ? `${r.cpu_load}%` : '—'}
+                        {r.cpu_load != null ? `${r.cpu_load}%` : '-'}
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-700">{r.active_users ?? 0}</td>
                   <td className="px-4 py-3 text-xs text-gray-400">
-                    {r.last_seen_at ? formatDistanceToNow(new Date(r.last_seen_at), { addSuffix: true }) : '—'}
+                    {r.last_seen_at ? formatDistanceToNow(new Date(r.last_seen_at), { addSuffix: true }) : '-'}
                   </td>
                 </tr>
               ))}

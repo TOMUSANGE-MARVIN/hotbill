@@ -17,7 +17,7 @@ class BlogPostSeeder extends Seeder
     public function run(): void
     {
         $author = 'HotBill Team';
-        // Publish dates, newest first — the newest becomes the featured post.
+        // Publish dates, newest first - the newest becomes the featured post.
         $base = Carbon::create(2026, 6, 30, 9, 0, 0);
 
         foreach ($this->posts() as $i => $post) {
@@ -48,7 +48,7 @@ class BlogPostSeeder extends Seeder
                 'title' => 'How to Start a WiFi Hotspot Business in Uganda',
                 'slug' => 'how-to-start-wifi-hotspot-business-uganda',
                 'category' => 'Guides',
-                'excerpt' => 'A simple, step-by-step guide to starting a WiFi hotspot business in Uganda — from buying internet to getting paid with mobile money.',
+                'excerpt' => 'A simple, step-by-step guide to starting a WiFi hotspot business in Uganda - from buying internet to getting paid with mobile money.',
                 'meta_title' => 'How to Start a WiFi Hotspot Business in Uganda (2026 Guide)',
                 'meta_description' => 'Learn how to start a WiFi hotspot business in Uganda step by step: pick a location, buy internet, set up a MikroTik router, and get paid with MTN MoMo and Airtel Money.',
                 'content' => <<<'HTML'
@@ -91,7 +91,7 @@ class BlogPostSeeder extends Seeder
 <h2>Start small and grow</h2>
 <p>You do not need a lot of money to begin. Start with one router in one location, learn how it works, and add more routers as you earn. Many big hotspot businesses in Uganda started with just one small setup.</p>
 
-<p>HotBill brings all of this together — router management, captive portal, mobile money, and daily reports — in one simple dashboard, so you can focus on growing your business.</p>
+<p>HotBill brings all of this together - router management, captive portal, mobile money, and daily reports - in one simple dashboard, so you can focus on growing your business.</p>
 HTML,
             ],
             [
@@ -107,7 +107,7 @@ HTML,
 <h2>What you need before you start</h2>
 <ul>
 <li>A MikroTik router (for example an hAP or an RB series board)</li>
-<li>An internet line — fibre or 4G</li>
+<li>An internet line - fibre or 4G</li>
 <li>A laptop or phone to set it up</li>
 <li>A billing system like HotBill to sell packages</li>
 </ul>
@@ -131,7 +131,7 @@ HTML,
 <p>Connect with your phone. You should see the login page. Buy a small package to make sure the payment works and the internet turns on. Then let the time run out to check that it cuts off correctly.</p>
 
 <h2>Make setup easier</h2>
-<p>Setting up a MikroTik router by hand takes time and knowledge. With HotBill, you run one setup wizard and it prepares your router for you — no deep networking skills needed. That means you can start selling WiFi faster and spend less time on technical work.</p>
+<p>Setting up a MikroTik router by hand takes time and knowledge. With HotBill, you run one setup wizard and it prepares your router for you - no deep networking skills needed. That means you can start selling WiFi faster and spend less time on technical work.</p>
 HTML,
             ],
             [
@@ -142,7 +142,7 @@ HTML,
                 'meta_title' => 'Accept MTN MoMo & Airtel Money for Your WiFi Hotspot',
                 'meta_description' => 'Learn how to accept MTN Mobile Money and Airtel Money for your WiFi hotspot in Uganda, so customers pay and get online automatically without airtime or manual work.',
                 'content' => <<<'HTML'
-<p>In Uganda, mobile money is king. Most people do not carry cash or use bank cards, but almost everyone has <strong>MTN MoMo</strong> or <strong>Airtel Money</strong>. If your WiFi business accepts mobile money, you make it easy for people to pay — and easy payment means more sales.</p>
+<p>In Uganda, mobile money is king. Most people do not carry cash or use bank cards, but almost everyone has <strong>MTN MoMo</strong> or <strong>Airtel Money</strong>. If your WiFi business accepts mobile money, you make it easy for people to pay - and easy payment means more sales.</p>
 
 <h2>Why mobile money beats cash and airtime</h2>
 <ul>
@@ -186,7 +186,7 @@ HTML,
 <p>A <strong>WiFi voucher</strong> is a code that gives someone internet for a set time. The customer buys the code, enters it on your login page, and gets online. Vouchers are a simple and powerful way to sell WiFi, especially where mobile money is not always easy.</p>
 
 <h2>What is a WiFi voucher?</h2>
-<p>Think of a voucher like a scratch card for airtime. Each voucher has a unique code and a value — for example "1 day" or "1 week" of internet. Once a code is used, it cannot be used again. This keeps your business safe from cheating.</p>
+<p>Think of a voucher like a scratch card for airtime. Each voucher has a unique code and a value - for example "1 day" or "1 week" of internet. Once a code is used, it cannot be used again. This keeps your business safe from cheating.</p>
 
 <h2>Why vouchers are useful</h2>
 <ul>
@@ -211,7 +211,7 @@ HTML,
 <h2>Keep track of every voucher</h2>
 <p>A good system shows you which vouchers are used, which are still active, and how much money each batch brought in. This helps you manage agents and see what is selling. HotBill lets you create, print, and track vouchers easily, right next to your other sales.</p>
 
-<p>Vouchers turn your WiFi into something people can buy anywhere, any time — even from the shop next door. That is a simple way to reach more customers and earn more.</p>
+<p>Vouchers turn your WiFi into something people can buy anywhere, any time - even from the shop next door. That is a simple way to reach more customers and earn more.</p>
 HTML,
             ],
             [
@@ -222,7 +222,7 @@ HTML,
                 'meta_title' => 'How Much Can You Earn From a WiFi Hotspot in Uganda?',
                 'meta_description' => 'A simple, honest guide to WiFi hotspot income in Uganda: how earnings work, what costs to expect, and how to make your hotspot more profitable.',
                 'content' => <<<'HTML'
-<p>One of the first questions people ask is: "Can a WiFi hotspot really make money?" The honest answer is yes — but how much depends on a few things. This guide explains, in simple terms, how hotspot income works and how to grow it.</p>
+<p>One of the first questions people ask is: "Can a WiFi hotspot really make money?" The honest answer is yes - but how much depends on a few things. This guide explains, in simple terms, how hotspot income works and how to grow it.</p>
 
 <h2>How hotspot income works</h2>
 <p>Your income comes from customers buying packages. If many people buy small packages every day, those small amounts add up fast. A busy hotspot in a good location can serve dozens or even hundreds of users a day.</p>
@@ -267,9 +267,9 @@ HTML,
                 'category' => 'Growth',
                 'excerpt' => 'Want more people using your WiFi? These seven simple, low-cost tips will help you attract and keep more hotspot customers.',
                 'meta_title' => '7 Easy Ways to Get More WiFi Hotspot Customers',
-                'meta_description' => 'Seven simple, low-cost ways to get more customers for your WiFi hotspot in Uganda — from better pricing to reliable internet and word of mouth.',
+                'meta_description' => 'Seven simple, low-cost ways to get more customers for your WiFi hotspot in Uganda - from better pricing to reliable internet and word of mouth.',
                 'content' => <<<'HTML'
-<p>Getting your hotspot running is only the first step. To grow, you need people to use it again and again — and to tell their friends. Here are seven easy ways to get more customers, without spending a lot of money.</p>
+<p>Getting your hotspot running is only the first step. To grow, you need people to use it again and again - and to tell their friends. Here are seven easy ways to get more customers, without spending a lot of money.</p>
 
 <h2>1. Keep your WiFi fast and reliable</h2>
 <p>Nothing loses customers faster than slow or broken internet. When your WiFi is fast and always on, people come back and trust you. This is the number one thing that grows a hotspot business.</p>
@@ -293,7 +293,7 @@ HTML,
 <p>Check your reports to see which packages and which hours are busiest. Then focus on what works. If daily plans sell best in the evening, make sure your WiFi is strong at that time. Smart owners make choices based on real numbers, not guesses.</p>
 
 <h2>Small steps, steady growth</h2>
-<p>You do not need a big budget to grow a hotspot. Reliable internet, fair prices, easy payment, and a little marketing will steadily bring more customers. HotBill helps you manage all of this — packages, payments, vouchers, and reports — from one simple dashboard, so you can focus on growing.</p>
+<p>You do not need a big budget to grow a hotspot. Reliable internet, fair prices, easy payment, and a little marketing will steadily bring more customers. HotBill helps you manage all of this - packages, payments, vouchers, and reports - from one simple dashboard, so you can focus on growing.</p>
 HTML,
             ],
         ];

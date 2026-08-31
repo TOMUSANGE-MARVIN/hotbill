@@ -15,7 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Platform (super-admin) endpoints — cross-tenant insight and control.
+ * Platform (super-admin) endpoints - cross-tenant insight and control.
  * Gated by the platform.admin middleware.
  */
 class PlatformController extends Controller
@@ -27,13 +27,13 @@ class PlatformController extends Controller
 
         $paidOrders = PortalOrder::where('status', 'paid');
 
-        // Revenue source 1 — commission on online hotspot sales (stored per order).
+        // Revenue source 1 - commission on online hotspot sales (stored per order).
         $hotspotRevenue = (float) (clone $paidOrders)->sum('platform_fee');
         $gatewayFees = (float) (clone $paidOrders)->sum('gateway_fee');
         $gmv = (float) (clone $paidOrders)->sum('amount');
         $operatorEarnings = (float) (clone $paidOrders)->sum('operator_net');
 
-        // Revenue source 2 — commission on redeemed vouchers (stored on the txn).
+        // Revenue source 2 - commission on redeemed vouchers (stored on the txn).
         $voucherTxns = Transaction::where('type', 'voucher')->where('status', 'completed');
         $voucherRevenue = (float) (clone $voucherTxns)->sum('commission');
         $voucherCount = (clone $voucherTxns)->count();
@@ -88,7 +88,7 @@ class PlatformController extends Controller
                 'period_revenue' => $periodRevenue,
                 'operator_wallet_liability' => (float) Tenant::sum('wallet_balance'),
             ],
-            // Where platform revenue comes from — all-time and within the range.
+            // Where platform revenue comes from - all-time and within the range.
             'revenue_by_source' => [
                 [
                     'source' => 'hotspot',

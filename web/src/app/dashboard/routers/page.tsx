@@ -87,7 +87,7 @@ export default function RouterObservabilityPage() {
             <h1 className="text-2xl font-bold text-gray-900">Router Observability</h1>
           </div>
           <p className="text-sm text-gray-500 mt-1">
-            RouterBoard: <span className="font-medium text-gray-700">{router.model ?? router.identity ?? '—'}</span>
+            RouterBoard: <span className="font-medium text-gray-700">{router.model ?? router.identity ?? '-'}</span>
           </p>
         </div>
 
@@ -123,10 +123,10 @@ export default function RouterObservabilityPage() {
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Clock} label="Uptime" value={router.uptime ?? '—'} />
+        <StatCard icon={Clock} label="Uptime" value={router.uptime ?? '-'} />
         <StatCard icon={Users} label="Active Users" value={String(router.active_users ?? 0)} />
-        <StatCard icon={Cpu} label="CPU Load" value={router.cpu_load != null ? `${router.cpu_load}%` : '—'} />
-        <StatCard icon={MemoryStick} label="Memory Usage" value={memPct != null ? `${memPct}%` : '—'} />
+        <StatCard icon={Cpu} label="CPU Load" value={router.cpu_load != null ? `${router.cpu_load}%` : '-'} />
+        <StatCard icon={MemoryStick} label="Memory Usage" value={memPct != null ? `${memPct}%` : '-'} />
       </div>
 
       {/* CPU & Memory chart */}
@@ -195,7 +195,7 @@ function StatCard({ icon: Icon, label, value }: { icon: any; label: string; valu
 function EmptyChart() {
   return (
     <div className="h-[240px] flex items-center justify-center text-sm text-gray-400">
-      No data yet — waiting for the router heartbeat.
+      No data yet - waiting for the router heartbeat.
     </div>
   )
 }

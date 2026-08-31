@@ -43,7 +43,7 @@ export default function RegisterPage() {
     setError('')
     try {
       const res = await api.post('/auth/register', form)
-      // The account is created unverified — collect the emailed code next.
+      // The account is created unverified - collect the emailed code next.
       setOtpMessage(res.data.message ?? '')
       setStep('verify')
     } catch (err: any) {
@@ -90,7 +90,7 @@ export default function RegisterPage() {
           ) : (
           <>
           <h1 className="text-3xl font-extrabold mb-2">Create your account</h1>
-          <p className="text-[#00012A]/55 mb-8">Set up your HotBill workspace — no card required.</p>
+          <p className="text-[#00012A]/55 mb-8">Set up your HotBill workspace - no card required.</p>
 
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg p-3 mb-5">{error}</div>

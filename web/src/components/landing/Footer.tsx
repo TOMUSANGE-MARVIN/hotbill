@@ -43,7 +43,7 @@ export default function Footer() {
       <div className="container-1200 py-14">
         <div>
           <div className="grid lg:grid-cols-[1.2fr_1.6fr_1fr] gap-10">
-            {/* Left — brand */}
+            {/* Left - brand */}
             <div>
               <Link href="/" className="flex items-center gap-2.5 mb-4">
                 <Image src="/hotbill-logo.png" alt="HotBill" width={176} height={107} className="h-8 w-auto object-contain" />
@@ -54,7 +54,7 @@ export default function Footer() {
               </p>
             </div>
 
-            {/* Center — links */}
+            {/* Center - links */}
             <div className="flex flex-wrap gap-x-8 gap-y-3 lg:justify-center">
               {footerLinks.map((l) => (
                 <Link key={l.label} href={l.href} className="text-sm text-white/70 hover:text-white transition-colors">
@@ -63,7 +63,7 @@ export default function Footer() {
               ))}
             </div>
 
-            {/* Right — socials */}
+            {/* Right - socials */}
             <div className="flex gap-3 lg:justify-end items-start">
               {socials.map((Icon, i) => (
                 <a

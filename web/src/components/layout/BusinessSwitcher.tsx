@@ -33,7 +33,7 @@ export default function BusinessSwitcher() {
     setOpen(false)
     if (id === activeBusinessId) return
     await switchBusiness(id)
-    // Every cached query is tenant-scoped — refetch all for the new business.
+    // Every cached query is tenant-scoped - refetch all for the new business.
     qc.invalidateQueries()
     // Detail routes (e.g. a specific router) belong to the old business; go home.
     if (/^\/dashboard\/.+\/.+/.test(pathname)) router.push('/dashboard')

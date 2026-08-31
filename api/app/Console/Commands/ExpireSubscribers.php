@@ -8,7 +8,7 @@ use Illuminate\Console\Command;
 
 /**
  * Nothing else in the system ever tells the router to cut an expired customer
- * off — the hotspot user account (and its mac-cookie) stays valid forever
+ * off - the hotspot user account (and its mac-cookie) stays valid forever
  * once created, and RouterOS's own limit-uptime only counts connected time,
  * not calendar time, so an intermittent user can easily outlive it. This is
  * the actual enforcement point: mark the subscriber expired and queue a

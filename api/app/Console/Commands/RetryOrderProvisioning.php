@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Self-heals paid orders that were charged but whose hotspot user was never
- * confirmed on the router (see PortalController::fulfill — 'provisioning_failed').
+ * confirmed on the router (see PortalController::fulfill - 'provisioning_failed').
  * The customer's money was already collected; this just keeps retrying the same
  * stored credentials against the router until it confirms, then flips the order
  * to 'paid' so /status starts returning the credentials.

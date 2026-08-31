@@ -19,7 +19,7 @@ return new class extends Migration
             // Which tunnel HotBill actually reaches this router over.
             // null = unknown yet (pre-heartbeat); resolved to wireguard|sstp.
             $table->string('vpn_type', 12)->nullable()->after('vpn_configured_at');
-            // SSTP (PPP) tunnel IP assigned to this router — the reachable host
+            // SSTP (PPP) tunnel IP assigned to this router - the reachable host
             // MikrotikService connects to when vpn_type = sstp.
             $table->string('sstp_ip', 15)->nullable()->unique()->after('vpn_type');
             // PPP password for the router's SSTP client (username = router token).

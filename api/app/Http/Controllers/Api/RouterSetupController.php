@@ -36,7 +36,7 @@ class RouterSetupController extends Controller
                     'running' => ($row['running'] ?? 'false') === 'true',
                     'disabled' => ($row['disabled'] ?? 'false') === 'true',
                     'mac_address' => $row['mac-address'] ?? null,
-                    // WAN/uplink ports are locked — bridging them drops internet + the tunnel.
+                    // WAN/uplink ports are locked - bridging them drops internet + the tunnel.
                     'is_wan' => in_array($row['name'], $wanInterfaces, true),
                 ])
                 ->filter(fn ($row) => !in_array($row['type'], ['bridge', 'wg', 'loopback']))
@@ -71,7 +71,7 @@ class RouterSetupController extends Controller
     }
 
     /**
-     * Toggle (enable/disable) an interface — used to "activate"
+     * Toggle (enable/disable) an interface - used to "activate"
      * the wireless interface from the topology designer.
      */
     public function toggleInterface(Request $request, Router $router): JsonResponse
@@ -151,7 +151,7 @@ class RouterSetupController extends Controller
         // Poll model (XenFi-style): rather than reach into the router over a VPN
         // (which fails behind NAT), we queue the full bridge script. The router's
         // hotbill-commands poller pulls it over outbound HTTPS and applies it,
-        // then reports back — so this works on any RouterOS behind any firewall.
+        // then reports back - so this works on any RouterOS behind any firewall.
         $script = $this->bridgeScript($bridge, $networkCidr);
 
         $command = RouterCommand::create([
@@ -166,7 +166,7 @@ class RouterSetupController extends Controller
             'bridge' => $bridge,
             'queued' => true,
             'command_id' => $command->id,
-            'message' => 'Bridge configuration queued — the router will apply it within ~30 seconds.',
+            'message' => 'Bridge configuration queued - the router will apply it within ~30 seconds.',
             // Kept so operators who prefer manual application can still paste it.
             'bootstrap_script' => $script,
         ]);
@@ -175,7 +175,7 @@ class RouterSetupController extends Controller
     /**
      * Full, idempotent RouterOS script that creates the bridge, adds its ports,
      * assigns the gateway IP, and (optionally) stands up the DHCP + hotspot +
-     * RADIUS + captive-portal walled garden — the script equivalent of what
+     * RADIUS + captive-portal walled garden - the script equivalent of what
      * MikrotikService used to do over the live API. Runs on RouterOS v6 and v7.
      */
     private function bridgeScript(RouterBridge $bridge, string $networkCidr): string
@@ -213,12 +213,12 @@ class RouterSetupController extends Controller
             // no dns-name so *.local mDNS never breaks the portal).
             $lines[] = ":if ([:len [/ip hotspot profile find name=\"{$profile}\"]] = 0) do={ /ip hotspot profile add name=\"{$profile}\" hotspot-address={$gw} dns-name=\"\" login-by=mac-cookie,http-pap,http-chap } else={ /ip hotspot profile set [find name=\"{$profile}\"] dns-name=\"\" login-by=mac-cookie,http-pap,http-chap }";
             // mac-cookie needs to be enabled on the USER profile too (add-mac-cookie),
-            // or reconnects always fall back to a fresh login — see PortalController.
+            // or reconnects always fall back to a fresh login - see PortalController.
             $lines[] = "/ip hotspot user profile set [find name=default] add-mac-cookie=yes mac-cookie-timeout=30d";
             // Hotspot server.
             $lines[] = ":if ([:len [/ip hotspot find interface=\"{$name}\"]] = 0) do={ /ip hotspot add name=\"{$name}-hotspot\" interface=\"{$name}\" address-pool=\"{$pool}\" profile=\"{$profile}\" disabled=no }";
             // Authentication uses LOCAL hotspot users provisioned via the command
-            // poller (RADIUS is unreachable behind NAT — UDP 1812 is blocked), so
+            // poller (RADIUS is unreachable behind NAT - UDP 1812 is blocked), so
             // keep the profile off RADIUS to avoid login timeouts.
             $lines[] = "/ip hotspot profile set [find name=\"{$profile}\"] use-radius=no";
             $lines[] = "/ip hotspot walled-garden remove [find comment=\"hotbill-portal\"]";

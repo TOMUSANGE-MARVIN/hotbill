@@ -30,7 +30,7 @@ export default function AuthBrand() {
           Seamless Billing.
         </h2>
         <p className="text-white/55 mt-5 max-w-sm leading-relaxed">
-          Manage your network for tomorrow&apos;s revenue today — provision routers, automate billing and grow your ISP from one dashboard.
+          Manage your network for tomorrow&apos;s revenue today - provision routers, automate billing and grow your ISP from one dashboard.
         </p>
 
         <div className="flex items-center gap-8 mt-10">

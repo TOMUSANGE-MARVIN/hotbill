@@ -13,12 +13,12 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Polls a router's hotspot for per-user usage over the direct API — only
+ * Polls a router's hotspot for per-user usage over the direct API - only
  * works when the router's VPN tunnel is actually reachable, which most
  * NAT/CGNAT routers' isn't (see RouterController::usageReport for the
  * NAT-safe push path those routers use instead). Kept as a fallback for
  * routers where the tunnel does work. Dispatched from the 60s heartbeat so
- * it rides the existing queue worker — no separate scheduler needed.
+ * it rides the existing queue worker - no separate scheduler needed.
  */
 class CollectHotspotUsageJob implements ShouldQueue
 {

@@ -20,7 +20,7 @@ class Voucher extends Model
 
     /**
      * Flip any redeemed ("active") vouchers whose validity window has passed to
-     * "expired". Cheap, idempotent bulk update — call it before reading vouchers
+     * "expired". Cheap, idempotent bulk update - call it before reading vouchers
      * so listings/exports/filters reflect real expiry without a cron.
      */
     public static function expireStale(int $tenantId): void

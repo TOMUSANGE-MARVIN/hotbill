@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
- * Platform super-admin blog CMS — full CRUD over posts plus image uploads.
+ * Platform super-admin blog CMS - full CRUD over posts plus image uploads.
  * Gated by the platform.admin middleware.
  */
 class BlogController extends Controller

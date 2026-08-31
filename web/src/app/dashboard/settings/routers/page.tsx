@@ -112,7 +112,7 @@ export default function RoutersSettingsPage() {
                   </div>
                 </td>
                 <td className="px-5 py-3">
-                  <p className="text-gray-900">{router.model ?? '—'}</p>
+                  <p className="text-gray-900">{router.model ?? '-'}</p>
                   <p className="text-xs text-gray-400">{router.ros_version ?? ''}</p>
                 </td>
                 <td className="px-5 py-3">
@@ -120,8 +120,8 @@ export default function RoutersSettingsPage() {
                     <Activity size={11} /> {router.status}
                   </span>
                 </td>
-                <td className="px-5 py-3 text-gray-600">{router.cpu_load != null ? `${router.cpu_load}%` : '—'}</td>
-                <td className="px-5 py-3 text-gray-600">{router.uptime ?? '—'}</td>
+                <td className="px-5 py-3 text-gray-600">{router.cpu_load != null ? `${router.cpu_load}%` : '-'}</td>
+                <td className="px-5 py-3 text-gray-600">{router.uptime ?? '-'}</td>
                 <td className="px-5 py-3 text-right">
                   <ActionsMenu
                     router={router}
@@ -164,19 +164,19 @@ export default function RoutersSettingsPage() {
       )}
 
       {renameRouter && (
-        <Modal title={`Rename — ${renameRouter.name}`} onClose={() => setRenameRouter(null)}>
+        <Modal title={`Rename - ${renameRouter.name}`} onClose={() => setRenameRouter(null)}>
           <RenameForm initial={renameRouter.name} pending={rename.isPending} onSubmit={(name) => rename.mutate({ id: renameRouter.id, name })} />
         </Modal>
       )}
 
       {pwRouter && (
-        <Modal title={`Update Admin Password — ${pwRouter.name}`} onClose={() => setPwRouter(null)}>
+        <Modal title={`Update Admin Password - ${pwRouter.name}`} onClose={() => setPwRouter(null)}>
           <PasswordForm pending={updatePassword.isPending} onSubmit={(password) => updatePassword.mutate({ id: pwRouter.id, password })} />
         </Modal>
       )}
 
       {scriptRouter && (
-        <Modal title={`Install Script — ${scriptRouter.name}`} onClose={() => setScriptRouter(null)}>
+        <Modal title={`Install Script - ${scriptRouter.name}`} onClose={() => setScriptRouter(null)}>
           <p className="text-xs text-gray-500 mb-3">Paste this into your MikroTik terminal (New Terminal). It provisions the API user, RADIUS, WireGuard tunnel, and heartbeat.</p>
           <div className="relative">
             <pre className="bg-gray-900 text-brand-400 text-xs rounded-lg p-4 overflow-x-auto whitespace-pre-wrap font-mono">{scriptRouter.script}</pre>

@@ -76,10 +76,10 @@ function WithdrawalsList() {
               {data.map((w) => (
                 <tr key={w.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
-                    <div className="font-medium text-gray-900">{w.tenant?.name ?? '—'}</div>
+                    <div className="font-medium text-gray-900">{w.tenant?.name ?? '-'}</div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 font-mono text-xs">
-                    {w.tenant?.payout_phone ?? '—'} <span className="text-gray-400">{w.tenant?.payout_provider}</span>
+                    {w.tenant?.payout_phone ?? '-'} <span className="text-gray-400">{w.tenant?.payout_provider}</span>
                   </td>
                   <td className="px-4 py-3 font-semibold text-gray-900">{formatCurrency(w.amount)}</td>
                   <td className="px-4 py-3"><StatusBadge status={w.status} /></td>

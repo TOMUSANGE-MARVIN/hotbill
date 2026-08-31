@@ -13,7 +13,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'HotBill — Smart WiFi Hotspot Billing for ISPs in Uganda',
+    default: 'HotBill - Smart WiFi Hotspot Billing for ISPs in Uganda',
     template: '%s | HotBill',
   },
   description: DESCRIPTION,
@@ -34,13 +34,13 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: SITE_URL,
     siteName: 'HotBill',
-    title: 'HotBill — Smart WiFi Hotspot Billing for ISPs in Uganda',
+    title: 'HotBill - Smart WiFi Hotspot Billing for ISPs in Uganda',
     description: DESCRIPTION,
-    images: [{ url: '/global-network.jpg', width: 728, height: 408, alt: 'HotBill — WiFi billing for Uganda' }],
+    images: [{ url: '/global-network.jpg', width: 728, height: 408, alt: 'HotBill - WiFi billing for Uganda' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'HotBill — Smart WiFi Hotspot Billing',
+    title: 'HotBill - Smart WiFi Hotspot Billing',
     description: DESCRIPTION,
     images: ['/global-network.jpg'],
   },

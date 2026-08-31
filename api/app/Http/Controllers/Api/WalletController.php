@@ -83,7 +83,7 @@ class WalletController extends Controller
 
         // If the payout could not even be submitted (e.g. MarzPay rejected it or
         // had insufficient float), no disbursement exists and no webhook will ever
-        // settle it — so the reserved debit must be refunded right here, otherwise
+        // settle it - so the reserved debit must be refunded right here, otherwise
         // the operator loses the money for a withdrawal that never happened.
         if ($status === 'failed') {
             $tenant->postWallet('credit', $total, 'adjustment', [
@@ -102,11 +102,11 @@ class WalletController extends Controller
         $messages = [
             'completed' => 'Sent ' . number_format($amount) . ' to ' . $tenant->payout_phone . ' (' . number_format($fee) . ' fee deducted from your wallet).',
             'processing' => number_format($amount) . ' is being sent to ' . $tenant->payout_phone . ' (' . number_format($fee) . ' fee deducted from your wallet).',
-            'failed' => 'Payout could not be sent — your balance has been kept. Please try again.',
+            'failed' => 'Payout could not be sent - your balance has been kept. Please try again.',
         ];
 
         return response()->json([
-            'message' => $messages[$status] ?? 'Withdrawal request submitted — pending approval.',
+            'message' => $messages[$status] ?? 'Withdrawal request submitted - pending approval.',
             'status' => $status,
             'fee' => $fee,
             'amount' => $amount,

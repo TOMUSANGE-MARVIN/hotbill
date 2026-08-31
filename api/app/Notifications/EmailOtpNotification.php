@@ -47,7 +47,7 @@ class EmailOtpNotification extends Notification
             ->line("This code expires in {$this->ttlMinutes} minutes.")
             ->line($isRegister
                 ? 'If you did not create a HotBill account, you can safely ignore this email.'
-                : 'If you did not try to sign in, please change your password immediately — someone may have it.')
-            ->salutation('— The HotBill Team');
+                : 'If you did not try to sign in, please change your password immediately - someone may have it.')
+            ->salutation('- The HotBill Team');
     }
 }

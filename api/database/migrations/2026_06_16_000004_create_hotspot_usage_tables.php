@@ -28,7 +28,7 @@ return new class extends Migration {
             $table->index(['tenant_id', 'last_seen_at']);
         });
 
-        // Daily byte deltas per tenant — accurate "data over time" without unbounded snapshots.
+        // Daily byte deltas per tenant - accurate "data over time" without unbounded snapshots.
         Schema::create('hotspot_usage_daily', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tenant_id')->constrained()->cascadeOnDelete();

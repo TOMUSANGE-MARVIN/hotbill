@@ -90,7 +90,7 @@ export default function ExpensesPage() {
               <tr key={exp.id} className="hover:bg-gray-50">
                 <td className="px-5 py-3 text-gray-800">{exp.description}</td>
                 <td className="px-5 py-3">
-                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{exp.category ?? '—'}</span>
+                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-xs">{exp.category ?? '-'}</span>
                 </td>
                 <td className="px-5 py-3 font-medium text-red-600">{formatCurrency(exp.amount, currency)}</td>
                 <td className="px-5 py-3 text-gray-400 text-xs">{formatDate(exp.expense_date)}</td>

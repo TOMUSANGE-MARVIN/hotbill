@@ -8,7 +8,7 @@ import {
 export const metadata: Metadata = {
   title: 'Documentation',
   description:
-    'HotBill documentation — set up your MikroTik hotspot, create packages and vouchers, accept mobile-money payments, and manage your wallet and withdrawals.',
+    'HotBill documentation - set up your MikroTik hotspot, create packages and vouchers, accept mobile-money payments, and manage your wallet and withdrawals.',
   alternates: { canonical: '/docs' },
 }
 
@@ -47,7 +47,7 @@ export default function DocsPage() {
           </h1>
           <p className="text-lg text-navy/60 max-w-2xl mx-auto">
             From connecting your first MikroTik router to collecting mobile-money payments and paying
-            yourself out — here&apos;s how it all works.
+            yourself out - here&apos;s how it all works.
           </p>
         </div>
       </section>
@@ -80,7 +80,7 @@ export default function DocsPage() {
                   over mobile money, and tracks every sale, voucher and session in one dashboard.
                 </p>
                 <p>
-                  Each business you run is fully isolated — its own packages, subscribers, wallet and reports — so you
+                  Each business you run is fully isolated - its own packages, subscribers, wallet and reports - so you
                   can manage multiple locations from a single login.
                 </p>
               </Section>
@@ -91,7 +91,7 @@ export default function DocsPage() {
                   <li><b>Create an account</b> at the sign-up page and confirm your business name.</li>
                   <li><b>Add a business</b> (location). Each business starts empty with its own wallet and data.</li>
                   <li><b>Connect a router</b> (next section) so HotBill can serve the captive portal.</li>
-                  <li><b>Create packages</b> — the time or data bundles your customers buy.</li>
+                  <li><b>Create packages</b> - the time or data bundles your customers buy.</li>
                 </ol>
                 <p>That&apos;s the whole loop: connect → package → sell → get paid → withdraw.</p>
               </Section>
@@ -104,7 +104,7 @@ export default function DocsPage() {
                 </p>
                 <p>
                   The captive portal login page is served straight from the router&apos;s gateway IP, so it loads reliably on
-                  every device — Android, iPhone, Windows and Linux — with no DNS setup required on your side.
+                  every device - Android, iPhone, Windows and Linux - with no DNS setup required on your side.
                 </p>
               </Section>
 
@@ -119,7 +119,7 @@ export default function DocsPage() {
               <Section id="captive-portal" title="Captive Portal & Payments">
                 <p>
                   When a customer connects to your WiFi, the captive portal opens automatically. They pick a package,
-                  enter their phone number, and approve a <b>mobile-money prompt</b> on their phone — no redirect, no
+                  enter their phone number, and approve a <b>mobile-money prompt</b> on their phone - no redirect, no
                   re-entering the network. Once payment confirms, HotBill logs the device in instantly.
                 </p>
                 <p>
@@ -132,7 +132,7 @@ export default function DocsPage() {
               <Section id="vouchers" title="Vouchers">
                 <p>
                   Vouchers let you sell access for cash. Generate a batch under <b>Vouchers</b>, print or share the codes,
-                  and sell them physically. A customer redeems a code on the captive portal to get online — no mobile-money
+                  and sell them physically. A customer redeems a code on the captive portal to get online - no mobile-money
                   payment needed, since you already collected the cash.
                 </p>
                 <p>
@@ -143,7 +143,7 @@ export default function DocsPage() {
 
               <Section id="wallet" title="Wallet & Withdrawals">
                 <p>
-                  Your <b>wallet</b> holds the money collected through mobile money — the balance you can withdraw. To cash
+                  Your <b>wallet</b> holds the money collected through mobile money - the balance you can withdraw. To cash
                   out, go to <b>Wallet → Withdraw</b>, set your mobile-money number in Settings, and request an amount.
                 </p>
                 <p>
@@ -164,7 +164,7 @@ export default function DocsPage() {
               <Section id="analytics" title="Dashboard & Analytics">
                 <p>
                   The dashboard shows net and gross sales, commission, active users, data used and revenue by channel. Usage
-                  analytics break down data over time, top users and consumption per package — everything you need to see how
+                  analytics break down data over time, top users and consumption per package - everything you need to see how
                   each location is performing.
                 </p>
               </Section>

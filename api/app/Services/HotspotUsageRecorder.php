@@ -9,7 +9,7 @@ use App\Models\Router;
 use App\Models\Voucher;
 
 /**
- * Turns a hotspot usage snapshot (however it was gathered — a direct API
+ * Turns a hotspot usage snapshot (however it was gathered - a direct API
  * poll, or the router self-reporting over the NAT-safe push channel) into
  * HotspotUsage/HotspotUsageDaily rows. Shared so both collection paths stay
  * byte-for-byte consistent.

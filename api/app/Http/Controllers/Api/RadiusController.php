@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Called by FreeRADIUS rlm_rest module.
- * These endpoints are NOT protected by Sanctum — secured by a shared secret header.
+ * These endpoints are NOT protected by Sanctum - secured by a shared secret header.
  */
 class RadiusController extends Controller
 {

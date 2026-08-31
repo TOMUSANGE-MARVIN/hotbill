@@ -41,8 +41,8 @@ class AppServiceProvider extends ServiceProvider
                 ->line('We received a request to reset the password for your HotBill account.')
                 ->action('Reset Password', $url)
                 ->line("This link will expire in {$expire} minutes.")
-                ->line('If you did not request a password reset, no action is needed — your password stays the same.')
-                ->salutation('— The HotBill Team');
+                ->line('If you did not request a password reset, no action is needed - your password stays the same.')
+                ->salutation('- The HotBill Team');
         });
     }
 }

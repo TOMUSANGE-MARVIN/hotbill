@@ -187,7 +187,7 @@ function done(d){
     try{var f=document.createElement("form");f.method="post";f.action=LINK;var u=document.createElement("input");u.name="username";u.value=d.username;var p=document.createElement("input");p.name="password";p.value=d.password||"";f.appendChild(u);f.appendChild(p);document.body.appendChild(f);f.submit();}catch(e){}
   }else{
     // The router didn't hand us a login-submit URL (page opened outside its
-    // own captive redirect, or a stale/cached load) — the account was created
+    // own captive redirect, or a stale/cached load) - the account was created
     // successfully server-side, but we can't auto-login. Say so honestly
     // instead of claiming "connected" with no login ever submitted.
     app.innerHTML=head()+'<div class="center">'+tick+'<h3>Account ready</h3><p class="muted">'+(d.package?esc(d.package)+" is active, but ":"")+'we could not complete login automatically.<br>Please reconnect to the WiFi and reopen this page, or enter these details on the WiFi login screen:</p><p class="muted"><b>Username:</b> '+esc(d.username||"")+'<br><b>Password:</b> '+esc(d.password||"")+'</p></div>';
@@ -272,7 +272,7 @@ HTML;
 
     /**
      * Public: redeem a pre-sold voucher. Provisions the same one-time hotspot
-     * session as a paid order (so auto-login is identical) — no payment, no
+     * session as a paid order (so auto-login is identical) - no payment, no
      * wallet credit (the operator already collected cash for the voucher).
      */
     public function redeem(Request $request): JsonResponse
@@ -324,7 +324,7 @@ HTML;
             return response()->json(['message' => 'Invalid or already-used voucher code.'], 422);
         }
 
-        // RADIUS-based activation — the hotspot authenticates the client against
+        // RADIUS-based activation - the hotspot authenticates the client against
         // HotBill's RADIUS, so no live router API access is needed (this works
         // behind NAT, unlike the old MikrotikService push). The portal then
         // auto-submits the hotspot login form with these credentials, and the
@@ -347,7 +347,7 @@ HTML;
         $result = $this->provisionHotspotSession($router, $username, $password, $package);
 
         if ($result !== 'done') {
-            // The router never confirmed the hotspot user was created — release the
+            // The router never confirmed the hotspot user was created - release the
             // claim so the code goes back to 'unused' and the same customer can
             // retry with it; nothing was taken from them (vouchers are pre-paid in
             // cash, not charged here).
@@ -364,14 +364,14 @@ HTML;
             ]);
 
             return response()->json([
-                'message' => 'Could not connect you right now. Please try again in a moment — your voucher has not been used.',
+                'message' => 'Could not connect you right now. Please try again in a moment - your voucher has not been used.',
             ], 502);
         }
 
         // Vouchers are bought with physical cash, so the sale value is NEVER
         // credited to the wallet (the operator already holds the cash). We only
         // take the platform commission, which is debited from the operator wallet
-        // and shown on the transaction — identical to the operator-side redeem.
+        // and shown on the transaction - identical to the operator-side redeem.
         $commissionPercent = (float) config('hotbill.platform.voucher_commission_percent');
         $value = (float) $voucher->price;
         $commission = round($value * $commissionPercent / 100, 2);
@@ -404,7 +404,7 @@ HTML;
             $walletTxn = $voucher->tenant?->postWallet('debit', $commission, 'voucher_commission', [
                 'reference' => $transaction->reference,
                 'status' => 'completed',
-                'description' => "Platform fee {$commissionPercent}% — voucher {$voucher->code}",
+                'description' => "Platform fee {$commissionPercent}% - voucher {$voucher->code}",
                 'meta' => [
                     'voucher_id' => $voucher->id,
                     'voucher_code' => $voucher->code,
@@ -434,7 +434,7 @@ HTML;
 
     /**
      * Provision the client's session by queuing a LOCAL hotspot user on the
-     * router (RADIUS is unreachable behind NAT — UDP 1812 is firewall-blocked —
+     * router (RADIUS is unreachable behind NAT - UDP 1812 is firewall-blocked -
      * so we can't authenticate via RADIUS). The router's command poller pulls
      * this over outbound HTTPS and applies it; we wait up to ~35s so the portal's
      * auto-login finds the user immediately. Also flips the hotspot off RADIUS so
@@ -457,12 +457,12 @@ HTML;
 
         // mac-cookie: after the first login the router remembers this device's
         // MAC and auto-logs it back in on reconnect (until the package uptime is
-        // used up) — so leaving and rejoining the WiFi doesn't force re-entering
+        // used up) - so leaving and rejoining the WiFi doesn't force re-entering
         // the voucher. use-radius=no because RADIUS is unreachable behind NAT.
         //
         // IMPORTANT: MikroTik requires mac-cookie to be enabled on BOTH the
         // hotspot SERVER profile (login-by=...,mac-cookie) AND the hotspot USER
-        // profile (add-mac-cookie=yes, mac-cookie-timeout=...) — missing either
+        // profile (add-mac-cookie=yes, mac-cookie-timeout=...) - missing either
         // one makes it silently do nothing (this was the bug: only the server
         // profile was set, so reconnects always fell back to "sign in").
         $script = implode("\n", [
@@ -532,7 +532,7 @@ HTML;
 
     /**
      * Verify a MarzPay collection against the API (the webhook is unsigned, so we
-     * always re-check before fulfilling). Idempotent — a no-op once paid.
+     * always re-check before fulfilling). Idempotent - a no-op once paid.
      */
     private function reconcile(PortalOrder $order): void
     {
@@ -594,7 +594,7 @@ HTML;
      */
     private function fulfill(PortalOrder $order, ?string $paymentMethod = null): void
     {
-        // Atomic claim — the webhook and the status-poll can both fire fulfill().
+        // Atomic claim - the webhook and the status-poll can both fire fulfill().
         // Move to an intermediate 'fulfilling' state (NOT 'paid') so only one
         // caller proceeds AND the status endpoint doesn't report 'paid' with a
         // null username while we're still provisioning the router (~30s). The
@@ -610,7 +610,7 @@ HTML;
         $username = preg_replace('/\D/', '', $order->phone) ?: ('u' . $order->id);
         $password = strtoupper(Str::random(6));
 
-        // RADIUS-based activation — the client's hotspot login is authenticated
+        // RADIUS-based activation - the client's hotspot login is authenticated
         // against HotBill's RADIUS, so no live router API access is needed (works
         // behind NAT). The portal auto-submits the login form with these creds.
         $expiresAt = $package->mikrotik_limit_uptime
@@ -648,8 +648,8 @@ HTML;
 
         // The money has genuinely been collected either way, so the payment
         // bookkeeping (credentials generated, fees, wallet credit, transaction)
-        // always happens here. But the order is only marked 'paid' — which is
-        // what unlocks the credentials on the /status endpoint — once the
+        // always happens here. But the order is only marked 'paid' - which is
+        // what unlocks the credentials on the /status endpoint - once the
         // router actually confirms the hotspot user exists. Otherwise it goes
         // to 'provisioning_failed' and a scheduled retry (RetryOrderProvisioning)
         // keeps trying with these same stored credentials until it succeeds.

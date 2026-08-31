@@ -220,7 +220,7 @@ export default function VouchersPage() {
           <Calendar size={14} className="text-gray-400" />
           {dateRange
             ? `${format(dateRange.from, 'MMM d, yyyy')} - ${format(dateRange.to, 'MMM d, yyyy')}`
-            : '—'}
+            : '-'}
         </div>
       </div>
 
@@ -349,7 +349,7 @@ export default function VouchersPage() {
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm">
                   <option value="">Select package</option>
                   {packages.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price, currency)}</option>
+                    <option key={p.id} value={p.id}>{p.name} - {formatCurrency(p.price, currency)}</option>
                   ))}
                 </select>
               </div>
@@ -393,12 +393,12 @@ export default function VouchersPage() {
 function cellValue(v: any, col: ColKey, currency: string): string {
   switch (col) {
     case 'username': return v.code
-    case 'package': return v.package?.name ?? '—'
+    case 'package': return v.package?.name ?? '-'
     case 'status': return statusPill(v.status).label
     case 'first_login': return v.used_at ? format(new Date(v.used_at), 'EEE dd/MM/yyyy HH:mm') : 'Never'
     case 'expires_on': return v.expires_at ? format(new Date(v.expires_at), 'EEE dd/MM/yyyy HH:mm') : 'Never'
     case 'use_case': return v.batch_id ? 'Batch Create' : 'System'
-    case 'note': return v.batch?.name ?? '—'
+    case 'note': return v.batch?.name ?? '-'
     case 'created_on': return format(new Date(v.created_at), 'EEE dd/MM/yyyy HH:mm')
     default: return ''
   }
@@ -406,14 +406,14 @@ function cellValue(v: any, col: ColKey, currency: string): string {
 
 function Cell({ voucher: v, col, currency }: { voucher: any; col: ColKey; currency: string }) {
   if (col === 'username') return <span className="font-semibold text-gray-900">{v.code}</span>
-  if (col === 'package') return <span className="text-gray-600">{v.package?.name ?? '—'}</span>
+  if (col === 'package') return <span className="text-gray-600">{v.package?.name ?? '-'}</span>
   if (col === 'status') {
     const p = statusPill(v.status)
     return <span className={cn('inline-block rounded-full px-2.5 py-1 text-[11px] font-semibold tracking-wide', p.cls)}>{p.label}</span>
   }
   if (col === 'expires_on' && !v.expires_at) return <span className="text-gray-400">Never</span>
   if (col === 'first_login' && !v.used_at) return <span className="text-gray-700">Never</span>
-  if (col === 'note') return <span className="text-gray-600">{v.batch?.name ?? '—'}</span>
+  if (col === 'note') return <span className="text-gray-600">{v.batch?.name ?? '-'}</span>
   return <span className="text-gray-700">{cellValue(v, col, currency)}</span>
 }
 
