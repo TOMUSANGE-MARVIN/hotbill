@@ -23,7 +23,7 @@
   --color-purple-dark: #3F3ABF;
   --color-lightgray: #EFEFEF;
 
-  /* Brand scale (600 = #4F4AD7) — replaces the old green accent app-wide */
+  /* Brand scale (600 = #4F4AD7) - replaces the old green accent app-wide */
   --color-brand-50: #EFEFFE;
   --color-brand-100: #E1E0FC;
   --color-brand-200: #C7C5F7;
@@ -51,13 +51,13 @@
   }
   .text-balance { text-wrap: balance; }
   .animate-marquee { animation: marquee 22s linear infinite; }
-  /* Same track, scrolling the other way — used by the second gallery row. */
+  /* Same track, scrolling the other way - used by the second gallery row. */
   .animate-marquee-reverse { animation: marquee 40s linear infinite reverse; }
   .animate-marquee-slow { animation: marquee 50s linear infinite; }
   .animate-spinSlow { animation: spinSlow 8s linear infinite; }
   .marquee-track:hover { animation-play-state: paused; }
 
-  /* Scroll reveal — re-triggers every time the element enters the viewport.
+  /* Scroll reveal - re-triggers every time the element enters the viewport.
      Smooth fade + rise (no bounce), driven by a transition so it eases both
      in and out. Per-element stagger comes from inline transition-delay. */
   .reveal {
@@ -69,7 +69,7 @@
   .reveal-in { opacity: 1; transform: translateY(0); }
 
   /* Compatible-with brand icons: slide in from the left one by one, hold,
-     then slide back out — looping forever. Stagger via inline animationDelay. */
+     then slide back out - looping forever. Stagger via inline animationDelay. */
   .compat-icon { animation: compatSlide 7s ease-in-out infinite both; }
 }
 
@@ -158,79 +158,85 @@ input, select, textarea {
    rules are intentionally unlayered so they win over Tailwind's
    utility layer, letting us retrofit dark mode without editing every
    component's className. We flip only neutral grays + white surfaces;
-   brand and semantic (green/red/amber) colors are left intact. */
+   brand and semantic (green/red/amber) colors are left intact.
+   Pure black + neutral zinc grays (no blue tint) - not navy. */
 .dark {
-  color: #dfe6f0;
+  color: #e4e4e7;
   color-scheme: dark;
   /* The dashboard shell carries both `.dark` and `bg-gray-50` on the same
-     element, so the descendant rules below can't reach it — set it here. */
-  background-color: #0b1120;
+     element, so the descendant rules below can't reach it - set it here. */
+  background-color: #000000;
 }
 
 /* Surfaces */
-.dark .bg-white { background-color: #0f172a; }
-.dark .bg-white\/80 { background-color: rgba(15, 23, 42, 0.8); }
-.dark .bg-white\/95 { background-color: rgba(15, 23, 42, 0.95); }
-.dark .bg-gray-50 { background-color: #0b1120; }
-.dark .bg-gray-100 { background-color: #1e293b; }
-.dark .bg-gray-200 { background-color: #334155; }
-.dark .hover\:bg-gray-50:hover { background-color: #1e293b; }
-.dark .hover\:bg-gray-100:hover { background-color: #263349; }
-.dark .hover\:bg-white:hover { background-color: #0f172a; }
+.dark .bg-white { background-color: #0a0a0a; }
+.dark .bg-white\/80 { background-color: rgba(10, 10, 10, 0.8); }
+.dark .bg-white\/95 { background-color: rgba(10, 10, 10, 0.95); }
+.dark .bg-gray-50 { background-color: #000000; }
+.dark .bg-gray-100 { background-color: #18181b; }
+.dark .bg-gray-200 { background-color: #27272a; }
+.dark .hover\:bg-gray-50:hover { background-color: #18181b; }
+.dark .hover\:bg-gray-100:hover { background-color: #202023; }
+.dark .hover\:bg-white:hover { background-color: #0a0a0a; }
 
-/* Borders + dividers */
-.dark .border-gray-100 { border-color: #1e293b; }
-.dark .border-gray-200 { border-color: #24324a; }
-.dark .border-gray-300 { border-color: #2f3e58; }
-.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b; }
-.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #24324a; }
-.dark .hover\:border-gray-300:hover { border-color: #3a4c6b; }
+/* Borders + dividers - light gray, not white */
+.dark .border-gray-100 { border-color: #27272a; }
+.dark .border-gray-200 { border-color: #3f3f46; }
+.dark .border-gray-300 { border-color: #52525b; }
+.dark .border-slate-100 { border-color: #27272a; }
+.dark .border-slate-200 { border-color: #3f3f46; }
+.dark .border-slate-200\/70 { border-color: rgba(63, 63, 70, 0.7); }
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #27272a; }
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: #3f3f46; }
+.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #27272a; }
+.dark .hover\:border-gray-300:hover { border-color: #63636b; }
 
 /* Text */
-.dark .text-gray-900 { color: #f1f5f9; }
-.dark .text-gray-800 { color: #e5edf7; }
-.dark .text-gray-700 { color: #cbd6e4; }
-.dark .text-gray-600 { color: #aebccf; }
-.dark .text-gray-500 { color: #93a2b8; }
-.dark .text-gray-400 { color: #74839a; }
-.dark .text-gray-300 { color: #5c6b82; }
+.dark .text-gray-900 { color: #fafafa; }
+.dark .text-gray-800 { color: #f4f4f5; }
+.dark .text-gray-700 { color: #d4d4d8; }
+.dark .text-gray-600 { color: #a1a1aa; }
+.dark .text-gray-500 { color: #71717a; }
+.dark .text-gray-400 { color: #52525b; }
+.dark .text-gray-300 { color: #3f3f46; }
 
 /* Other dark text tokens used across dashboard components (navy = near-black
-   marketing token; slate 600–900 = dark). Flip these to light so they stay
+   marketing token; slate 400–900 = dark). Flip these to light so they stay
    visible on dark surfaces. */
-.dark .text-navy { color: #f1f5f9; }
-.dark .text-slate-900 { color: #f1f5f9; }
-.dark .text-slate-800 { color: #e5edf7; }
-.dark .text-slate-700 { color: #cbd6e4; }
-.dark .text-slate-600 { color: #aebccf; }
-.dark .text-slate-500 { color: #93a2b8; }
-.dark .text-black { color: #f1f5f9; }
+.dark .text-navy { color: #fafafa; }
+.dark .text-slate-900 { color: #fafafa; }
+.dark .text-slate-800 { color: #f4f4f5; }
+.dark .text-slate-700 { color: #d4d4d8; }
+.dark .text-slate-600 { color: #a1a1aa; }
+.dark .text-slate-500 { color: #71717a; }
+.dark .text-slate-400 { color: #52525b; }
+.dark .text-black { color: #fafafa; }
 
 /* Rings + placeholders */
-.dark .ring-gray-200 { --tw-ring-color: #24324a; }
-.dark .placeholder-gray-400::placeholder { color: #64748b; }
+.dark .ring-gray-200 { --tw-ring-color: #3f3f46; }
+.dark .placeholder-gray-400::placeholder { color: #52525b; }
 
 /* Form controls */
 .dark input, .dark select, .dark textarea {
-  color: #e5edf7;
-  background-color: #0f172a;
-  border-color: #24324a;
+  color: #f4f4f5;
+  background-color: #0a0a0a;
+  border-color: #3f3f46;
 }
-.dark input::placeholder, .dark textarea::placeholder { color: #64748b; }
+.dark input::placeholder, .dark textarea::placeholder { color: #52525b; }
 
-/* Recharts — inline fill/stroke attributes are overridden by CSS */
-.dark .recharts-cartesian-grid line { stroke: #1e293b; }
+/* Recharts - inline fill/stroke attributes are overridden by CSS */
+.dark .recharts-cartesian-grid line { stroke: #27272a; }
 .dark .recharts-cartesian-axis-line,
-.dark .recharts-cartesian-axis-tick-line { stroke: #24324a; }
+.dark .recharts-cartesian-axis-tick-line { stroke: #3f3f46; }
 .dark .recharts-cartesian-axis-tick text,
-.dark .recharts-text { fill: #93a2b8; }
+.dark .recharts-text { fill: #71717a; }
 .dark .recharts-tooltip-wrapper .recharts-default-tooltip {
-  background-color: #0f172a !important;
-  border-color: #24324a !important;
-  color: #e5edf7;
+  background-color: #0a0a0a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5;
 }
-.dark .recharts-default-tooltip .recharts-tooltip-label { color: #e5edf7 !important; }
+.dark .recharts-default-tooltip .recharts-tooltip-label { color: #f4f4f5 !important; }
 
 /* Scrollbars */
-.dark ::-webkit-scrollbar-thumb { background-color: #334155; }
-.dark ::-webkit-scrollbar-track { background-color: #0b1120; }
+.dark ::-webkit-scrollbar-thumb { background-color: #3f3f46; }
+.dark ::-webkit-scrollbar-track { background-color: #000000; }
