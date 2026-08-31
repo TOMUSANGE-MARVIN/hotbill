@@ -156,15 +156,44 @@ function pay(){
 function redeem(){
   var code=document.getElementById("vc").value.trim();
   if(!code){return;}
-  // Activation can take up to ~a minute (waiting on the router to confirm).
-  // The old UI just showed "..." on the button with no explanation, so
-  // people assumed it had failed, gave up, and tried a second voucher while
-  // the first was silently succeeding a few seconds later.
+  // Activation can take a while (waiting on the router to confirm the account,
+  // then waiting again to confirm the device actually connected). The old UI
+  // just showed "..." on the button with no explanation, so people assumed it
+  // had failed, gave up, and tried a second voucher while the first was
+  // silently succeeding a few seconds later - so now this polls until the
+  // device is genuinely confirmed online instead of trusting a single response.
   app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Activating your voucher</h3><p class="muted">This can take up to a minute.<br>Please don\'t close this page or try another voucher.</p></div>';
   fetch(API+"/portal/redeem",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,code:code,mac:MAC,ip:IP,link_login:LINK})})
   .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
-  .then(function(o){if(!o.ok){throw new Error(o.j.message||"Invalid voucher");}done(o.j);})
+  .then(function(o){
+    if(!o.ok){throw new Error(o.j.message||"Invalid voucher");}
+    var submitted=false;
+    if(o.j.username&&LINK){
+      try{var f=document.createElement("form");f.method="post";f.action=LINK;var u=document.createElement("input");u.name="username";u.value=o.j.username;var p=document.createElement("input");p.name="password";p.value=o.j.password||"";f.appendChild(u);f.appendChild(p);document.body.appendChild(f);f.submit();submitted=true;}catch(e){}
+    }
+    waitRedeem(o.j.reference,o.j.package,submitted,o.j.username,o.j.password);
+  })
   .catch(function(e){view();document.getElementById("vc").value=code;document.getElementById("ver").textContent=e.message;});
+}
+function waitRedeem(ref,pkg,submitted,uname,pass){
+  var n=0;var t=setInterval(function(){
+    n++;
+    fetch(API+"/portal/redeem/"+ref+"/status",{headers:{Accept:"application/json"}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.status==="connected"){clearInterval(t);redeemConnected(d.package||pkg,submitted,uname,pass);}
+      else if(d.status==="failed"){clearInterval(t);app.innerHTML=head()+'<div class="center"><h3>Could not connect</h3><p class="muted">'+esc(d.message||"Please try again.")+'</p><button class="btn" onclick="location.reload()" style="margin-top:8px">Try again</button></div>';}
+    }).catch(function(){});
+    if(n>30){clearInterval(t);app.innerHTML=head()+'<div class="center"><h3>Still connecting</h3><p class="muted">This is taking longer than expected.<br>Please reload this page and try reconnecting to the WiFi.</p></div>';}
+  },3000);
+}
+function redeemConnected(pkg,submitted,uname,pass){
+  var tick='<div class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4F4AD7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
+  if(submitted){
+    app.innerHTML=head()+'<div class="center">'+tick+'<h3>You are connected!</h3><p class="muted">'+(pkg?esc(pkg)+" is now active. ":"")+'Enjoy your internet.</p></div>';
+  }else{
+    app.innerHTML=head()+'<div class="center">'+tick+'<h3>Account ready</h3><p class="muted">'+(pkg?esc(pkg)+" is active, but ":"")+'we could not complete login automatically.<br>Please reconnect to the WiFi and reopen this page, or enter these details on the WiFi login screen:</p><p class="muted"><b>Username:</b> '+esc(uname||"")+'<br><b>Password:</b> '+esc(pass||"")+'</p></div>';
+  }
 }
 function wait(ref){
   app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Check your phone</h3><p class="muted">Enter your Mobile Money PIN on the prompt.<br>This page updates automatically.</p></div>';
@@ -307,13 +336,19 @@ HTML;
             : null;
 
         // Atomically claim the voucher before provisioning (not just check-then-act):
-        // provisioning can take up to ~70s, long enough for the customer's browser to
-        // time out and retry with the same code while the first request is still
+        // provisioning can take a while, long enough for the customer's browser to
+        // give up and retry with the same code while the first request is still
         // running. Without this, both requests would pass the earlier status check,
         // race to provision, and double-charge the commission. Reverted below if
         // provisioning fails, so a genuine retry still works.
+        //
+        // Claims to 'connecting', not 'active' - a hotspot user existing on the
+        // router isn't the same as the customer's device actually being online
+        // (the client-side auto-login can silently fail). It only becomes 'active'
+        // - and only then counts as a sale - once redeemStatus() below confirms a
+        // real active hotspot session for this username.
         $claimed = Voucher::whereKey($voucher->id)->where('status', 'unused')->update([
-            'status' => 'active',
+            'status' => 'connecting',
             'router_id' => $router->id,
             'used_by_username' => $username,
             'used_at' => now(),
@@ -368,10 +403,138 @@ HTML;
             ], 502);
         }
 
-        // Vouchers are bought with physical cash, so the sale value is NEVER
-        // credited to the wallet (the operator already holds the cash). We only
-        // take the platform commission, which is debited from the operator wallet
-        // and shown on the transaction - identical to the operator-side redeem.
+        // The hotspot user exists on the router now, but that isn't proof the
+        // customer's device is actually online - queue a check so redeemStatus()
+        // below can confirm a real active session before this counts as a sale.
+        RouterCommand::create([
+            'router_id' => $router->id,
+            'kind' => 'check-active',
+            'label' => "Confirm connected: {$username}",
+            'script' => ':if ([:len [/ip hotspot active find user="' . $username . '"]] = 0) do={ :error "not-active" }',
+            'status' => 'pending',
+        ]);
+
+        return response()->json([
+            'status' => 'connecting',
+            'package' => $package->name,
+            'username' => $username,
+            'password' => $password,
+            'link_login' => $data['link_login'] ?? null,
+            'reference' => $voucher->code,
+        ]);
+    }
+
+    /**
+     * Public: poll during redeem() - only finalizes the sale (transaction,
+     * commission, voucher -> 'active') once a check-active command confirms the
+     * customer's device is genuinely online, not merely that the hotspot user
+     * exists. Keeps re-queuing the check while the router hasn't reported back
+     * yet, and gives up (reverting the voucher so the code can be retried) after
+     * ~90s of the device never actually showing as connected.
+     */
+    public function redeemStatus(Request $request, string $code): JsonResponse
+    {
+        $voucher = Voucher::where('code', strtoupper(trim($code)))->with('package')->first();
+        if (!$voucher) {
+            return response()->json(['status' => 'failed', 'message' => 'Voucher not found.'], 404);
+        }
+
+        return response()->json($this->resolveVoucherConnection($voucher));
+    }
+
+    /**
+     * Confirms (or gives up on) a 'connecting' voucher's device connection.
+     * Called both from the customer's own polling (redeemStatus) and from
+     * vouchers:confirm-connections - the customer's form-submit to the router
+     * navigates their browser away from this page, so their poll may never run
+     * again; the scheduled command is what actually guarantees this resolves
+     * one way or the other even if nobody's watching.
+     */
+    public function resolveVoucherConnection(Voucher $voucher): array
+    {
+        if ($voucher->status === 'active') {
+            return ['status' => 'connected', 'package' => $voucher->package?->name];
+        }
+
+        if ($voucher->status !== 'connecting') {
+            return ['status' => 'failed', 'message' => 'This voucher is no longer valid.'];
+        }
+
+        $username = $voucher->used_by_username;
+        $check = RouterCommand::where('router_id', $voucher->router_id)
+            ->where('kind', 'check-active')
+            ->where('label', "Confirm connected: {$username}")
+            ->latest('id')
+            ->first();
+
+        if ($check && $check->status === 'done') {
+            $this->finalizeVoucherSale($voucher);
+            return ['status' => 'connected', 'package' => $voucher->package?->name];
+        }
+
+        // Bounded by elapsed time, not by ever seeing an explicit "failed" -
+        // if the router never responds at all (offline, or the poll cycle just
+        // never lands), the check stays 'pending' forever and this must still
+        // eventually give up instead of leaving the voucher stuck in
+        // 'connecting' - permanently unusable - forever.
+        $waitedSeconds = $voucher->used_at ? $voucher->used_at->diffInSeconds(now()) : 999;
+
+        if ($waitedSeconds > 90) {
+            // Never confirmed online after a fair wait - release the hotspot
+            // user and the voucher so the customer can get a fresh code.
+            $router = $voucher->router;
+            if ($router) {
+                RouterCommand::create([
+                    'router_id' => $router->id,
+                    'kind' => 'hotspot-user-remove',
+                    'label' => "Release unconfirmed voucher: {$username}",
+                    'script' => "/ip hotspot user remove [find name=\"{$username}\"]",
+                    'status' => 'pending',
+                ]);
+            }
+
+            Voucher::whereKey($voucher->id)->update([
+                'status' => 'unused',
+                'router_id' => null,
+                'used_by_username' => null,
+                'used_at' => null,
+                'expires_at' => null,
+            ]);
+
+            Log::error('Voucher redeem: device never confirmed online', ['voucher_id' => $voucher->id, 'username' => $username]);
+
+            return [
+                'status' => 'failed',
+                'message' => 'We could not confirm your device connected. Your voucher has not been used - please try again.',
+            ];
+        }
+
+        if (!$check || $check->status === 'failed') {
+            RouterCommand::create([
+                'router_id' => $voucher->router_id,
+                'kind' => 'check-active',
+                'label' => "Confirm connected: {$username}",
+                'script' => ':if ([:len [/ip hotspot active find user="' . $username . '"]] = 0) do={ :error "not-active" }',
+                'status' => 'pending',
+            ]);
+        }
+
+        return ['status' => 'connecting'];
+    }
+
+    /**
+     * Vouchers are bought with physical cash, so the sale value is NEVER
+     * credited to the wallet (the operator already holds the cash). We only
+     * take the platform commission, which is debited from the operator wallet
+     * and shown on the transaction - identical to the operator-side redeem.
+     */
+    private function finalizeVoucherSale(Voucher $voucher): void
+    {
+        $finalized = Voucher::whereKey($voucher->id)->where('status', 'connecting')->update(['status' => 'active']);
+        if (!$finalized) {
+            return; // Already finalized by a concurrent poll.
+        }
+
         $commissionPercent = (float) config('hotbill.platform.voucher_commission_percent');
         $value = (float) $voucher->price;
         $commission = round($value * $commissionPercent / 100, 2);
@@ -380,14 +543,14 @@ HTML;
         $transaction = Transaction::create([
             'tenant_id' => $voucher->tenant_id,
             'voucher_id' => $voucher->id,
-            'package_id' => $package->id,
+            'package_id' => $voucher->package_id,
             'reference' => 'VCH-' . $voucher->code,
             'type' => 'voucher',
             'method' => 'cash',
             'amount' => $value,
             'commission' => $commission,
             'net_amount' => $net,
-            'currency' => $router->tenant?->currency ?? config('hotbill.marzpay.currency'),
+            'currency' => $voucher->tenant?->currency ?? config('hotbill.marzpay.currency'),
             'status' => 'completed',
             'notes' => 'Captive portal voucher redemption',
             'paid_at' => now(),
@@ -397,9 +560,6 @@ HTML;
             ],
         ]);
 
-        // Deduct only the commission from the operator wallet (not the sale value)
-        // and log it on the ledger so the wallet holds mobile-money + voucher-fee
-        // movements only, and platform revenue captures the voucher commission.
         if ($commission > 0) {
             $walletTxn = $voucher->tenant?->postWallet('debit', $commission, 'voucher_commission', [
                 'reference' => $transaction->reference,
@@ -422,14 +582,6 @@ HTML;
                 ]);
             }
         }
-
-        return response()->json([
-            'status' => 'paid',
-            'package' => $package->name,
-            'username' => $username,
-            'password' => $password,
-            'link_login' => $data['link_login'] ?? null,
-        ]);
     }
 
     /**

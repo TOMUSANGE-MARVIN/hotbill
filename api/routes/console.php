@@ -23,6 +23,13 @@ Schedule::command('subscribers:expire')->everyMinute()->onOneServer()->withoutOv
 // the already-reliable poll/command queue instead.
 Schedule::command('usage:collect')->everyFiveMinutes()->onOneServer()->withoutOverlapping();
 
+// A voucher only counts as a sale once the device is confirmed online, not
+// just because the hotspot account was created - but submitting the login
+// form navigates the customer's browser away, so their own status poll may
+// never fire again. This is what actually resolves 'connecting' vouchers
+// either way even when nobody's left watching the page.
+Schedule::command('vouchers:confirm-connections')->everyMinute()->onOneServer()->withoutOverlapping();
+
 // Safety net for operator payouts: settle any withdrawal left 'processing' because
 // its MarzPay disbursement webhook was missed. Re-verifies against MarzPay so it
 // never marks money paid without confirmation.
