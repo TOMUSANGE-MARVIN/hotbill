@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Agent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AgentController extends Controller
 {
@@ -23,7 +24,10 @@ class AgentController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string',
-            'phone' => 'required|string|unique:agents,phone',
+            'phone' => [
+                'required', 'string',
+                Rule::unique('agents', 'phone')->where('tenant_id', $request->user()->tenant_id),
+            ],
             'email' => 'nullable|email',
             'location' => 'nullable|string',
             'commission_rate' => 'nullable|numeric|min:0|max:100',

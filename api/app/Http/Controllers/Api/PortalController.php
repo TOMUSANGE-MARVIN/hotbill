@@ -744,7 +744,7 @@ HTML;
     /**
      * Create the one-time hotspot user on the router and mark the order paid.
      */
-    private function fulfill(PortalOrder $order, ?string $paymentMethod = null): void
+    public function fulfill(PortalOrder $order, ?string $paymentMethod = null): void
     {
         // Atomic claim - the webhook and the status-poll can both fire fulfill().
         // Move to an intermediate 'fulfilling' state (NOT 'paid') so only one

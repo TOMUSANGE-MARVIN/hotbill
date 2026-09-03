@@ -39,3 +39,10 @@ Schedule::command('payouts:reconcile')->everyFiveMinutes()->onOneServer()->witho
 // the router (customer was charged but never connected) - retries the same
 // stored credentials until the router confirms, then flips the order to 'paid'.
 Schedule::command('orders:retry-provisioning')->everyMinute()->onOneServer()->withoutOverlapping();
+
+// fulfill()'s atomic 'fulfilling' claim was a one-way door with no recovery if
+// anything interrupted it mid-flight (an exception, a killed request) -
+// exactly what stranded a real paying customer when a cross-tenant
+// subscribers.username collision threw partway through. This is the general
+// safety net so no future interruption can do that again.
+Schedule::command('orders:retry-stuck-fulfillment')->everyMinute()->onOneServer()->withoutOverlapping();
