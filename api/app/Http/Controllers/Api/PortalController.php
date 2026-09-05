@@ -439,6 +439,16 @@ HTML;
         // The hotspot user exists on the router now, but that isn't proof the
         // customer's device is actually online - queue a check so redeemStatus()
         // below can confirm a real active session before this counts as a sale.
+        //
+        // Re-stamp used_at here, not just at the original claim above:
+        // provisionHotspotSession() can itself take up to ~70s (2 attempts, up
+        // to 35s each) waiting on the router's own poll cycle. The confirmation
+        // timeout below is measured from used_at, so leaving it at the original
+        // claim time silently burned up to 70s of that budget on provisioning
+        // alone before the device-connection check even got a first try - which
+        // is very likely why genuine connections kept timing out.
+        Voucher::whereKey($voucher->id)->update(['used_at' => now()]);
+
         RouterCommand::create([
             'router_id' => $router->id,
             'kind' => 'check-active',
@@ -463,7 +473,7 @@ HTML;
      * customer's device is genuinely online, not merely that the hotspot user
      * exists. Keeps re-queuing the check while the router hasn't reported back
      * yet, and gives up (reverting the voucher so the code can be retried) after
-     * ~90s of the device never actually showing as connected.
+     * ~180s of the device never actually showing as connected.
      */
     public function redeemStatus(Request $request, string $code): JsonResponse
     {
@@ -524,6 +534,30 @@ HTML;
         if ($waitedSeconds > 180) {
             // Never confirmed online after a fair wait - release the hotspot
             // user and the voucher so the customer can get a fresh code.
+            //
+            // Conditioned on still being 'connecting', same as
+            // finalizeVoucherSale()'s guard - this function runs from both the
+            // customer's own poll (every 3s) and the vouchers:confirm-connections
+            // cron (every 60s), so it's possible for one caller to confirm the
+            // device active (flipping the voucher to 'active') a moment before
+            // another caller, still holding a stale read, reaches this branch.
+            // Without the guard that second caller would revert a just-completed
+            // sale back to 'unused' and rip the now-connected customer's hotspot
+            // user off the router.
+            $released = Voucher::whereKey($voucher->id)->where('status', 'connecting')->update([
+                'status' => 'unused',
+                'router_id' => null,
+                'used_by_username' => null,
+                'used_at' => null,
+                'expires_at' => null,
+            ]);
+
+            if (!$released) {
+                // Already confirmed active by a concurrent check - the
+                // customer is connected, don't kick them offline.
+                return ['status' => 'connected', 'package' => $voucher->package?->name];
+            }
+
             $router = $voucher->router;
             if ($router) {
                 RouterCommand::create([
@@ -534,14 +568,6 @@ HTML;
                     'status' => 'pending',
                 ]);
             }
-
-            Voucher::whereKey($voucher->id)->update([
-                'status' => 'unused',
-                'router_id' => null,
-                'used_by_username' => null,
-                'used_at' => null,
-                'expires_at' => null,
-            ]);
 
             Log::error('Voucher redeem: device never confirmed online', ['voucher_id' => $voucher->id, 'username' => $username]);
 

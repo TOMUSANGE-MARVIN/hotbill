@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
  * from our portal page, so their own polling (redeemStatus) may never run
  * again after the very first request - this is what actually guarantees a
  * 'connecting' voucher resolves to confirmed-active or genuinely-failed
- * within ~90s, regardless of whether anyone's still watching the page.
+ * within ~180s, regardless of whether anyone's still watching the page.
  */
 class ConfirmVoucherConnections extends Command
 {
