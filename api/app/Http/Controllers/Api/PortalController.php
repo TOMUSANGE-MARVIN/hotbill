@@ -184,7 +184,7 @@ function waitRedeem(ref,pkg,submitted,uname,pass){
       if(d.status==="connected"){clearInterval(t);redeemConnected(d.package||pkg,submitted,uname,pass);}
       else if(d.status==="failed"){clearInterval(t);app.innerHTML=head()+'<div class="center"><h3>Could not connect</h3><p class="muted">'+esc(d.message||"Please try again.")+'</p><button class="btn" onclick="location.reload()" style="margin-top:8px">Try again</button></div>';}
     }).catch(function(){});
-    if(n>30){clearInterval(t);app.innerHTML=head()+'<div class="center"><h3>Still connecting</h3><p class="muted">This is taking longer than expected.<br>Please reload this page and try reconnecting to the WiFi.</p></div>';}
+    if(n>65){clearInterval(t);app.innerHTML=head()+'<div class="center"><h3>Still connecting</h3><p class="muted">This is taking longer than expected.<br>Please reload this page and try reconnecting to the WiFi.</p></div>';}
   },3000);
 }
 function redeemConnected(pkg,submitted,uname,pass){
@@ -320,6 +320,17 @@ HTML;
             ->first();
 
         if (!$voucher || $voucher->status !== 'unused') {
+            // This branch used to be silent, which made a real complaint
+            // ("code X was rejected") impossible to diagnose after the fact -
+            // no way to tell a genuine typo/wrong-router attempt apart from a
+            // real bug. Log enough to tell them apart next time.
+            Log::warning('Voucher redeem rejected', [
+                'code' => $data['code'],
+                'router_id' => $router->id,
+                'tenant_id' => $router->tenant_id,
+                'voucher_found' => (bool) $voucher,
+                'voucher_status' => $voucher?->status,
+            ]);
             return response()->json(['message' => 'Invalid or already-used voucher code.'], 422);
         }
 
@@ -477,9 +488,18 @@ HTML;
         // never lands), the check stays 'pending' forever and this must still
         // eventually give up instead of leaving the voucher stuck in
         // 'connecting' - permanently unusable - forever.
+        //
+        // 90s used to be the limit here, but the router only phones home every
+        // 30s (hotbill-commands scheduler), so each check-active retry cycle
+        // (queue + wait for next poll + report back) costs up to ~60s on its
+        // own - that left room for only 1-2 attempts before giving up, which
+        // was killing genuine connections that just took a little longer than
+        // usual to complete the captive portal auto-login (real customers seen
+        // in the logs: voucher_id 143, 157, 160 all timed out this way even
+        // though the hotspot account was created successfully every time).
         $waitedSeconds = $voucher->used_at ? $voucher->used_at->diffInSeconds(now()) : 999;
 
-        if ($waitedSeconds > 90) {
+        if ($waitedSeconds > 180) {
             // Never confirmed online after a fair wait - release the hotspot
             // user and the voucher so the customer can get a fresh code.
             $router = $voucher->router;
