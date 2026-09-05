@@ -319,6 +319,28 @@ HTML;
             ->where('tenant_id', $router->tenant_id)
             ->first();
 
+        // A voucher already 'connecting' isn't invalid - it's this same
+        // customer's own earlier tap still in flight (a slow mobile network
+        // makes people double-tap "Redeem", or the first request actually
+        // succeeded server-side but its response never made it back to their
+        // browser). Treating that identically to a genuinely bad/used code
+        // produces an instant "invalid" for a code that is, in fact, fine -
+        // resume that in-flight attempt instead of rejecting it.
+        if ($voucher && $voucher->status === 'connecting') {
+            $subscriber = Subscriber::where('username', $voucher->used_by_username)
+                ->where('tenant_id', $router->tenant_id)
+                ->first();
+
+            return response()->json([
+                'status' => 'connecting',
+                'package' => $voucher->package?->name,
+                'username' => $voucher->used_by_username,
+                'password' => $subscriber?->password,
+                'link_login' => $data['link_login'] ?? null,
+                'reference' => $voucher->code,
+            ]);
+        }
+
         if (!$voucher || $voucher->status !== 'unused') {
             // This branch used to be silent, which made a real complaint
             // ("code X was rejected") impossible to diagnose after the fact -
