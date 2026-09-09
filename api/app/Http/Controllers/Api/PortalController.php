@@ -150,7 +150,7 @@ function pay(){
   var btn=document.getElementById("pay");btn.disabled=true;btn.textContent="Sending...";document.getElementById("er").textContent="";
   fetch(API+"/portal/pay",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,package_id:pkgs[sel].id,phone:ph,provider:prov,mac:MAC,ip:IP,link_login:LINK})})
   .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
-  .then(function(o){if(!o.ok){throw new Error(o.j.message||"Payment failed");}wait(o.j.reference);})
+  .then(function(o){if(!o.ok){throw new Error(o.j.message||"Payment failed");}wait(o.j.reference,o.j.resumed);})
   .catch(function(e){btn.disabled=false;btn.textContent="Pay";document.getElementById("er").textContent=e.message;});
 }
 function redeem(){
@@ -195,8 +195,8 @@ function redeemConnected(pkg,submitted,uname,pass){
     app.innerHTML=head()+'<div class="center">'+tick+'<h3>Account ready</h3><p class="muted">'+(pkg?esc(pkg)+" is active, but ":"")+'we could not complete login automatically.<br>Please reconnect to the WiFi and reopen this page, or enter these details on the WiFi login screen:</p><p class="muted"><b>Username:</b> '+esc(uname||"")+'<br><b>Password:</b> '+esc(pass||"")+'</p></div>';
   }
 }
-function wait(ref){
-  app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Check your phone</h3><p class="muted">Enter your Mobile Money PIN on the prompt.<br>This page updates automatically.</p></div>';
+function wait(ref,resumed){
+  app.innerHTML=resumed?(head()+'<div class="center"><div class="spin"></div><h3>Reconnecting you</h3><p class="muted">You already have an active package - no charge, just a moment.</p></div>'):(head()+'<div class="center"><div class="spin"></div><h3>Check your phone</h3><p class="muted">Enter your Mobile Money PIN on the prompt.<br>This page updates automatically.</p></div>');
   var n=0,shownConnecting=false;var t=setInterval(function(){
     n++;
     fetch(API+"/portal/orders/"+ref+"/status",{headers:{Accept:"application/json"}})
@@ -259,6 +259,25 @@ HTML;
             ->where('is_active', true)
             ->firstOrFail();
 
+        // A customer who already has a still-valid subscription for this exact
+        // package (e.g. roamed to a different physical router/AP and lost their
+        // local hotspot session) shouldn't be charged again - just reprovision
+        // on whichever router they're connecting through now. Scoped to the
+        // same package only: if they deliberately picked something different
+        // while one is still active, let that go through as a real purchase
+        // rather than silently substituting their old package for it.
+        $existingUsername = preg_replace('/\D/', '', $data['phone']) ?: null;
+        $existing = $existingUsername ? Subscriber::where('username', $existingUsername)
+            ->where('tenant_id', $router->tenant_id)
+            ->where('package_id', $package->id)
+            ->where('status', 'active')
+            ->where('expires_at', '>', now())
+            ->first() : null;
+
+        if ($existing) {
+            return $this->resumeExistingSubscription($existing, $router, $package, $data);
+        }
+
         $order = PortalOrder::create([
             'tenant_id' => $router->tenant_id,
             'router_id' => $router->id,
@@ -296,6 +315,71 @@ HTML;
         return response()->json([
             'reference' => $order->merchant_reference,
             'prompt_sent' => true,
+        ]);
+    }
+
+    /**
+     * Re-provisions an already-paid, still-valid subscriber's hotspot account
+     * on whichever router they're connecting through this time - no new
+     * MarzPay charge, no new commission/wallet credit, since no new money
+     * moved. Still creates a PortalOrder so the client's existing wait()/
+     * status() polling flow needs no changes, and so this shows up in order
+     * history as what it actually was (payment_method 'resume', amount 0).
+     */
+    private function resumeExistingSubscription(Subscriber $subscriber, Router $router, Package $package, array $data): JsonResponse
+    {
+        $order = PortalOrder::create([
+            'tenant_id' => $router->tenant_id,
+            'router_id' => $router->id,
+            'package_id' => $package->id,
+            'phone' => $data['phone'],
+            'provider' => $data['provider'] ?? null,
+            'email' => $data['email'] ?? null,
+            'amount' => 0,
+            'currency' => $package->currency ?? config('hotbill.marzpay.currency'),
+            'status' => 'pending',
+            'merchant_reference' => (string) Str::uuid(),
+            'client_mac' => $data['mac'] ?? null,
+            'client_ip' => $data['ip'] ?? null,
+            'link_login' => $data['link_login'] ?? null,
+        ]);
+
+        if ($subscriber->router_id && $subscriber->router_id !== $router->id) {
+            // Best-effort cleanup wherever they used to be - not required for
+            // this request to succeed.
+            RouterCommand::create([
+                'router_id' => $subscriber->router_id,
+                'kind' => 'hotspot-user-remove',
+                'label' => "Release moved subscriber: {$subscriber->username}",
+                'script' => "/ip hotspot user remove [find name=\"{$subscriber->username}\"]",
+                'status' => 'pending',
+            ]);
+        }
+        Subscriber::whereKey($subscriber->id)->update(['router_id' => $router->id]);
+
+        $result = $this->provisionHotspotSession($router, $subscriber->username, $subscriber->password, $package);
+
+        $order->update([
+            'status' => $result === 'done' ? 'paid' : 'provisioning_failed',
+            'paid_at' => now(),
+            'payment_method' => 'resume',
+            'hotspot_username' => $subscriber->username,
+            'hotspot_password' => $subscriber->password,
+            'gateway_fee' => 0,
+            'platform_fee' => 0,
+            'operator_net' => 0,
+        ]);
+
+        if ($result !== 'done') {
+            Log::error('Resume: hotspot provisioning did not complete', [
+                'order' => $order->id, 'router_id' => $router->id, 'subscriber' => $subscriber->id, 'result' => $result,
+            ]);
+        }
+
+        return response()->json([
+            'reference' => $order->merchant_reference,
+            'prompt_sent' => false,
+            'resumed' => true,
         ]);
     }
 
@@ -339,6 +423,16 @@ HTML;
                 'link_login' => $data['link_login'] ?? null,
                 'reference' => $voucher->code,
             ]);
+        }
+
+        // A still-valid, already-sold voucher isn't invalid if it's entered
+        // again before it expires - most likely the customer roamed to a
+        // different physical router/AP and lost their local hotspot session
+        // (mac-cookie and the hotspot user it created are both per-router, so
+        // neither follows them). Re-provision on whichever router they're on
+        // now instead of rejecting a code that's still genuinely theirs.
+        if ($voucher && $voucher->status === 'active' && $voucher->expires_at?->isFuture()) {
+            return $this->resumeVoucherSession($voucher, $router, $data);
         }
 
         if (!$voucher || $voucher->status !== 'unused') {
@@ -462,6 +556,62 @@ HTML;
             'package' => $package->name,
             'username' => $username,
             'password' => $password,
+            'link_login' => $data['link_login'] ?? null,
+            'reference' => $voucher->code,
+        ]);
+    }
+
+    /**
+     * Re-provisions an already-sold, still-valid voucher's hotspot account on
+     * whichever router the customer is connecting through this time, without
+     * touching the voucher's status or expiry - no new sale, no new charge,
+     * just continuing access they already paid for. The voucher stays
+     * 'active' throughout, so the existing redeemStatus()/
+     * resolveVoucherConnection() fast path ("already active" -> 'connected')
+     * handles the client's subsequent poll with no changes needed there.
+     */
+    private function resumeVoucherSession(Voucher $voucher, Router $router, array $data): JsonResponse
+    {
+        $username = $voucher->used_by_username ?: ('V' . $voucher->code);
+        $subscriber = Subscriber::where('username', $username)->where('tenant_id', $router->tenant_id)->first();
+
+        if (!$subscriber) {
+            // Nothing to actually resume (e.g. manually deleted) - fall back
+            // to the normal rejection rather than provisioning with no record.
+            return response()->json(['message' => 'Invalid or already-used voucher code.'], 422);
+        }
+
+        if ($subscriber->router_id && $subscriber->router_id !== $router->id) {
+            // Best-effort cleanup of the stale local hotspot user wherever they
+            // used to be - not required for this request to succeed, so a
+            // failure here doesn't block the actual reconnection below.
+            RouterCommand::create([
+                'router_id' => $subscriber->router_id,
+                'kind' => 'hotspot-user-remove',
+                'label' => "Release moved voucher session: {$username}",
+                'script' => "/ip hotspot user remove [find name=\"{$username}\"]",
+                'status' => 'pending',
+            ]);
+        }
+        Subscriber::whereKey($subscriber->id)->update(['router_id' => $router->id]);
+        Voucher::whereKey($voucher->id)->update(['router_id' => $router->id]);
+
+        $result = $this->provisionHotspotSession($router, $username, $subscriber->password, $voucher->package);
+
+        if ($result !== 'done') {
+            Log::error('Voucher resume: hotspot provisioning did not complete', [
+                'voucher_id' => $voucher->id, 'router_id' => $router->id, 'result' => $result,
+            ]);
+            return response()->json([
+                'message' => 'Could not connect you right now. Please try again in a moment.',
+            ], 502);
+        }
+
+        return response()->json([
+            'status' => 'connecting',
+            'package' => $voucher->package?->name,
+            'username' => $username,
+            'password' => $subscriber->password,
             'link_login' => $data['link_login'] ?? null,
             'reference' => $voucher->code,
         ]);
