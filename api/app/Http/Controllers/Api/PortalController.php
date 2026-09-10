@@ -132,6 +132,7 @@ function view(){
   h+='</div><div id="pb" style="display:none"><div class="prov"><button id="bmtn" class="mtn on">MTN MoMo</button><button id="bair" class="air">Airtel Money</button></div><input id="ph" type="tel" inputmode="tel" placeholder="07XX XXX XXX"><button class="btn" id="pay">Pay</button><p class="err" id="er"></p></div>';
   if(!pkgs.length)h+='<p class="muted">No packages available right now.</p>';
   h+='<div class="vc"><p class="lbl">Have a voucher?</p><div class="vrow"><input id="vc" placeholder="VOUCHER CODE"><button class="vbtn" id="vbtn">Redeem</button></div><p class="err" id="ver"></p></div>';
+  h+='<div class="vc"><p class="lbl">Already paid? Enter your transaction ID</p><div class="vrow"><input id="tid" placeholder="TRANSACTION ID"><button class="vbtn" id="tidbtn">Find</button></div><p class="err" id="tider"></p></div>';
   app.innerHTML=h;
   var b=document.querySelectorAll(".pkg");
   for(var k=0;k<b.length;k++){b[k].addEventListener("click",function(){pick(parseInt(this.getAttribute("data-i"),10));});}
@@ -141,6 +142,20 @@ function view(){
     document.getElementById("pay").addEventListener("click",pay);
   }
   document.getElementById("vbtn").addEventListener("click",redeem);
+  document.getElementById("tidbtn").addEventListener("click",findTransaction);
+}
+function findTransaction(){
+  var ref=document.getElementById("tid").value.trim();
+  if(!ref){return;}
+  // Lets a customer reclaim a still-active paid session using their own
+  // transaction ID, independent of phone number or which router they're on -
+  // covers cases the automatic same-phone resume in pay() can't (paid from a
+  // different phone, or just don't have that phone on them right now).
+  app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Looking up your session</h3><p class="muted">Please wait...</p></div>';
+  fetch(API+"/portal/find-transaction",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,reference:ref,mac:MAC,ip:IP,link_login:LINK})})
+  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+  .then(function(o){if(!o.ok){throw new Error(o.j.message||"Not found");}wait(o.j.reference,true);})
+  .catch(function(e){view();document.getElementById("tid").value=ref;document.getElementById("tider").textContent=e.message;});
 }
 function pick(i){sel=i;var b=document.querySelectorAll(".pkg");for(var j=0;j<b.length;j++){b[j].className="pkg"+(j===i?" sel":"");}document.getElementById("pb").style.display="block";document.getElementById("pay").textContent="Pay "+cur+" "+m(pkgs[i].price);}
 function setp(x){prov=x;document.getElementById("bmtn").className="mtn"+(x==="mtn"?" on":"");document.getElementById("bair").className="air"+(x==="airtel"?" on":"");}
@@ -381,6 +396,53 @@ HTML;
             'prompt_sent' => false,
             'resumed' => true,
         ]);
+    }
+
+    /**
+     * Public: a customer reclaims a still-active paid session using their own
+     * transaction ID - independent of phone number or which router they're
+     * on, so it covers cases the automatic same-phone resume in pay() can't
+     * (paid from a different phone than the one they're reconnecting with, or
+     * they just don't have that phone on them). Looks up the original order's
+     * hotspot account and, if it's still a genuinely active/unexpired
+     * subscriber, reprovisions it here via the same resumeExistingSubscription
+     * used for the automatic case - identical no-new-charge behavior either
+     * way.
+     */
+    public function findByReference(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'router_id' => 'required|exists:routers,id',
+            'reference' => 'required|string|max:60',
+            'mac' => 'nullable|string|max:32',
+            'ip' => 'nullable|string|max:45',
+            'link_login' => 'nullable|string',
+        ]);
+
+        $router = Router::findOrFail($data['router_id']);
+
+        $order = PortalOrder::where('merchant_reference', trim($data['reference']))
+            ->where('tenant_id', $router->tenant_id)
+            ->first();
+
+        if (!$order || !$order->hotspot_username) {
+            return response()->json(['message' => 'Transaction not found.'], 404);
+        }
+
+        $subscriber = Subscriber::where('username', $order->hotspot_username)
+            ->where('tenant_id', $router->tenant_id)
+            ->first();
+
+        if (!$subscriber || $subscriber->status !== 'active' || !$subscriber->expires_at || $subscriber->expires_at->isPast()) {
+            return response()->json(['message' => 'This session has expired.'], 422);
+        }
+
+        $package = $subscriber->package;
+        if (!$package) {
+            return response()->json(['message' => 'This session has expired.'], 422);
+        }
+
+        return $this->resumeExistingSubscription($subscriber, $router, $package, $data);
     }
 
     /**
