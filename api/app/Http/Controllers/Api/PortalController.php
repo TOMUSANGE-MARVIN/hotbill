@@ -65,7 +65,10 @@ class PortalController extends Controller
         // refuses to leave for an external SPA) and talks straight to the API.
         // The $(...) tokens are MikroTik hotspot variables, substituted on serve.
         $api = rtrim(config('app.url'), '/') . '/api/v1';
-        $logo = rtrim(config('hotbill.portal_url'), '/') . '/hotbill-logo.png';
+        $portalUrl = rtrim(config('hotbill.portal_url'), '/');
+        $logo = $portalUrl . '/hotbill-logo.png';
+        $mtnLogo = $portalUrl . '/mtn-logo.png';
+        $airtelLogo = $portalUrl . '/airtel-logo.png';
         $rid = $router->id;
 
         $html = <<<HTML
@@ -110,7 +113,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 .pkg .d{font-size:12px;color:var(--sub);margin-top:3px}
 .pkg .p{font-weight:700;color:var(--accent);white-space:nowrap;margin-left:10px}
 .prov{display:flex;gap:8px;margin:14px 0 10px}
-.prov button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px;font-weight:600;font-size:14px;cursor:pointer;color:var(--lbl)}
+.prov button{flex:1;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:8px;font-weight:600;font-size:14px;cursor:pointer;color:var(--lbl)}
+.prov button img{height:26px;width:auto;border-radius:6px;display:block}
 .prov button.mtn.on{border-color:#F5C518;background:var(--mtn-bg);color:var(--mtn-text)}
 .prov button.air.on{border-color:#E4002B;background:var(--air-bg);color:var(--air-text)}
 input{width:100%;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:16px;margin-bottom:12px;outline:none;font-family:inherit;background:var(--card);color:var(--text)}
@@ -133,7 +137,7 @@ h3{margin:0 0 2px;font-size:19px;text-align:center}
 <body>
 <div class="card" id="app"><div class="spin"></div></div>
 <script>
-var API="{$api}", RID={$rid}, LOGO="{$logo}";
+var API="{$api}", RID={$rid}, LOGO="{$logo}", MTNLOGO="{$mtnLogo}", AIRLOGO="{$airtelLogo}";
 var MAC="\$(mac)", IP="\$(ip)", LINK="\$(link-login-only)";
 var pkgs=[], sel=null, prov="mtn", cur="UGX", org="WiFi Hotspot", app=document.getElementById("app");
 function m(n){return Number(n).toLocaleString();}
@@ -148,7 +152,7 @@ function load(){
 function view(){
   var h=head()+'<p class="lbl">Choose a package</p><div id="list">';
   for(var i=0;i<pkgs.length;i++){var p=pkgs[i];var sub=esc(p.duration_label||"")+(p.speed_label?" · "+esc(p.speed_label):"");h+='<button class="pkg" data-i="'+i+'"><div><div class="n">'+esc(p.name)+'</div><div class="d">'+sub+'</div></div><div class="p">'+cur+" "+m(p.price)+'</div></button>';}
-  h+='</div><div id="pb" style="display:none"><div class="prov"><button id="bmtn" class="mtn on">MTN MoMo</button><button id="bair" class="air">Airtel Money</button></div><input id="ph" type="tel" inputmode="tel" placeholder="07XX XXX XXX"><button class="btn" id="pay">Pay</button><p class="err" id="er"></p></div>';
+  h+='</div><div id="pb" style="display:none"><div class="prov"><button id="bmtn" class="mtn on"><img src="'+MTNLOGO+'" alt="MTN MoMo"></button><button id="bair" class="air"><img src="'+AIRLOGO+'" alt="Airtel Money"></button></div><input id="ph" type="tel" inputmode="tel" placeholder="07XX XXX XXX"><button class="btn" id="pay">Pay</button><p class="err" id="er"></p></div>';
   if(!pkgs.length)h+='<p class="muted">No packages available right now.</p>';
   h+='<div class="vc"><p class="lbl">Have a voucher?</p><div class="vrow"><input id="vc" placeholder="VOUCHER CODE"><button class="vbtn" id="vbtn">Redeem</button></div><p class="err" id="ver"></p></div>';
   h+='<div class="vc"><p class="lbl">Already paid? Enter your transaction ID</p><div class="vrow"><input id="tid" placeholder="TRANSACTION ID"><button class="vbtn" id="tidbtn">Find</button></div><p class="err" id="tider"></p></div>';
