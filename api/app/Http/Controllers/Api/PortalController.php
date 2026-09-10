@@ -76,39 +76,58 @@ class PortalController extends Controller
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>WiFi · HotBill</title>
 <style>
+:root{
+  color-scheme:light dark;
+  --bg1:#EFEFFE;--bg2:#fff;--text:#00012A;--sub:#9a9aa5;--lbl:#6b6b76;
+  --card:#fff;--card-border:#eee;--shadow:rgba(0,1,42,.12);
+  --line:#e7e7ef;--divider:#f0f0f5;--wash:#EFEFFE;--ring:#E1E0FC;
+  --accent:#4F4AD7;--accent-active:#3F3ABF;
+  --mtn-bg:#FEF9E7;--mtn-text:#8a6d00;--air-bg:#FDECEF;--air-text:#c0001f;
+  --vbtn-bg:#00012A;--vbtn-text:#fff;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg1:#000;--bg2:#000;--text:#f2f2f5;--sub:#8f8f99;--lbl:#a3a3ad;
+    --card:#0a0a0a;--card-border:#2a2a30;--shadow:rgba(0,0,0,.5);
+    --line:#2a2a30;--divider:#232328;--wash:rgba(79,74,215,.18);--ring:rgba(79,74,215,.35);
+    --accent:#7b76e8;--accent-active:#6360d1;
+    --mtn-bg:rgba(245,197,24,.14);--mtn-text:#f5c518;--air-bg:rgba(228,0,43,.16);--air-text:#ff6b7f;
+    --vbtn-bg:#1c1c22;--vbtn-text:#f2f2f5;
+  }
+}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;min-height:100%}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(to bottom,#EFEFFE,#fff);color:#00012A;display:flex;align-items:center;justify-content:center;padding:16px;min-height:100vh}
-.card{width:100%;max-width:384px;background:#fff;border:1px solid #eee;border-radius:20px;box-shadow:0 20px 50px rgba(0,1,42,.12);padding:22px}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:linear-gradient(to bottom,var(--bg1),var(--bg2));color:var(--text);display:flex;align-items:center;justify-content:center;padding:16px;min-height:100vh}
+.card{width:100%;max-width:384px;background:var(--card);border:1px solid var(--card-border);border-radius:20px;box-shadow:0 20px 50px var(--shadow);padding:22px}
 .brand{display:flex;align-items:center;gap:10px;margin-bottom:18px}
 .brand img{height:30px;width:auto}
 .brand .o{font-weight:800;font-size:15px;line-height:1.1}
-.brand .s{font-size:11px;color:#9a9aa5;margin-top:1px}
-.lbl{font-size:13px;color:#6b6b76;margin:0 0 10px}
-.pkg{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:1px solid #e7e7ef;background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;font:inherit;color:inherit}
-.pkg.sel{border-color:#4F4AD7;background:#EFEFFE;box-shadow:0 0 0 2px #E1E0FC}
+.brand .s{font-size:11px;color:var(--sub);margin-top:1px}
+.lbl{font-size:13px;color:var(--lbl);margin:0 0 10px}
+.pkg{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;font:inherit;color:inherit}
+.pkg.sel{border-color:var(--accent);background:var(--wash);box-shadow:0 0 0 2px var(--ring)}
 .pkg .n{font-weight:600;font-size:15px}
-.pkg .d{font-size:12px;color:#9a9aa5;margin-top:3px}
-.pkg .p{font-weight:700;color:#4F4AD7;white-space:nowrap;margin-left:10px}
+.pkg .d{font-size:12px;color:var(--sub);margin-top:3px}
+.pkg .p{font-weight:700;color:var(--accent);white-space:nowrap;margin-left:10px}
 .prov{display:flex;gap:8px;margin:14px 0 10px}
-.prov button{flex:1;border:1px solid #e7e7ef;background:#fff;border-radius:12px;padding:11px;font-weight:600;font-size:14px;cursor:pointer;color:#6b6b76}
-.prov button.mtn.on{border-color:#F5C518;background:#FEF9E7;color:#8a6d00}
-.prov button.air.on{border-color:#E4002B;background:#FDECEF;color:#c0001f}
-input{width:100%;border:1px solid #e7e7ef;border-radius:12px;padding:14px;font-size:16px;margin-bottom:12px;outline:none;font-family:inherit}
-input:focus{border-color:#4F4AD7;box-shadow:0 0 0 2px #E1E0FC}
-.btn{width:100%;background:#4F4AD7;color:#fff;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;cursor:pointer}
-.btn:active{background:#3F3ABF}.btn:disabled{opacity:.55}
-.err{color:#d33;font-size:13px;margin:8px 0 0;text-align:center}
-.muted{color:#9a9aa5;font-size:13px;text-align:center;line-height:1.5;margin:6px 0}
+.prov button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:11px;font-weight:600;font-size:14px;cursor:pointer;color:var(--lbl)}
+.prov button.mtn.on{border-color:#F5C518;background:var(--mtn-bg);color:var(--mtn-text)}
+.prov button.air.on{border-color:#E4002B;background:var(--air-bg);color:var(--air-text)}
+input{width:100%;border:1px solid var(--line);border-radius:12px;padding:14px;font-size:16px;margin-bottom:12px;outline:none;font-family:inherit;background:var(--card);color:var(--text)}
+input:focus{border-color:var(--accent);box-shadow:0 0 0 2px var(--ring)}
+.btn{width:100%;background:var(--accent);color:#fff;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:600;cursor:pointer}
+.btn:active{background:var(--accent-active)}.btn:disabled{opacity:.55}
+.err{color:#e04848;font-size:13px;margin:8px 0 0;text-align:center}
+.muted{color:var(--sub);font-size:13px;text-align:center;line-height:1.5;margin:6px 0}
 .center{text-align:center;padding:10px 0}
-.spin{width:34px;height:34px;border:3px solid #E1E0FC;border-top-color:#4F4AD7;border-radius:50%;animation:sp 1s linear infinite;margin:18px auto}
+.spin{width:34px;height:34px;border:3px solid var(--ring);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;margin:18px auto}
 @keyframes sp{to{transform:rotate(360deg)}}
-.tick{width:56px;height:56px;border-radius:50%;background:#EFEFFE;display:flex;align-items:center;justify-content:center;margin:4px auto 10px}
+.tick{width:56px;height:56px;border-radius:50%;background:var(--wash);color:var(--accent);display:flex;align-items:center;justify-content:center;margin:4px auto 10px}
 h3{margin:0 0 2px;font-size:19px;text-align:center}
-.vc{margin-top:18px;padding-top:16px;border-top:1px solid #f0f0f5}
+.vc{margin-top:18px;padding-top:16px;border-top:1px solid var(--divider)}
 .vrow{display:flex;gap:8px}
 .vrow input{margin-bottom:0;text-transform:uppercase;letter-spacing:1px}
-.vbtn{background:#00012A;color:#fff;border:0;border-radius:12px;padding:0 16px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+.vbtn{background:var(--vbtn-bg);color:var(--vbtn-text);border:0;border-radius:12px;padding:0 16px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -203,7 +222,7 @@ function waitRedeem(ref,pkg,submitted,uname,pass){
   },3000);
 }
 function redeemConnected(pkg,submitted,uname,pass){
-  var tick='<div class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4F4AD7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
+  var tick='<div class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
   if(submitted){
     app.innerHTML=head()+'<div class="center">'+tick+'<h3>You are connected!</h3><p class="muted">'+(pkg?esc(pkg)+" is now active. ":"")+'Enjoy your internet.</p></div>';
   }else{
@@ -225,7 +244,7 @@ function wait(ref,resumed){
   },4000);
 }
 function done(d){
-  var tick='<div class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4F4AD7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
+  var tick='<div class="tick"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>';
   if(d.username&&LINK){
     app.innerHTML=head()+'<div class="center">'+tick+'<h3>You are connected!</h3><p class="muted">'+(d.package?esc(d.package)+" is now active. ":"")+'Enjoy your internet.</p></div>';
     try{var f=document.createElement("form");f.method="post";f.action=LINK;var u=document.createElement("input");u.name="username";u.value=d.username;var p=document.createElement("input");p.name="password";p.value=d.password||"";f.appendChild(u);f.appendChild(p);document.body.appendChild(f);f.submit();}catch(e){}
