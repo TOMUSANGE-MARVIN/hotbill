@@ -22,26 +22,38 @@ class AnalyticsController extends Controller
     public function dashboard(Request $request): JsonResponse
     {
         $tenantId = $request->user()->tenant_id;
+        $tz = Tenant::find($tenantId)?->timezone ?: config('app.timezone');
+
         // The dashboard sends `start`/`end`; accept the legacy `start_date`/`end_date`
         // names too. Without this the range silently fell back to the current month,
         // so at every month boundary the dashboard showed zeros for prior data.
-        $start = $request->input('start', $request->input('start_date')) ?? now()->startOfMonth()->toDateString();
-        $end = $request->input('end', $request->input('end_date')) ?? now()->toDateString();
+        $start = $request->input('start', $request->input('start_date')) ?? now($tz)->startOfMonth()->toDateString();
+        $end = $request->input('end', $request->input('end_date')) ?? now($tz)->toDateString();
 
-        $range = [$start . ' 00:00:00', $end . ' 23:59:59'];
+        // `paid_at` is stored in UTC (app.timezone), but $start/$end are calendar
+        // dates in the tenant's own local timezone - interpreting them as literal
+        // UTC boundaries (the old behavior) misattributes every sale in the first
+        // few hours of the local day to the previous day's totals instead. This
+        // is exactly the "yesterday's numbers don't tally" bug: a Uganda (EAT,
+        // UTC+3) sale at 01:00 local is stored as 22:00 UTC the day before, so a
+        // naive UTC range for "yesterday" silently excludes it.
+        $range = [
+            Carbon::parse($start, $tz)->startOfDay()->utc()->toDateTimeString(),
+            Carbon::parse($end, $tz)->endOfDay()->utc()->toDateTimeString(),
+        ];
 
         // These aggregates scan growing tables on every dashboard load, so cache
         // the assembled payload for a short window (per tenant + date range).
         $payload = Cache::remember(
             "dashboard:{$tenantId}:{$start}:{$end}",
             60,
-            fn () => $this->buildDashboard($tenantId, $range)
+            fn () => $this->buildDashboard($tenantId, $range, $tz)
         );
 
         return response()->json($payload);
     }
 
-    private function buildDashboard(int $tenantId, array $range): array
+    private function buildDashboard(int $tenantId, array $range, string $tz): array
     {
         // Sales summary
         $salesBase = Transaction::where('tenant_id', $tenantId)
@@ -57,9 +69,12 @@ class AnalyticsController extends Controller
         $agentCommission = (clone $salesBase)->whereNotNull('agent_id')->sum('commission');
         $mmCommission = (clone $salesBase)->whereIn('method', ['mtn_momo', 'airtel_money'])->sum('commission');
         $voucherSales = (clone $salesBase)->where('type', 'voucher')->sum('amount');
+        // "Today" also has to mean the tenant's local calendar day, not UTC's -
+        // same reasoning as the range above.
+        $todayRange = [now($tz)->startOfDay()->utc()->toDateTimeString(), now($tz)->endOfDay()->utc()->toDateTimeString()];
         $salesToday = Transaction::where('tenant_id', $tenantId)
             ->where('status', 'completed')
-            ->whereDate('paid_at', today())
+            ->whereBetween('paid_at', $todayRange)
             ->count();
 
         // System insights - "live" figures only count routers reporting right now.
@@ -80,7 +95,7 @@ class AnalyticsController extends Controller
         // Subscribers
         $activeSubscribers = Subscriber::where('tenant_id', $tenantId)->where('status', 'active')->count();
         $expiredToday = Subscriber::where('tenant_id', $tenantId)
-            ->whereDate('expires_at', today())->count();
+            ->whereBetween('expires_at', $todayRange)->count();
 
         // Recent sales
         $recentSales = Transaction::where('tenant_id', $tenantId)
@@ -107,11 +122,15 @@ class AnalyticsController extends Controller
             ])
             ->values();
 
-        // Daily chart
+        // Daily chart - group by the tenant's local calendar date, not the UTC
+        // date paid_at happens to be stored in (same fix as the range above:
+        // a bare DATE(paid_at) would still split one local day's sales across
+        // two bars for anything sold in the first few hours of the local day).
+        $offset = $this->tzOffset($tz);
         $daily = Transaction::where('tenant_id', $tenantId)
             ->where('status', 'completed')
             ->whereBetween('paid_at', $range)
-            ->selectRaw('DATE(paid_at) as date, SUM(net_amount) as net_revenue, SUM(commission) as commission, SUM(amount) as gross_revenue, 0 as expense')
+            ->selectRaw("DATE(CONVERT_TZ(paid_at, '+00:00', '{$offset}')) as date, SUM(net_amount) as net_revenue, SUM(commission) as commission, SUM(amount) as gross_revenue, 0 as expense")
             ->groupBy('date')
             ->orderBy('date')
             ->get();
@@ -148,12 +167,17 @@ class AnalyticsController extends Controller
     public function series(Request $request): JsonResponse
     {
         $tenantId = $request->user()->tenant_id;
-        $start = $request->input('start', $request->input('start_date')) ?? now()->startOfMonth()->toDateString();
-        $end = $request->input('end', $request->input('end_date')) ?? now()->toDateString();
+        $tz = Tenant::find($tenantId)?->timezone ?: config('app.timezone');
+        $start = $request->input('start', $request->input('start_date')) ?? now($tz)->startOfMonth()->toDateString();
+        $end = $request->input('end', $request->input('end_date')) ?? now($tz)->toDateString();
         $channel = $request->input('channel', 'all'); // all | mobile_money | vouchers
         $subscriberId = $request->input('subscriber_id');
 
-        $range = [$start . ' 00:00:00', $end . ' 23:59:59'];
+        // Same tenant-local-day reasoning as dashboard() - see the comment there.
+        $range = [
+            Carbon::parse($start, $tz)->startOfDay()->utc()->toDateTimeString(),
+            Carbon::parse($end, $tz)->endOfDay()->utc()->toDateTimeString(),
+        ];
 
         $query = Transaction::where('tenant_id', $tenantId)
             ->where('status', 'completed')
@@ -167,13 +191,32 @@ class AnalyticsController extends Controller
             $query->where('type', 'voucher');
         }
 
+        $offset = $this->tzOffset($tz);
         $daily = $query
-            ->selectRaw('DATE(paid_at) as date, SUM(net_amount) as net_revenue, SUM(commission) as commission, SUM(amount) as gross_revenue')
+            ->selectRaw("DATE(CONVERT_TZ(paid_at, '+00:00', '{$offset}')) as date, SUM(net_amount) as net_revenue, SUM(commission) as commission, SUM(amount) as gross_revenue")
             ->groupBy('date')
             ->orderBy('date')
             ->get();
 
         return response()->json(['daily' => $daily]);
+    }
+
+    /**
+     * Numeric UTC offset (e.g. "+03:00") for a timezone name, suitable for
+     * MySQL/MariaDB's CONVERT_TZ. Named zones (CONVERT_TZ(x,'UTC','Africa/..'))
+     * would be more correct across DST changes, but silently return NULL unless
+     * the server's mysql.time_zone_name tables are loaded - not guaranteed on a
+     * fresh MariaDB install. A numeric offset always works; Africa/Kampala (and
+     * every timezone HotBill currently serves) has no DST anyway.
+     */
+    private function tzOffset(string $tz): string
+    {
+        $seconds = (new \DateTimeZone($tz))->getOffset(new \DateTime('now', new \DateTimeZone('UTC')));
+
+        $sign = $seconds < 0 ? '-' : '+';
+        $seconds = abs($seconds);
+
+        return sprintf('%s%02d:%02d', $sign, intdiv($seconds, 3600), intdiv($seconds % 3600, 60));
     }
 
     /**
