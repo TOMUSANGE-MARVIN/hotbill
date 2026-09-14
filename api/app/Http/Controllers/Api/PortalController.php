@@ -838,7 +838,8 @@ HTML;
             return; // Already finalized by a concurrent poll.
         }
 
-        $commissionPercent = (float) config('hotbill.platform.voucher_commission_percent');
+        $commissionPercent = $voucher->tenant?->voucherCommissionPercent()
+            ?? (float) config('hotbill.platform.voucher_commission_percent');
         $value = (float) $voucher->price;
         $commission = round($value * $commissionPercent / 100, 2);
         $net = round($value - $commission, 2);

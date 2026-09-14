@@ -13,8 +13,11 @@ return [
         // HotBill's per-transaction commission on each hotspot sale (% of gross).
         'commission_percent' => (float) env('PLATFORM_COMMISSION_PERCENT', 3),
         // HotBill's commission on each voucher redeemed (% of voucher value),
-        // debited from the operator's wallet when the voucher is used.
-        // Set to 0 to switch this off entirely - both call sites (finalizeVoucherSale
+        // debited from the operator's wallet when the voucher is used. This is
+        // the platform-wide default (currently off); a platform admin can
+        // switch it back on for a specific tenant at their own rate via
+        // Tenant::voucher_commission_enabled/voucher_commission_rate - see
+        // Tenant::voucherCommissionPercent(). Both call sites (finalizeVoucherSale
         // in PortalController, and VoucherService::redeem) already guard their wallet
         // debit on commission > 0, so 0% just records a fee-free sale (net_amount
         // equals the full voucher price) with no other behavior change.

@@ -131,6 +131,8 @@ class PlatformController extends Controller
                     'users_count' => $t->users_count,
                     'wallet_balance' => (float) $t->wallet_balance,
                     'gross_revenue' => $revenue,
+                    'voucher_commission_enabled' => $t->voucher_commission_enabled,
+                    'voucher_commission_rate' => (float) $t->voucher_commission_rate,
                     'created_at' => $t->created_at,
                 ];
             });
@@ -143,6 +145,8 @@ class PlatformController extends Controller
         $data = $request->validate([
             'is_active' => 'sometimes|boolean',
             'plan' => 'sometimes|in:free,pro,enterprise',
+            'voucher_commission_enabled' => 'sometimes|boolean',
+            'voucher_commission_rate' => 'sometimes|numeric|min:0|max:100',
         ]);
 
         $tenant->update($data);

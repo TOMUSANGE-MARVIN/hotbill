@@ -12,6 +12,7 @@ class Tenant extends Model
         'name', 'slug', 'email', 'phone', 'currency', 'timezone',
         'plan', 'is_active', 'settings', 'trial_ends_at',
         'wallet_balance', 'payout_phone', 'payout_provider',
+        'voucher_commission_enabled', 'voucher_commission_rate',
     ];
 
     protected $casts = [
@@ -19,7 +20,21 @@ class Tenant extends Model
         'is_active' => 'boolean',
         'trial_ends_at' => 'datetime',
         'wallet_balance' => 'decimal:2',
+        'voucher_commission_enabled' => 'boolean',
+        'voucher_commission_rate' => 'decimal:2',
     ];
+
+    /**
+     * The voucher commission percent that actually applies to this tenant -
+     * the platform-wide default unless a platform admin has switched this
+     * specific account on with its own rate.
+     */
+    public function voucherCommissionPercent(): float
+    {
+        return $this->voucher_commission_enabled
+            ? (float) $this->voucher_commission_rate
+            : (float) config('hotbill.platform.voucher_commission_percent');
+    }
 
     /**
      * Atomically move money in/out of the wallet and record a ledger row.

@@ -38,7 +38,7 @@ function TenantsList() {
         <table className="w-full text-sm min-w-[750px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {['Operator', 'Plan', 'Routers', 'Gross Revenue', 'Wallet', 'Status', 'Joined', ''].map((h) => (
+              {['Operator', 'Plan', 'Routers', 'Gross Revenue', 'Wallet', 'Voucher Commission', 'Status', 'Joined', ''].map((h) => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
             </tr>
@@ -57,6 +57,13 @@ function TenantsList() {
                 <td className="px-4 py-3 text-gray-700">{formatCurrency(t.gross_revenue)}</td>
                 <td className="px-4 py-3 text-gray-700">{formatCurrency(t.wallet_balance)}</td>
                 <td className="px-4 py-3">
+                  <VoucherCommissionControl
+                    enabled={t.voucher_commission_enabled}
+                    rate={t.voucher_commission_rate}
+                    onChange={(payload) => update.mutate({ id: t.id, payload })}
+                  />
+                </td>
+                <td className="px-4 py-3">
                   <StatusToggle active={t.is_active} onChange={(v) => update.mutate({ id: t.id, payload: { is_active: v } })} />
                 </td>
                 <td className="px-4 py-3 text-xs text-gray-400">{format(new Date(t.created_at), 'dd MMM yyyy')}</td>
@@ -64,7 +71,7 @@ function TenantsList() {
               </tr>
             ))}
             {data.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-400">No tenants yet.</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">No tenants yet.</td></tr>
             )}
           </tbody>
         </table>
@@ -105,6 +112,53 @@ function PlanBadge({ plan, onChange }: { plan: string; onChange: (p: string) => 
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function VoucherCommissionControl({
+  enabled,
+  rate,
+  onChange,
+}: {
+  enabled: boolean
+  rate: number
+  onChange: (payload: { voucher_commission_enabled?: boolean; voucher_commission_rate?: number }) => void
+}) {
+  const [draft, setDraft] = useState(String(rate))
+
+  const commitRate = () => {
+    const parsed = Math.min(100, Math.max(0, Number(draft)))
+    if (Number.isFinite(parsed) && parsed !== rate) {
+      onChange({ voucher_commission_rate: parsed })
+    }
+    setDraft(String(Number.isFinite(parsed) ? parsed : rate))
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => onChange({ voucher_commission_enabled: !enabled })}
+        className={`flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${enabled ? 'bg-brand-50 text-brand-700' : 'bg-gray-100 text-gray-500'}`}
+      >
+        {enabled ? <CheckCircle size={12} /> : <XCircle size={12} />}
+        {enabled ? 'On' : 'Off'}
+      </button>
+      <div className={`flex items-center ${enabled ? '' : 'opacity-40'}`}>
+        <input
+          type="number"
+          min={0}
+          max={100}
+          step={0.5}
+          disabled={!enabled}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commitRate}
+          onKeyDown={(e) => e.key === 'Enter' && (e.currentTarget as HTMLInputElement).blur()}
+          className="w-14 text-xs border border-gray-200 rounded-md px-1.5 py-0.5 text-gray-700 disabled:cursor-not-allowed"
+        />
+        <span className="text-xs text-gray-400 ml-1">%</span>
+      </div>
     </div>
   )
 }
