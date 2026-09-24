@@ -16,6 +16,7 @@ use App\Services\RadiusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
 /**
@@ -602,9 +603,21 @@ HTML;
         // or dashes (seen in the rejection log: "Vb ltuyc").
         $code = strtoupper(preg_replace('/[\s\-]+/', '', $data['code']));
         $mac = $this->normalizeMac($data['mac'] ?? null);
+
+        // Someone was seen cycling dozens of variations of one code (GWZZG1Y,
+        // GWZZG2Y ... GWZZG7Z). Cap wrong guesses per device. All hotspot clients
+        // share the router's public IP, so the IP fallback (no MAC) is looser.
+        $guessKey = 'voucher-guess:' . $router->id . ':' . ($mac ?? $request->ip());
+        $maxGuesses = $mac ? 8 : 30;
+        if (RateLimiter::tooManyAttempts($guessKey, $maxGuesses)) {
+            $minutes = max(1, (int) ceil(RateLimiter::availableIn($guessKey) / 60));
+            return response()->json(['message' => "Too many incorrect codes. Please wait {$minutes} minute(s) and try again."], 429);
+        }
+
         $voucher = Voucher::where('code', $code)
             ->where('tenant_id', $router->tenant_id)
-            ->first();
+            ->first()
+            ?? $this->findLookalikeVoucher($code, $router);
 
         // A voucher already 'connecting' isn't invalid - it's this same
         // customer's own earlier tap still in flight (a slow mobile network
@@ -650,6 +663,9 @@ HTML;
                 'voucher_found' => (bool) $voucher,
                 'voucher_status' => $voucher?->status,
             ]);
+            if (!$voucher) {
+                RateLimiter::hit($guessKey, 600);
+            }
             return response()->json(['message' => $this->voucherRejectionMessage($voucher, $code, $router)], 422);
         }
 
@@ -816,6 +832,32 @@ HTML;
             'link_login' => $data['link_login'] ?? null,
             'reference' => $voucher->code,
         ]);
+    }
+
+    /**
+     * A typed code that doesn't exist but looks like exactly one unsold voucher
+     * on paper (S for 5, H for M, ...) is that voucher. Seen in the rejection log:
+     * customers holding genuinely unused slips (GVP9HPM typed as GVP9HPH) were
+     * told "invalid". Only unused vouchers are matched, and only when the match
+     * is unique - an ambiguous or already-used match stays a normal rejection.
+     */
+    private function findLookalikeVoucher(string $code, Router $router): ?Voucher
+    {
+        $canonical = Voucher::canonical($code);
+
+        $matches = Voucher::where('tenant_id', $router->tenant_id)
+            ->where('status', 'unused')
+            ->whereRaw('CHAR_LENGTH(code) = ?', [strlen($code)])
+            ->get(['id', 'code'])
+            ->filter(fn (Voucher $v) => Voucher::canonical($v->code) === $canonical);
+
+        if ($matches->count() !== 1) {
+            return null;
+        }
+
+        Log::info('Voucher matched via look-alike characters', ['typed' => $code, 'code' => $matches->first()->code]);
+
+        return Voucher::find($matches->first()->id);
     }
 
     /**

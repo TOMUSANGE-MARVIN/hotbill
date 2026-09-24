@@ -14,9 +14,16 @@ class VoucherService
     public function generateBatch(VoucherBatch $batch): void
     {
         $vouchers = [];
+        // Codes are only inserted at the end, so the DB check in generateCode()
+        // can't see the other codes of this same batch - track them here too.
+        $taken = [];
 
         for ($i = 0; $i < $batch->quantity; $i++) {
-            $code = $this->generateCode($batch->prefix, $batch->code_length);
+            do {
+                $code = $this->generateCode((string) $batch->prefix, $batch->code_length ?: 8);
+            } while (isset($taken[$code]));
+            $taken[$code] = true;
+
             $vouchers[] = [
                 'tenant_id' => $batch->tenant_id,
                 'batch_id' => $batch->id,
@@ -35,7 +42,7 @@ class VoucherService
 
     private function generateCode(string $prefix = '', int $length = 8): string
     {
-        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I confusion
+        $chars = Voucher::CODE_ALPHABET;
         do {
             $suffix = '';
             for ($i = 0; $i < $length; $i++) {

@@ -17,12 +17,16 @@
     padding: 8px 6px; text-align: center; background: #f0fdf4;
   }
   .voucher .network { font-size: 9px; color: #666; }
+  /* Customers misread printed codes (S/5, H/M, J/3 in the redeem logs) - a
+     larger, heavier, dark mono face bundled with dompdf reads far better. */
   .voucher .code {
-    font-size: 15px; font-weight: bold; letter-spacing: 2px;
-    color: #15803d; margin: 5px 0; font-family: monospace;
+    font-size: 18px; font-weight: bold; letter-spacing: 3px;
+    color: #111; margin: 6px 0; font-family: 'DejaVu Sans Mono', monospace;
   }
   .voucher .package { font-size: 10px; color: #555; }
   .voucher .duration, .voucher .speed { font-size: 9px; color: #777; }
+  /* the ↑/↓ in speed labels aren't in Arial - dompdf printed them as "?" */
+  .voucher .speed { font-family: 'DejaVu Sans', sans-serif; }
   .voucher .price { font-weight: bold; color: #111; margin-top: 3px; }
 </style>
 </head>

@@ -19,6 +19,34 @@ class Voucher extends Model
     ];
 
     /**
+     * Characters customers actually confuse when reading printed slips (from the
+     * redeem rejection log: S/5, B/8, H/M, Y/U ...), each mapped to one
+     * representative. Two codes with the same canonical form look alike on paper.
+     */
+    private const LOOKALIKES = [
+        'S' => '5',
+        'B' => '8',
+        'Z' => '2',
+        '6' => 'G',
+        'O' => 'D', 'Q' => 'D', '0' => 'D',
+        'I' => 'L', '1' => 'L',
+        'U' => 'Y', 'V' => 'Y',
+        'H' => 'M', 'N' => 'M',
+    ];
+
+    /**
+     * Alphabet for new codes: at most one character from each look-alike group
+     * (plus J dropped - it was read as 3 and 8), so a misread can only ever map
+     * back to the code that was printed.
+     */
+    public const CODE_ALPHABET = 'ACEFKPRTWX3479582GDLYM';
+
+    public static function canonical(string $code): string
+    {
+        return strtr(strtoupper($code), self::LOOKALIKES);
+    }
+
+    /**
      * Flip any redeemed ("active") vouchers whose validity window has passed to
      * "expired". Cheap, idempotent bulk update - call it before reading vouchers
      * so listings/exports/filters reflect real expiry without a cron.
