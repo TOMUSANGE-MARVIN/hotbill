@@ -11,7 +11,7 @@ class PortalOrder extends Model
         'tenant_id', 'router_id', 'package_id',
         'phone', 'provider', 'email', 'amount', 'currency',
         'status', 'gateway_fee', 'platform_fee', 'operator_net',
-        'merchant_reference', 'pesapal_tracking_id', 'payment_method',
+        'merchant_reference', 'pesapal_tracking_id', 'provider_reference', 'payment_method',
         'hotspot_username', 'hotspot_password', 'client_mac', 'client_ip', 'link_login',
         'paid_at',
     ];

@@ -155,7 +155,7 @@ function view(){
   h+='</div><div id="pb" style="display:none"><div class="prov"><button id="bmtn" class="mtn on"><img src="'+MTNLOGO+'" alt="MTN MoMo"></button><button id="bair" class="air"><img src="'+AIRLOGO+'" alt="Airtel Money"></button></div><input id="ph" type="tel" inputmode="tel" placeholder="07XX XXX XXX"><button class="btn" id="pay">Pay</button><p class="err" id="er"></p></div>';
   if(!pkgs.length)h+='<p class="muted">No packages available right now.</p>';
   h+='<div class="vc"><p class="lbl">Have a voucher?</p><div class="vrow"><input id="vc" placeholder="VOUCHER CODE"><button class="vbtn" id="vbtn">Redeem</button></div><p class="err" id="ver"></p></div>';
-  h+='<div class="vc"><p class="lbl">Already paid? Enter your transaction ID</p><div class="vrow"><input id="tid" placeholder="TRANSACTION ID"><button class="vbtn" id="tidbtn">Find</button></div><p class="err" id="tider"></p></div>';
+  h+='<div class="vc"><p class="lbl">Already paid? Enter the transaction ID from your Mobile Money SMS</p><div class="vrow"><input id="tid" placeholder="TRANSACTION ID"><button class="vbtn" id="tidbtn">Find</button></div><p class="err" id="tider"></p></div>';
   app.innerHTML=h;
   var b=document.querySelectorAll(".pkg");
   for(var k=0;k<b.length;k++){b[k].addEventListener("click",function(){pick(parseInt(this.getAttribute("data-i"),10));});}
@@ -443,9 +443,17 @@ HTML;
         ]);
 
         $router = Router::findOrFail($data['router_id']);
+        $reference = trim($data['reference']);
 
-        $order = PortalOrder::where('merchant_reference', trim($data['reference']))
-            ->where('tenant_id', $router->tenant_id)
+        // A real customer only ever sees the telco's own reference (the one in
+        // their MTN/Airtel SMS receipt) - our internal merchant_reference is a
+        // UUID they've never been shown. Match either, so this actually works
+        // with what someone would realistically type in.
+        $order = PortalOrder::where('tenant_id', $router->tenant_id)
+            ->where(function ($q) use ($reference) {
+                $q->where('merchant_reference', $reference)
+                    ->orWhere('provider_reference', $reference);
+            })
             ->first();
 
         if (!$order || !$order->hotspot_username) {
@@ -999,6 +1007,15 @@ HTML;
         $txn = $data['data']['transaction'] ?? $data['transaction'] ?? [];
         $st = strtolower($txn['status'] ?? '');
         $providerName = $data['data']['collection']['provider'] ?? $order->provider ?? '';
+
+        // The telco's own reference (what actually appears in the SMS receipt
+        // MTN/Airtel sends the customer) - distinct from pesapal_tracking_id,
+        // which is MarzPay's internal collection UUID the customer never sees.
+        // Captured as soon as it's available, regardless of outcome, so "find my
+        // transaction ID" has something a real customer could actually type in.
+        if (!empty($txn['provider_reference']) && !$order->provider_reference) {
+            $order->update(['provider_reference' => $txn['provider_reference']]);
+        }
 
         if (in_array($st, ['completed', 'successful', 'success'])) {
             $this->fulfill($order, $providerName);
