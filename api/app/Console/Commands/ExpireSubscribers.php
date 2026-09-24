@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Router;
 use App\Models\RouterCommand;
 use App\Models\Subscriber;
 use Illuminate\Console\Command;
@@ -44,13 +45,24 @@ class ExpireSubscribers extends Command
                 "/ip hotspot user remove [find name=\"{$u}\"]",
             ]);
 
-            RouterCommand::create([
-                'router_id' => $subscriber->router_id,
-                'kind' => 'hotspot-user-remove',
-                'label' => "Disconnect {$subscriber->username} (expired)",
-                'script' => $script,
-                'status' => 'pending',
-            ]);
+            // Reconnecting on another router copies the account there without
+            // removing it from the first one (removing would kick the customer),
+            // so at expiry it has to go from every router the tenant has.
+            $routerIds = Router::where('tenant_id', $subscriber->tenant_id)
+                ->whereNotNull('token')
+                ->pluck('id')
+                ->push($subscriber->router_id)
+                ->unique();
+
+            foreach ($routerIds as $routerId) {
+                RouterCommand::create([
+                    'router_id' => $routerId,
+                    'kind' => 'hotspot-user-remove',
+                    'label' => "Disconnect {$subscriber->username} (expired)",
+                    'script' => $script,
+                    'status' => 'pending',
+                ]);
+            }
 
             $count++;
         }

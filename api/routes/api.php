@@ -55,6 +55,8 @@ Route::prefix('v1')->group(function () {
         Route::get('routers/{router}/login.html', [PortalController::class, 'loginTemplate']);
         Route::post('pay', [PortalController::class, 'pay']);
         Route::post('find-transaction', [PortalController::class, 'findByReference']);
+        Route::post('reconnect/check', [PortalController::class, 'reconnectCheck'])->middleware('throttle:30,1');
+        Route::post('reconnect', [PortalController::class, 'reconnect'])->middleware('throttle:10,1');
         Route::post('redeem', [PortalController::class, 'redeem']);
         Route::get('redeem/{code}/status', [PortalController::class, 'redeemStatus']);
         // MarzPay webhooks (collections + operator payouts)

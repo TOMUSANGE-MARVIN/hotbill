@@ -132,13 +132,15 @@ h3{margin:0 0 2px;font-size:19px;text-align:center}
 .vrow{display:flex;gap:8px}
 .vrow input{margin-bottom:0;text-transform:uppercase;letter-spacing:1px}
 .vbtn{background:var(--vbtn-bg);color:var(--vbtn-text);border:0;border-radius:12px;padding:0 16px;font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
+.rb{border:1px solid var(--accent);background:var(--wash);border-radius:14px;padding:14px;margin-bottom:16px}
+.rb .muted{text-align:left;margin:0 0 10px}
 </style>
 </head>
 <body>
 <div class="card" id="app"><div class="spin"></div></div>
 <script>
 var API="{$api}", RID={$rid}, LOGO="{$logo}", MTNLOGO="{$mtnLogo}", AIRLOGO="{$airtelLogo}";
-var MAC="\$(mac)", IP="\$(ip)", LINK="\$(link-login-only)";
+var MAC="\$(mac)", IP="\$(ip)", LINK="\$(link-login-only)", ERR="\$(error)";
 var pkgs=[], sel=null, prov="mtn", cur="UGX", org="WiFi Hotspot", app=document.getElementById("app");
 function m(n){return Number(n).toLocaleString();}
 function esc(s){return String(s==null?"":s).replace(/[<>&]/g,"");}
@@ -149,8 +151,9 @@ function load(){
   .then(function(d){pkgs=d.packages||[];cur=d.currency||"UGX";org=d.organization||"WiFi Hotspot";view();})
   .catch(function(){app.innerHTML=head()+'<p class="err">Could not load packages.</p><button class="btn" onclick="location.reload()" style="margin-top:10px">Retry</button>';});
 }
+function rerr(){return (ERR&&ERR.indexOf("\$(")<0)?ERR:"";}
 function view(){
-  var h=head()+'<p class="lbl">Choose a package</p><div id="list">';
+  var h=head()+'<div id="rb"></div><p class="err" id="gerr" style="margin:0 0 12px">'+esc(rerr())+'</p><p class="lbl">Choose a package</p><div id="list">';
   for(var i=0;i<pkgs.length;i++){var p=pkgs[i];var sub=esc(p.duration_label||"")+(p.speed_label?" · "+esc(p.speed_label):"");h+='<button class="pkg" data-i="'+i+'"><div><div class="n">'+esc(p.name)+'</div><div class="d">'+sub+'</div></div><div class="p">'+cur+" "+m(p.price)+'</div></button>';}
   h+='</div><div id="pb" style="display:none"><div class="prov"><button id="bmtn" class="mtn on"><img src="'+MTNLOGO+'" alt="MTN MoMo"></button><button id="bair" class="air"><img src="'+AIRLOGO+'" alt="Airtel Money"></button></div><input id="ph" type="tel" inputmode="tel" placeholder="07XX XXX XXX"><button class="btn" id="pay">Pay</button><p class="err" id="er"></p></div>';
   if(!pkgs.length)h+='<p class="muted">No packages available right now.</p>';
@@ -166,6 +169,27 @@ function view(){
   }
   document.getElementById("vbtn").addEventListener("click",redeem);
   document.getElementById("tidbtn").addEventListener("click",findTransaction);
+  checkReturning();
+}
+// A device that still has paid time left gets a one-tap Reconnect, so being
+// sent back to this page doesn't mean hunting for the voucher slip or SMS.
+function checkReturning(){
+  if(!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/i.test(MAC)){return;}
+  fetch(API+"/portal/reconnect/check",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,mac:MAC})})
+  .then(function(r){return r.json();})
+  .then(function(d){
+    var el=document.getElementById("rb");
+    if(!d.found||!el){return;}
+    el.innerHTML='<div class="rb"><p class="lbl" style="margin:0 0 4px"><b>Welcome back!</b></p><p class="muted">'+(d.package?esc(d.package)+" is":"Your package is")+' active until '+esc(d.expires)+'.</p><button class="btn" id="rcbtn">Reconnect</button></div>';
+    document.getElementById("rcbtn").addEventListener("click",reconnectDevice);
+  }).catch(function(){});
+}
+function reconnectDevice(){
+  app.innerHTML=head()+'<div class="center"><div class="spin"></div><h3>Reconnecting you</h3><p class="muted">Just a moment - no charge.</p></div>';
+  fetch(API+"/portal/reconnect",{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({router_id:RID,mac:MAC,link_login:LINK})})
+  .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+  .then(function(o){if(!o.ok){throw new Error(o.j.message||"Could not reconnect");}done(o.j);})
+  .catch(function(e){view();document.getElementById("gerr").textContent=e.message;});
 }
 function findTransaction(){
   var ref=document.getElementById("tid").value.trim();
@@ -312,7 +336,10 @@ HTML;
             ->where('expires_at', '>', now())
             ->first() : null;
 
-        if ($existing) {
+        // Only for the device that bought it - a phone number is easy to know,
+        // so a different device typing it in goes through as a normal purchase
+        // instead of taking over someone else's paid session.
+        if ($existing && $this->claimsSameDevice($existing, $this->normalizeMac($data['mac'] ?? null))) {
             return $this->resumeExistingSubscription($existing, $router, $package, $data);
         }
 
@@ -370,7 +397,9 @@ HTML;
             'tenant_id' => $router->tenant_id,
             'router_id' => $router->id,
             'package_id' => $package->id,
-            'phone' => $data['phone'],
+            // find-transaction has no phone in its request - fall back to the
+            // subscriber's own (for paid sessions the username is the phone).
+            'phone' => $data['phone'] ?? $subscriber->phone ?? $subscriber->username,
             'provider' => $data['provider'] ?? null,
             'email' => $data['email'] ?? null,
             'amount' => 0,
@@ -382,20 +411,8 @@ HTML;
             'link_login' => $data['link_login'] ?? null,
         ]);
 
-        if ($subscriber->router_id && $subscriber->router_id !== $router->id) {
-            // Best-effort cleanup wherever they used to be - not required for
-            // this request to succeed.
-            RouterCommand::create([
-                'router_id' => $subscriber->router_id,
-                'kind' => 'hotspot-user-remove',
-                'label' => "Release moved subscriber: {$subscriber->username}",
-                'script' => "/ip hotspot user remove [find name=\"{$subscriber->username}\"]",
-                'status' => 'pending',
-            ]);
-        }
+        $result = $this->ensureHotspotAccount($router, $subscriber, $package);
         Subscriber::whereKey($subscriber->id)->update(['router_id' => $router->id]);
-
-        $result = $this->provisionHotspotSession($router, $subscriber->username, $subscriber->password, $package);
 
         $order->update([
             'status' => $result === 'done' ? 'paid' : 'provisioning_failed',
@@ -473,7 +490,96 @@ HTML;
             return response()->json(['message' => 'This session has expired.'], 422);
         }
 
+        if (!$this->claimsSameDevice($subscriber, $this->normalizeMac($data['mac'] ?? null))) {
+            return response()->json(['message' => 'This payment is already in use on another device.'], 409);
+        }
+
         return $this->resumeExistingSubscription($subscriber, $router, $package, $data);
+    }
+
+    /**
+     * The still-valid session (voucher or paid) bound to this device, if any.
+     */
+    private function activeSessionForDevice(Router $router, ?string $mac): ?Subscriber
+    {
+        if (!$mac) {
+            return null;
+        }
+
+        return Subscriber::where('tenant_id', $router->tenant_id)
+            ->where('mac_address', $mac)
+            ->where('status', 'active')
+            ->where('expires_at', '>', now())
+            ->orderByDesc('expires_at')
+            ->first();
+    }
+
+    /**
+     * Public: does this device still have paid time left? Lets the login page
+     * greet a returning customer with a one-tap Reconnect instead of making
+     * them dig out a voucher slip or SMS every time the router forgets them
+     * (the "I was connected, then it asked me to sign in again" complaint).
+     * Returns no credentials - those only come from reconnect() below.
+     */
+    public function reconnectCheck(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'router_id' => 'required|exists:routers,id',
+            'mac' => 'nullable|string|max:32',
+        ]);
+
+        $router = Router::findOrFail($data['router_id']);
+        $subscriber = $this->activeSessionForDevice($router, $this->normalizeMac($data['mac'] ?? null));
+
+        if (!$subscriber) {
+            return response()->json(['found' => false]);
+        }
+
+        $tz = $router->tenant?->timezone ?: config('app.timezone');
+
+        return response()->json([
+            'found' => true,
+            'package' => $subscriber->package?->name,
+            'expires' => $subscriber->expires_at->copy()->timezone($tz)->format('j M, g:ia'),
+        ]);
+    }
+
+    /**
+     * Public: reconnect this device to its still-valid session. Same no-kick
+     * behavior as the voucher/transaction resume - the account is only created
+     * if missing, never removed and re-added.
+     */
+    public function reconnect(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'router_id' => 'required|exists:routers,id',
+            'mac' => 'nullable|string|max:32',
+            'link_login' => 'nullable|string',
+        ]);
+
+        $router = Router::findOrFail($data['router_id']);
+        $subscriber = $this->activeSessionForDevice($router, $this->normalizeMac($data['mac'] ?? null));
+
+        if (!$subscriber) {
+            return response()->json(['message' => 'No active package found for this device.'], 404);
+        }
+
+        $result = $this->ensureHotspotAccount($router, $subscriber, $subscriber->package);
+        Subscriber::whereKey($subscriber->id)->update(['router_id' => $router->id]);
+
+        if ($result !== 'done') {
+            Log::error('Device reconnect: hotspot provisioning did not complete', [
+                'subscriber' => $subscriber->id, 'router_id' => $router->id, 'result' => $result,
+            ]);
+            return response()->json(['message' => 'Could not reconnect you right now. Please try again in a moment.'], 502);
+        }
+
+        return response()->json([
+            'package' => $subscriber->package?->name,
+            'username' => $subscriber->username,
+            'password' => $subscriber->password,
+            'link_login' => $data['link_login'] ?? null,
+        ]);
     }
 
     /**
@@ -492,7 +598,11 @@ HTML;
         ]);
 
         $router = Router::findOrFail($data['router_id']);
-        $voucher = Voucher::where('code', strtoupper(trim($data['code'])))
+        // Codes are printed with no separators, but people type them with spaces
+        // or dashes (seen in the rejection log: "Vb ltuyc").
+        $code = strtoupper(preg_replace('/[\s\-]+/', '', $data['code']));
+        $mac = $this->normalizeMac($data['mac'] ?? null);
+        $voucher = Voucher::where('code', $code)
             ->where('tenant_id', $router->tenant_id)
             ->first();
 
@@ -525,7 +635,7 @@ HTML;
         // neither follows them). Re-provision on whichever router they're on
         // now instead of rejecting a code that's still genuinely theirs.
         if ($voucher && $voucher->status === 'active' && $voucher->expires_at?->isFuture()) {
-            return $this->resumeVoucherSession($voucher, $router, $data);
+            return $this->resumeVoucherSession($voucher, $router, $data, $mac);
         }
 
         if (!$voucher || $voucher->status !== 'unused') {
@@ -540,7 +650,7 @@ HTML;
                 'voucher_found' => (bool) $voucher,
                 'voucher_status' => $voucher?->status,
             ]);
-            return response()->json(['message' => 'Invalid or already-used voucher code.'], 422);
+            return response()->json(['message' => $this->voucherRejectionMessage($voucher, $code, $router)], 422);
         }
 
         $package = $voucher->package;
@@ -576,7 +686,9 @@ HTML;
         ]);
 
         if (!$claimed) {
-            return response()->json(['message' => 'Invalid or already-used voucher code.'], 422);
+            // Lost a race with another request for the same code - that request
+            // now owns it, so a retry lands in the 'connecting' resume above.
+            return response()->json(['message' => 'This voucher is being activated. Please wait a moment and try again.'], 409);
         }
 
         // RADIUS-based activation - the hotspot authenticates the client against
@@ -596,6 +708,7 @@ HTML;
                 'activated_at' => now(),
                 'data_used_mb' => 0,
                 'data_limit_mb' => $package->data_limit_mb,
+                'mac_address' => $mac,
             ]
         );
 
@@ -663,7 +776,7 @@ HTML;
      * resolveVoucherConnection() fast path ("already active" -> 'connected')
      * handles the client's subsequent poll with no changes needed there.
      */
-    private function resumeVoucherSession(Voucher $voucher, Router $router, array $data): JsonResponse
+    private function resumeVoucherSession(Voucher $voucher, Router $router, array $data, ?string $mac): JsonResponse
     {
         $username = $voucher->used_by_username ?: ('V' . $voucher->code);
         $subscriber = Subscriber::where('username', $username)->where('tenant_id', $router->tenant_id)->first();
@@ -671,25 +784,20 @@ HTML;
         if (!$subscriber) {
             // Nothing to actually resume (e.g. manually deleted) - fall back
             // to the normal rejection rather than provisioning with no record.
-            return response()->json(['message' => 'Invalid or already-used voucher code.'], 422);
+            return response()->json(['message' => 'This voucher can no longer be used.'], 422);
         }
 
-        if ($subscriber->router_id && $subscriber->router_id !== $router->id) {
-            // Best-effort cleanup of the stale local hotspot user wherever they
-            // used to be - not required for this request to succeed, so a
-            // failure here doesn't block the actual reconnection below.
-            RouterCommand::create([
-                'router_id' => $subscriber->router_id,
-                'kind' => 'hotspot-user-remove',
-                'label' => "Release moved voucher session: {$username}",
-                'script' => "/ip hotspot user remove [find name=\"{$username}\"]",
-                'status' => 'pending',
+        if (!$this->claimsSameDevice($subscriber, $mac)) {
+            Log::warning('Voucher resume refused: different device', [
+                'voucher_id' => $voucher->id, 'router_id' => $router->id, 'bound_mac' => $subscriber->mac_address, 'mac' => $mac,
             ]);
+            return response()->json(['message' => 'This voucher is already in use on another device.'], 409);
         }
+
+        $result = $this->ensureHotspotAccount($router, $subscriber, $voucher->package);
+
         Subscriber::whereKey($subscriber->id)->update(['router_id' => $router->id]);
         Voucher::whereKey($voucher->id)->update(['router_id' => $router->id]);
-
-        $result = $this->provisionHotspotSession($router, $username, $subscriber->password, $voucher->package);
 
         if ($result !== 'done') {
             Log::error('Voucher resume: hotspot provisioning did not complete', [
@@ -708,6 +816,34 @@ HTML;
             'link_login' => $data['link_login'] ?? null,
             'reference' => $voucher->code,
         ]);
+    }
+
+    /**
+     * Tells the customer (and whoever at the counter they show it to) why a code
+     * was refused. "Invalid or already-used" for everything made an old,
+     * already-sold slip look identical to a system fault - most complaints were
+     * exactly that: slips from a sheet printed weeks earlier.
+     */
+    private function voucherRejectionMessage(?Voucher $voucher, string $code, Router $router): string
+    {
+        if (!$voucher) {
+            return "We couldn't find voucher {$code}. Please check the code and try again.";
+        }
+
+        $tz = $router->tenant?->timezone ?: config('app.timezone');
+        $fmt = fn ($dt) => $dt->copy()->timezone($tz)->format('j M, g:ia');
+
+        if ($voucher->status === 'expired' || ($voucher->status === 'active' && $voucher->expires_at?->isPast())) {
+            return $voucher->used_at && $voucher->expires_at
+                ? "This voucher was already used on {$fmt($voucher->used_at)} and expired on {$fmt($voucher->expires_at)}."
+                : 'This voucher has expired.';
+        }
+
+        if ($voucher->status === 'revoked') {
+            return 'This voucher has been cancelled. Please ask for a new one.';
+        }
+
+        return 'This voucher can no longer be used.';
     }
 
     /**
@@ -904,37 +1040,9 @@ HTML;
      * auto-login finds the user immediately. Also flips the hotspot off RADIUS so
      * logins resolve against the local user instead of timing out.
      */
-    public function provisionHotspotSession(Router $router, string $username, string $password, ?Package $package, int $attempts = 2): string
+    public function provisionHotspotSession(Router $router, string $username, string $password, ?Package $package, int $attempts = 2, bool $keepExisting = false, ?int $limitSeconds = null): string
     {
-        $u = str_replace(['"', '\\'], '', $username);
-        $p = str_replace(['"', '\\'], '', $password);
-
-        $add = "/ip hotspot user add name=\"{$u}\" password=\"{$p}\"";
-        if ($package) {
-            if ($package->mikrotik_limit_uptime) {
-                $add .= ' limit-uptime=' . $package->mikrotik_limit_uptime;
-            }
-            if ($package->data_limit_bytes) {
-                $add .= ' limit-bytes-total=' . $package->data_limit_bytes;
-            }
-        }
-
-        // mac-cookie: after the first login the router remembers this device's
-        // MAC and auto-logs it back in on reconnect (until the package uptime is
-        // used up) - so leaving and rejoining the WiFi doesn't force re-entering
-        // the voucher. use-radius=no because RADIUS is unreachable behind NAT.
-        //
-        // IMPORTANT: MikroTik requires mac-cookie to be enabled on BOTH the
-        // hotspot SERVER profile (login-by=...,mac-cookie) AND the hotspot USER
-        // profile (add-mac-cookie=yes, mac-cookie-timeout=...) - missing either
-        // one makes it silently do nothing (this was the bug: only the server
-        // profile was set, so reconnects always fell back to "sign in").
-        $script = implode("\n", [
-            '/ip hotspot profile set [find] use-radius=no login-by=mac-cookie,http-pap,http-chap',
-            '/ip hotspot user profile set [find name=default] add-mac-cookie=yes mac-cookie-timeout=30d',
-            "/ip hotspot user remove [find name=\"{$u}\"]",
-            $add,
-        ]);
+        $script = $this->hotspotUserScript($username, $password, $package, $keepExisting, $limitSeconds);
 
         $status = 'pending';
         for ($i = 0; $i < max(1, $attempts); $i++) {
@@ -967,6 +1075,128 @@ HTML;
         }
 
         return $status;
+    }
+
+    /**
+     * Builds the RouterOS script that puts a hotspot user in place.
+     *
+     * $keepExisting is for reconnecting someone who already paid: it must never
+     * remove an existing account, because removing it kicks whoever is logged
+     * in on it and resets its used uptime/data - which let anyone holding a
+     * still-valid code evict the paying customer and get a fresh full allowance.
+     * It only creates the account if it's missing (e.g. on a different router)
+     * and otherwise just resyncs the password, leaving the session alone so the
+     * router's shared-users=1 limit stays the thing deciding who's connected.
+     */
+    private function hotspotUserScript(string $username, string $password, ?Package $package, bool $keepExisting = false, ?int $limitSeconds = null): string
+    {
+        $u = str_replace(['"', '\\'], '', $username);
+        $p = str_replace(['"', '\\'], '', $password);
+
+        $uptime = $limitSeconds !== null ? $this->routerDuration($limitSeconds) : $package?->mikrotik_limit_uptime;
+
+        $add = "/ip hotspot user add name=\"{$u}\" password=\"{$p}\"";
+        if ($uptime) {
+            $add .= ' limit-uptime=' . $uptime;
+        }
+        if ($package?->data_limit_bytes) {
+            $add .= ' limit-bytes-total=' . $package->data_limit_bytes;
+        }
+
+        // mac-cookie: after the first login the router remembers this device's
+        // MAC and auto-logs it back in on reconnect (until the package uptime is
+        // used up) - so leaving and rejoining the WiFi doesn't force re-entering
+        // the voucher. use-radius=no because RADIUS is unreachable behind NAT.
+        //
+        // IMPORTANT: MikroTik requires mac-cookie to be enabled on BOTH the
+        // hotspot SERVER profile (login-by=...,mac-cookie) AND the hotspot USER
+        // profile (add-mac-cookie=yes, mac-cookie-timeout=...) - missing either
+        // one makes it silently do nothing (this was the bug: only the server
+        // profile was set, so reconnects always fell back to "sign in").
+        $lines = [
+            '/ip hotspot profile set [find] use-radius=no login-by=mac-cookie,http-pap,http-chap',
+            '/ip hotspot user profile set [find name=default] add-mac-cookie=yes mac-cookie-timeout=30d',
+        ];
+
+        if ($keepExisting) {
+            $lines[] = ":if ([:len [/ip hotspot user find name=\"{$u}\"]] = 0) do={ {$add} } else={ /ip hotspot user set [find name=\"{$u}\"] password=\"{$p}\" }";
+        } else {
+            $lines[] = "/ip hotspot user remove [find name=\"{$u}\"]";
+            $lines[] = $add;
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Makes sure a still-valid subscriber's hotspot account exists on this
+     * router without disturbing anyone already connected on it. On the router
+     * it was created on the account is already there, so the command is just
+     * queued and the caller answers immediately; on a different router we wait
+     * for it to be created so the portal's login submit can succeed.
+     */
+    private function ensureHotspotAccount(Router $router, Subscriber $subscriber, ?Package $package): string
+    {
+        $remaining = $subscriber->expires_at ? max(60, now()->diffInSeconds($subscriber->expires_at, false)) : null;
+
+        if ($subscriber->router_id === $router->id) {
+            RouterCommand::create([
+                'router_id' => $router->id,
+                'kind' => 'hotspot-user',
+                'label' => "Reconnect {$subscriber->username}",
+                'script' => $this->hotspotUserScript($subscriber->username, $subscriber->password, $package, true, (int) $remaining),
+                'status' => 'pending',
+            ]);
+
+            return 'done';
+        }
+
+        return $this->provisionHotspotSession($router, $subscriber->username, $subscriber->password, $package, 2, true, $remaining !== null ? (int) $remaining : null);
+    }
+
+    private function routerDuration(int $seconds): string
+    {
+        $seconds = max(60, $seconds);
+        $parts = [
+            'd' => intdiv($seconds, 86400),
+            'h' => intdiv($seconds % 86400, 3600),
+            'm' => intdiv($seconds % 3600, 60),
+            's' => $seconds % 60,
+        ];
+
+        $out = '';
+        foreach ($parts as $unit => $value) {
+            if ($value > 0) {
+                $out .= $value . $unit;
+            }
+        }
+
+        return $out;
+    }
+
+    private function normalizeMac(?string $mac): ?string
+    {
+        $mac = strtoupper(trim((string) $mac));
+
+        return preg_match('/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/', $mac) ? $mac : null;
+    }
+
+    /**
+     * One paid session belongs to one device. A session with no device on
+     * record yet (sold before this was tracked) gets bound to whoever claims
+     * it first; after that a different device is refused.
+     */
+    private function claimsSameDevice(Subscriber $subscriber, ?string $mac): bool
+    {
+        if (!$subscriber->mac_address) {
+            if ($mac) {
+                Subscriber::whereKey($subscriber->id)->update(['mac_address' => $mac]);
+                $subscriber->mac_address = $mac;
+            }
+            return true;
+        }
+
+        return $mac !== null && $subscriber->mac_address === $mac;
     }
 
     /**
@@ -1090,19 +1320,26 @@ HTML;
             ? now()->addDays($package->duration_days ?? 0)->addHours($package->duration_hours ?? 0)->addMinutes($package->duration_minutes ?? 0)
             : null;
 
+        $attrs = [
+            'password' => $password,
+            'router_id' => $router->id,
+            'package_id' => $package->id,
+            'type' => $package->type,
+            'status' => 'active',
+            'expires_at' => $expiresAt,
+            'activated_at' => now(),
+            'data_used_mb' => 0,
+            'data_limit_mb' => $package->data_limit_mb,
+        ];
+        // A new purchase binds the session to the device that bought it (a
+        // retry with no MAC on the order keeps whatever device was already bound).
+        if ($mac = $this->normalizeMac($order->client_mac)) {
+            $attrs['mac_address'] = $mac;
+        }
+
         $subscriber = Subscriber::updateOrCreate(
             ['username' => $username, 'tenant_id' => $router->tenant_id],
-            [
-                'password' => $password,
-                'router_id' => $router->id,
-                'package_id' => $package->id,
-                'type' => $package->type,
-                'status' => 'active',
-                'expires_at' => $expiresAt,
-                'activated_at' => now(),
-                'data_used_mb' => 0,
-                'data_limit_mb' => $package->data_limit_mb,
-            ]
+            $attrs
         );
 
         $result = $this->provisionHotspotSession($router, $username, $password, $package);
