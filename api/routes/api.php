@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BusinessController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\Admin\PlatformController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Admin\TenantInsightController;
 use App\Http\Controllers\Api\Admin\BlogController as AdminBlogController;
 use App\Http\Controllers\Api\BlogController;
@@ -80,6 +81,10 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'business'])->group(function ()
     // Auth
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me', [AuthController::class, 'me']);
+
+    // Notification bell
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::post('notifications/read', [NotificationController::class, 'markRead']);
 
     // Businesses (multi-location): list, create, set default fallback
     Route::get('businesses', [BusinessController::class, 'index']);

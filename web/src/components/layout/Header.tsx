@@ -2,7 +2,8 @@
 
 import { useAuthStore } from '@/store/auth'
 import { useThemeStore } from '@/store/theme'
-import { Bell, User, Menu, Sun, Moon } from 'lucide-react'
+import { User, Menu, Sun, Moon } from 'lucide-react'
+import NotificationBell from './NotificationBell'
 
 export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user } = useAuthStore()
@@ -29,9 +30,7 @@ export default function Header({ onMenuClick }: { onMenuClick?: () => void }) {
         >
           {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
         </button>
-        <button className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100 relative">
-          <Bell size={16} />
-        </button>
+        <NotificationBell />
         <div className="flex items-center gap-2 pl-2 border-l border-gray-200">
           <div className="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center">
             <User size={14} className="text-white" />
