@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Tenant;
 use App\Models\WalletTransaction;
+use App\Notifications\WithdrawalNotification;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -17,7 +18,10 @@ use Illuminate\Support\Facades\Log;
  */
 class PayoutService
 {
-    public function __construct(private MarzPayService $marzpay) {}
+    public function __construct(
+        private MarzPayService $marzpay,
+        private WithdrawalNotifier $notifier,
+    ) {}
 
     public function isEnabled(): bool
     {
@@ -151,23 +155,49 @@ class PayoutService
         }
 
         if (in_array($status, ['completed', 'successful', 'success'], true)) {
-            $withdrawal->update(['status' => 'completed']);
+            if (!$this->settle($withdrawal, 'completed')) {
+                return null;
+            }
             Log::info('Payout reconciled to completed', ['withdrawal_id' => $withdrawal->id]);
+            $this->notifier->notifyOperator($withdrawal, WithdrawalNotification::COMPLETED);
             return 'completed';
         }
 
         if (in_array($status, ['failed', 'declined', 'cancelled', 'reversed'], true)) {
+            if (!$this->settle($withdrawal, 'failed')) {
+                return null;
+            }
             // Refund the reserved amount back to the operator wallet.
             $withdrawal->tenant?->postWallet('credit', (float) $withdrawal->amount, 'adjustment', [
                 'status' => 'completed',
                 'reference' => $withdrawal->reference,
                 'description' => 'Refund: payout failed',
             ]);
-            $withdrawal->update(['status' => 'failed']);
             Log::info('Payout reconciled to failed (refunded)', ['withdrawal_id' => $withdrawal->id]);
+            $this->notifier->notifyOperator($withdrawal, WithdrawalNotification::FAILED);
             return 'failed';
         }
 
         return null; // still pending/processing at MarzPay - leave as is
+    }
+
+    /**
+     * Moves a withdrawal out of pending/processing exactly once. The webhook and
+     * the scheduled reconciler (and the admin buttons) can all act on the same
+     * withdrawal at the same moment; without this, two of them could each see
+     * 'processing' and each refund the wallet. Only the caller that actually
+     * wins the update goes on to refund/notify.
+     */
+    public function settle(WalletTransaction $withdrawal, string $to): bool
+    {
+        $won = WalletTransaction::whereKey($withdrawal->id)
+            ->whereIn('status', ['pending', 'processing'])
+            ->update(['status' => $to]) === 1;
+
+        if ($won) {
+            $withdrawal->status = $to;
+        }
+
+        return $won;
     }
 }

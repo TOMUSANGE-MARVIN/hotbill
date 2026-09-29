@@ -4,13 +4,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Tenant;
+use App\Notifications\WithdrawalNotification;
 use App\Services\PayoutService;
+use App\Services\WithdrawalNotifier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class WalletController extends Controller
 {
-    public function __construct(private PayoutService $payouts) {}
+    public function __construct(
+        private PayoutService $payouts,
+        private WithdrawalNotifier $notifier,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -98,6 +103,15 @@ class WalletController extends Controller
         }
 
         $withdrawal->update(['status' => $status]);
+
+        $this->notifier->notifyOperator($withdrawal, match ($status) {
+            'completed' => WithdrawalNotification::COMPLETED,
+            'failed' => WithdrawalNotification::FAILED,
+            default => WithdrawalNotification::REQUESTED,
+        });
+        if ($status === 'pending') {
+            $this->notifier->notifyPlatformAdmins($withdrawal);
+        }
 
         $messages = [
             'completed' => 'Sent ' . number_format($amount) . ' to ' . $tenant->payout_phone . ' (' . number_format($fee) . ' fee deducted from your wallet).',

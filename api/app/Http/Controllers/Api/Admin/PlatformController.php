@@ -9,6 +9,9 @@ use App\Models\Router;
 use App\Models\Tenant;
 use App\Models\Transaction;
 use App\Models\WalletTransaction;
+use App\Notifications\WithdrawalNotification;
+use App\Services\PayoutService;
+use App\Services\WithdrawalNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -166,26 +169,30 @@ class PlatformController extends Controller
         return response()->json($query->limit(200)->get());
     }
 
-    public function releaseWithdrawal(Request $request, WalletTransaction $transaction): JsonResponse
+    public function releaseWithdrawal(Request $request, WalletTransaction $transaction, PayoutService $payouts, WithdrawalNotifier $notifier): JsonResponse
     {
         abort_unless($transaction->source === 'withdrawal' && $transaction->type === 'debit', 422, 'Not a withdrawal.');
+        abort_unless($payouts->settle($transaction, 'completed'), 422, 'This withdrawal is already ' . $transaction->fresh()->status . '.');
 
-        $transaction->update(['status' => 'completed']);
+        $notifier->notifyOperator($transaction, WithdrawalNotification::COMPLETED);
 
         return response()->json(['message' => 'Withdrawal marked as paid out.', 'transaction' => $transaction]);
     }
 
-    public function failWithdrawal(Request $request, WalletTransaction $transaction): JsonResponse
+    public function failWithdrawal(Request $request, WalletTransaction $transaction, PayoutService $payouts, WithdrawalNotifier $notifier): JsonResponse
     {
         abort_unless($transaction->source === 'withdrawal' && $transaction->type === 'debit', 422, 'Not a withdrawal.');
-        abort_if($transaction->status === 'failed', 422, 'Already failed.');
+        // Only an unsettled withdrawal can be failed - failing one that was
+        // already paid out used to refund money the operator had received.
+        abort_unless($payouts->settle($transaction, 'failed'), 422, 'This withdrawal is already ' . $transaction->fresh()->status . '.');
 
         // Refund the reserved amount back to the operator's wallet.
         $transaction->tenant?->postWallet('credit', (float) $transaction->amount, 'adjustment', [
             'description' => 'Refund: failed withdrawal #' . $transaction->id,
             'reference' => $transaction->reference,
         ]);
-        $transaction->update(['status' => 'failed']);
+
+        $notifier->notifyOperator($transaction, WithdrawalNotification::FAILED);
 
         return response()->json(['message' => 'Withdrawal failed and refunded to operator wallet.']);
     }
