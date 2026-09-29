@@ -72,15 +72,95 @@ class PlatformController extends Controller
             ->where('source', 'withdrawal')
             ->whereIn('status', ['pending', 'processing']);
 
+        // Mobile-money checkout health across the platform in the range.
+        $orderStats = PortalOrder::whereBetween('created_at', [$from, $to])
+            ->selectRaw('status, COUNT(*) as c, COALESCE(SUM(amount),0) as amount')
+            ->groupBy('status')->get()->keyBy('status');
+        $paidCount = (int) ($orderStats['paid']->c ?? 0);
+        $failedCount = (int) ($orderStats['failed']->c ?? 0);
+
+        // Sales volume (what operators sold) in the range, both channels.
+        $periodSales = Transaction::where('status', 'completed')->whereBetween('paid_at', [$from, $to]);
+
+        $topTenants = (clone $periodSales)
+            ->join('tenants', 'tenants.id', '=', 'transactions.tenant_id')
+            ->selectRaw('transactions.tenant_id as id, tenants.name, COUNT(*) as sales,
+                SUM(transactions.amount) as gross, SUM(transactions.commission) as platform_revenue')
+            ->groupBy('transactions.tenant_id', 'tenants.name')
+            ->orderByDesc('gross')->limit(10)->get();
+
+        $onlineCutoff = now()->subMinutes(3);
+
+        // Things that need a platform admin's attention right now.
+        $alerts = [];
+        $offline = Router::with('tenant:id,name')
+            ->where('is_active', true)
+            ->whereNotNull('last_seen_at')
+            ->where('last_seen_at', '<', now()->subMinutes(30))
+            ->where('last_seen_at', '>', now()->subDays(7)) // long-dead test routers are just noise
+            ->get(['id', 'tenant_id', 'name', 'last_seen_at']);
+        foreach ($offline as $r) {
+            $alerts[] = [
+                'level' => 'warning', 'kind' => 'router_offline', 'tenant_id' => $r->tenant_id,
+                'message' => "{$r->tenant?->name}: router \"{$r->name}\" offline since " . $r->last_seen_at->diffForHumans(),
+            ];
+        }
+        $quiet = Transaction::where('status', 'completed')
+            ->selectRaw('tenant_id, MAX(paid_at) as last_sale')
+            ->groupBy('tenant_id')
+            ->havingRaw('MAX(paid_at) < ? AND MAX(paid_at) > ?', [now()->subDays(2), now()->subDays(30)])
+            ->get();
+        $quietNames = Tenant::whereIn('id', $quiet->pluck('tenant_id'))->pluck('name', 'id');
+        foreach ($quiet as $q) {
+            $alerts[] = [
+                'level' => 'info', 'kind' => 'quiet', 'tenant_id' => $q->tenant_id,
+                'message' => ($quietNames[$q->tenant_id] ?? 'Tenant') . ': no sales since ' . Carbon::parse($q->last_sale)->diffForHumans(),
+            ];
+        }
+        $stuck = DB::table('router_commands')->whereIn('status', ['pending', 'sent'])
+            ->where('created_at', '<', now()->subMinutes(15))->where('created_at', '>', now()->subDay())->count();
+        if ($stuck > 0) {
+            $alerts[] = ['level' => 'info', 'kind' => 'stuck_commands', 'tenant_id' => null,
+                'message' => "{$stuck} router command(s) waiting more than 15 minutes"];
+        }
+        $pendingCount = (clone $pendingWithdrawals)->count();
+        if ($pendingCount > 0) {
+            array_unshift($alerts, ['level' => 'critical', 'kind' => 'withdrawals', 'tenant_id' => null,
+                'message' => "{$pendingCount} withdrawal(s) waiting to be released"]);
+        }
+        $recentFailures = PortalOrder::where('status', 'failed')->where('created_at', '>=', now()->subHour())->count();
+        $recentPaid = PortalOrder::where('status', 'paid')->where('created_at', '>=', now()->subHour())->count();
+        if ($recentFailures >= 5 && $recentFailures > $recentPaid) {
+            array_unshift($alerts, ['level' => 'critical', 'kind' => 'payments_failing', 'tenant_id' => null,
+                'message' => "{$recentFailures} mobile-money payments failed in the last hour (only {$recentPaid} succeeded)"]);
+        }
+
         return response()->json([
             'tenants' => [
                 'total' => Tenant::count(),
                 'active' => Tenant::where('is_active', true)->count(),
+                'selling_7d' => Transaction::where('status', 'completed')->where('paid_at', '>=', now()->subDays(7))->distinct('tenant_id')->count('tenant_id'),
+                'new_in_range' => Tenant::whereBetween('created_at', [$from, $to])->count(),
             ],
             'routers' => [
                 'total' => Router::count(),
-                'online' => Router::where('status', 'online')->count(),
+                'online' => Router::where('last_seen_at', '>=', $onlineCutoff)->count(),
+                'active_users' => (int) Router::where('last_seen_at', '>=', $onlineCutoff)->sum('active_users'),
             ],
+            'payments' => [
+                'paid' => $paidCount,
+                'failed' => $failedCount,
+                'pending' => (int) ($orderStats['pending']->c ?? 0),
+                'success_rate' => ($paidCount + $failedCount) > 0 ? round($paidCount / ($paidCount + $failedCount) * 100, 1) : null,
+            ],
+            'sales' => [
+                'gross' => (float) (clone $periodSales)->sum('amount'),
+                'count' => (clone $periodSales)->count(),
+                'mobile_money' => (float) (clone $periodSales)->where('type', '<>', 'voucher')->sum('amount'),
+                'voucher' => (float) (clone $periodSales)->where('type', 'voucher')->sum('amount'),
+            ],
+            'top_tenants' => $topTenants,
+            'alerts' => $alerts,
             'customers' => HotspotUsage::distinct('username')->count('username'),
             'data_bytes' => (int) HotspotUsage::sum(DB::raw('bytes_in + bytes_out')),
             'finance' => [
@@ -118,22 +198,86 @@ class PlatformController extends Controller
 
     public function tenants(Request $request): JsonResponse
     {
-        $tenants = Tenant::withCount(['routers', 'users'])
+        $since30 = now()->subDays(30);
+        $since7 = now()->subDays(7);
+
+        // One grouped query per figure instead of a query per tenant.
+        $sales = Transaction::where('status', 'completed')
+            ->selectRaw('tenant_id,
+                COALESCE(SUM(amount),0) as gross,
+                COALESCE(SUM(commission),0) as platform_revenue,
+                COALESCE(SUM(CASE WHEN paid_at >= ? THEN amount ELSE 0 END),0) as gross_30d,
+                COALESCE(SUM(CASE WHEN paid_at >= ? THEN amount ELSE 0 END),0) as gross_7d,
+                SUM(CASE WHEN paid_at >= ? THEN 1 ELSE 0 END) as sales_30d,
+                MAX(paid_at) as last_sale_at', [$since30, $since7, $since30])
+            ->groupBy('tenant_id')->get()->keyBy('tenant_id');
+
+        $routers = Router::selectRaw('tenant_id, COUNT(*) as total,
+                SUM(CASE WHEN last_seen_at >= ? THEN 1 ELSE 0 END) as online,
+                COALESCE(SUM(CASE WHEN last_seen_at >= ? THEN active_users ELSE 0 END),0) as active_users,
+                MAX(last_seen_at) as last_seen_at', [now()->subMinutes(3), now()->subMinutes(3)])
+            ->groupBy('tenant_id')->get()->keyBy('tenant_id');
+
+        $subscribers = DB::table('subscribers')->whereNull('deleted_at')
+            ->where('status', 'active')->where(fn ($q) => $q->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->selectRaw('tenant_id, COUNT(*) as c')->groupBy('tenant_id')->pluck('c', 'tenant_id');
+
+        $orders = PortalOrder::where('created_at', '>=', $since30)
+            ->selectRaw("tenant_id, SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) as paid, SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) as failed")
+            ->groupBy('tenant_id')->get()->keyBy('tenant_id');
+
+        $lastLogin = DB::table('personal_access_tokens')
+            ->join('users', 'users.id', '=', 'personal_access_tokens.tokenable_id')
+            ->where('personal_access_tokens.tokenable_type', \App\Models\User::class)
+            ->selectRaw('users.tenant_id, MAX(personal_access_tokens.last_used_at) as last_active_at')
+            ->groupBy('users.tenant_id')->pluck('last_active_at', 'users.tenant_id');
+
+        $tenants = Tenant::withCount('users')
             ->orderByDesc('created_at')
             ->get()
-            ->map(function (Tenant $t) {
-                $revenue = (float) PortalOrder::where('tenant_id', $t->id)->where('status', 'paid')->sum('amount');
+            ->map(function (Tenant $t) use ($sales, $routers, $subscribers, $orders, $lastLogin, $since7) {
+                $s = $sales[$t->id] ?? null;
+                $r = $routers[$t->id] ?? null;
+                $o = $orders[$t->id] ?? null;
+                $paid = (int) ($o->paid ?? 0);
+                $failed = (int) ($o->failed ?? 0);
+                $routersTotal = (int) ($r->total ?? 0);
+                $routersOnline = (int) ($r->online ?? 0);
+                $lastSale = $s?->last_sale_at ? Carbon::parse($s->last_sale_at) : null;
+
+                // A quick health label so problem accounts stand out in the list.
+                $health = match (true) {
+                    !$t->is_active => 'suspended',
+                    $routersTotal === 0 => 'setup',
+                    !$lastSale => 'no_sales',
+                    $routersOnline < $routersTotal => 'router_offline',
+                    $lastSale->lt($since7) => 'quiet',
+                    default => 'healthy',
+                };
+
                 return [
                     'id' => $t->id,
                     'name' => $t->name,
                     'email' => $t->email,
+                    'phone' => $t->phone,
                     'plan' => $t->plan,
                     'is_active' => $t->is_active,
                     'currency' => $t->currency,
-                    'routers_count' => $t->routers_count,
+                    'routers_count' => $routersTotal,
+                    'routers_online' => $routersOnline,
+                    'active_users' => (int) ($r->active_users ?? 0),
                     'users_count' => $t->users_count,
                     'wallet_balance' => (float) $t->wallet_balance,
-                    'gross_revenue' => $revenue,
+                    'gross_revenue' => (float) ($s->gross ?? 0),
+                    'gross_30d' => (float) ($s->gross_30d ?? 0),
+                    'gross_7d' => (float) ($s->gross_7d ?? 0),
+                    'sales_30d' => (int) ($s->sales_30d ?? 0),
+                    'platform_revenue' => (float) ($s->platform_revenue ?? 0),
+                    'active_subscribers' => (int) ($subscribers[$t->id] ?? 0),
+                    'payment_success_rate' => ($paid + $failed) > 0 ? round($paid / ($paid + $failed) * 100, 1) : null,
+                    'last_sale_at' => $lastSale,
+                    'last_active_at' => $lastLogin[$t->id] ?? null,
+                    'health' => $health,
                     'voucher_commission_enabled' => $t->voucher_commission_enabled,
                     'voucher_commission_rate' => (float) $t->voucher_commission_rate,
                     'created_at' => $t->created_at,
@@ -148,6 +292,10 @@ class PlatformController extends Controller
         $data = $request->validate([
             'is_active' => 'sometimes|boolean',
             'plan' => 'sometimes|in:free,pro,enterprise',
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|nullable|email|max:255',
+            'phone' => 'sometimes|nullable|string|max:30',
+            'trial_ends_at' => 'sometimes|nullable|date',
             'voucher_commission_enabled' => 'sometimes|boolean',
             'voucher_commission_rate' => 'sometimes|numeric|min:0|max:100',
         ]);

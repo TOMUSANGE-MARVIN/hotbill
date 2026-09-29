@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
-      disallow: ['/dashboard/', '/admin/', '/portal/', '/login', '/register'],
+      disallow: ['/dashboard/', '/admin/', '/portal/', '/login', '/register', '/suspended'],
     },
     sitemap: 'https://hotbill.app/sitemap.xml',
     host: 'https://hotbill.app',

@@ -30,6 +30,20 @@ class ResolveBusiness
             }
         }
 
+        // A business a platform admin has suspended keeps its hotspot running
+        // (customers are not punished) but its team is locked out of the
+        // dashboard - and therefore of withdrawals - until it is reinstated.
+        // Sign-out, profile and switching to another business stay open.
+        if ($user && $user->role !== 'super_admin' && !$request->is('api/v1/auth/*', 'api/v1/businesses', 'api/v1/businesses/*', 'api/v1/admin/*')) {
+            $tenant = $user->relationLoaded('tenant') ? $user->tenant : Tenant::find($user->tenant_id);
+            if ($tenant && !$tenant->is_active) {
+                return response()->json([
+                    'message' => 'This business has been suspended. Please contact HotBill support.',
+                    'suspended' => true,
+                ], 403);
+            }
+        }
+
         return $next($request);
     }
 }

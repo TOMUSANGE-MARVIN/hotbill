@@ -23,6 +23,11 @@ api.interceptors.response.use(
       localStorage.removeItem('hotbill_token')
       window.location.href = '/login'
     }
+    // A platform admin suspended this business - show why instead of broken pages.
+    if (err.response?.status === 403 && err.response?.data?.suspended && typeof window !== 'undefined'
+      && window.location.pathname !== '/suspended') {
+      window.location.href = '/suspended'
+    }
     return Promise.reject(err)
   }
 )

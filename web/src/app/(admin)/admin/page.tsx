@@ -7,7 +7,9 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { format } from 'date-fns'
-import { Building2, Router as RouterIcon, Users, Database, Wallet, TrendingUp, Banknote, ShieldCheck, Ticket, Wifi } from 'lucide-react'
+import Link from 'next/link'
+import { Building2, Router as RouterIcon, Users, Database, Wallet, TrendingUp, Banknote, Ticket, Wifi, Smartphone, AlertTriangle, Info, ShoppingCart } from 'lucide-react'
+import { Stat } from '@/components/admin/controls'
 
 export default function AdminOverviewPage() {
   const { data, isLoading } = useQuery({
@@ -28,6 +30,26 @@ export default function AdminOverviewPage() {
         <p className="text-sm text-gray-500">System-wide insights across all operators.</p>
       </div>
 
+      {/* Needs attention */}
+      {(data?.alerts ?? []).length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="font-semibold text-gray-800 mb-3">Needs attention</h2>
+          <ul className="space-y-2">
+            {data.alerts.map((a: any, i: number) => {
+              const cls = a.level === 'critical' ? 'bg-red-50 text-red-700' : a.level === 'warning' ? 'bg-amber-50 text-amber-800' : 'bg-gray-50 text-gray-700'
+              const Icon = a.level === 'info' ? Info : AlertTriangle
+              const body = <span className="flex items-center gap-2"><Icon size={14} className="shrink-0" />{a.message}</span>
+              const href = a.tenant_id ? `/admin/tenants/${a.tenant_id}` : a.kind === 'withdrawals' ? '/admin/withdrawals' : a.kind === 'stuck_commands' ? '/admin/routers' : null
+              return (
+                <li key={i} className={`text-sm rounded-lg px-3 py-2 ${cls}`}>
+                  {href ? <Link href={href} className="hover:underline">{body}</Link> : body}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+
       {/* Revenue row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={TrendingUp} label="Platform Revenue" value={formatCurrency(f.platform_revenue ?? 0)} accent />
@@ -43,6 +65,45 @@ export default function AdminOverviewPage() {
         <Stat icon={Users} label="Customers" value={String(data?.customers ?? 0)} />
         <Stat icon={Database} label="Data Served" value={formatBytes(data?.data_bytes ?? 0)} />
         <Stat icon={Wallet} label="Pending Payouts" value={formatCurrency(data?.withdrawals?.pending_amount ?? 0)} sub={`${data?.withdrawals?.pending_count ?? 0} request(s)`} />
+      </div>
+
+      {/* Activity row (last 30 days) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <Stat icon={ShoppingCart} label="Sales · 30d" value={formatCurrency(data?.sales?.gross ?? 0)} sub={`${data?.sales?.count ?? 0} sale(s)`} />
+        <Stat
+          icon={Smartphone}
+          label="MoMo success · 30d"
+          value={data?.payments?.success_rate == null ? '-' : `${data.payments.success_rate}%`}
+          sub={`${data?.payments?.paid ?? 0} paid · ${data?.payments?.failed ?? 0} failed`}
+        />
+        <Stat icon={Building2} label="Selling tenants · 7d" value={String(data?.tenants?.selling_7d ?? 0)} sub={`${data?.tenants?.new_in_range ?? 0} new sign-up(s) in 30d`} />
+        <Stat icon={Wifi} label="Online now" value={String(data?.routers?.active_users ?? 0)} sub="users on live routers" />
+      </div>
+
+      {/* Top tenants */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 className="font-semibold text-gray-800 mb-1">Top tenants</h2>
+        <p className="text-xs text-gray-400 mb-4">By sales in the last 30 days.</p>
+        {(data?.top_tenants ?? []).length === 0 ? (
+          <div className="text-sm text-gray-400 py-4 text-center">No sales in this range.</div>
+        ) : (
+          <div className="space-y-3">
+            {data.top_tenants.map((t: any) => {
+              const max = Number(data.top_tenants[0].gross) || 1
+              return (
+                <Link key={t.id} href={`/admin/tenants/${t.id}`} className="block group">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="font-medium text-gray-800 group-hover:text-brand-600">{t.name}</span>
+                    <span className="text-gray-600">{formatCurrency(Number(t.gross))} <span className="text-xs text-gray-400">· {t.sales} sales · {formatCurrency(Number(t.platform_revenue))} to us</span></span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-500" style={{ width: `${(Number(t.gross) / max) * 100}%` }} />
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        )}
       </div>
 
       {/* Revenue by source */}
@@ -98,19 +159,6 @@ export default function AdminOverviewPage() {
           </ResponsiveContainer>
         )}
       </div>
-    </div>
-  )
-}
-
-function Stat({ icon: Icon, label, value, sub, accent }: { icon: any; label: string; value: string; sub?: string; accent?: boolean }) {
-  return (
-    <div className={`rounded-xl border p-5 ${accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-gray-200'}`}>
-      <div className="flex items-center justify-between">
-        <span className={`text-sm ${accent ? 'text-brand-100' : 'text-gray-500'}`}>{label}</span>
-        <Icon size={16} className={accent ? 'text-brand-200' : 'text-gray-400'} />
-      </div>
-      <p className={`text-2xl font-bold mt-2 ${accent ? 'text-white' : 'text-gray-900'}`}>{value}</p>
-      {sub && <p className={`text-xs mt-1 ${accent ? 'text-brand-100' : 'text-gray-400'}`}>{sub}</p>}
     </div>
   )
 }
