@@ -47,7 +47,7 @@ function Hero() {
         {/* Giant headline */}
         <Reveal className="text-center mb-16 lg:mb-20">
           <h1 className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 font-extrabold uppercase tracking-[-1px] leading-[0.95] text-navy text-5xl sm:text-6xl lg:text-8xl">
-            <span>Smart</span>
+            <span>WiFi</span>
             <Image
               src="/network-shield.png"
               alt="HotBill network shield"
@@ -61,6 +61,10 @@ function Hero() {
           <h2 className="mt-3 lg:mt-4 font-medium uppercase tracking-[-1px] text-navy/90 text-4xl sm:text-5xl lg:text-7xl">
             Billing System
           </h2>
+          <p className="mt-6 mx-auto max-w-2xl text-base sm:text-lg text-navy/70 leading-relaxed">
+            Sell WiFi by the hour, day or week. Customers pay with MTN or Airtel Mobile Money, or a
+            voucher, and get online automatically. Built for MikroTik routers.
+          </p>
         </Reveal>
 
         {/* Three columns */}
@@ -68,7 +72,7 @@ function Hero() {
           {/* LEFT */}
           <div className="order-2 lg:order-1">
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-sm font-bold text-navy">Our story</span>
+              <span className="text-sm font-bold text-navy">What it does</span>
               <span className="h-px w-16 bg-navy/30" />
             </div>
             <div className="relative max-w-xs">
@@ -85,10 +89,10 @@ function Hero() {
                 } as React.CSSProperties}
               />
               <p className="text-sm text-navy/60 leading-relaxed">
-                A specialized platform that helps ISPs deploy, manage and bill their hotspot
+                Everything a WiFi hotspot business needs, in one place:
                 <br />
                 <br />
-                networks, establishing a strong, profitable online presence.
+                packages, vouchers, a captive portal and payouts to Mobile Money.
               </p>
               {/* arrow button nestled at the bottom-left, text wraps around it */}
               <span className="absolute bottom-0 left-0 inline-flex items-center justify-center w-14 h-14 rounded-btn bg-purple text-white">
