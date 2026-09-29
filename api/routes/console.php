@@ -46,3 +46,7 @@ Schedule::command('orders:retry-provisioning')->everyMinute()->onOneServer()->wi
 // subscribers.username collision threw partway through. This is the general
 // safety net so no future interruption can do that again.
 Schedule::command('orders:retry-stuck-fulfillment')->everyMinute()->onOneServer()->withoutOverlapping();
+
+// Router commands whose done/failed report never came back would otherwise
+// sit 'sent' forever and look stuck in the admin views.
+Schedule::command('router-commands:expire-unconfirmed')->everyFiveMinutes()->onOneServer()->withoutOverlapping();
