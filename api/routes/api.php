@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\BusinessController;
 use App\Http\Controllers\Api\CampaignController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\Admin\PlatformController;
+use App\Http\Controllers\Api\Admin\PlatformWalletController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\Admin\TenantInsightController;
 use App\Http\Controllers\Api\Admin\BlogController as AdminBlogController;
@@ -169,6 +170,12 @@ Route::prefix('v1')->middleware(['auth:sanctum', 'business'])->group(function ()
         Route::post('withdrawals/{transaction}/fail', [PlatformController::class, 'failWithdrawal']);
         Route::get('transactions', [PlatformController::class, 'transactions']);
         Route::get('routers', [PlatformController::class, 'routers']);
+
+        // Platform wallet (the platform's own earnings)
+        Route::get('wallet', [PlatformWalletController::class, 'show']);
+        Route::get('wallet/fee', [PlatformWalletController::class, 'fee']);
+        Route::post('wallet/withdraw', [PlatformWalletController::class, 'withdraw'])->middleware('throttle:5,1');
+        Route::post('wallet/withdrawals/{withdrawal}/refresh', [PlatformWalletController::class, 'refresh']);
 
         // Blog CMS
         Route::post('blog/uploads', [AdminBlogController::class, 'upload']);

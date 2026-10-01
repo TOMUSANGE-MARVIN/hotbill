@@ -114,6 +114,20 @@ class MarzPayService
         return $res->json() ?? [];
     }
 
+    /**
+     * The MarzPay account's own balance - the real cash HotBill is holding for
+     * operators and itself. Returns the available amount, or null if unknown.
+     */
+    public function availableBalance(): ?float
+    {
+        $res = Http::withBasicAuth($this->key, $this->secret)->acceptJson()->timeout(10)
+            ->get("{$this->base}/balance");
+
+        $raw = $res->json('data.account.available_balance.raw');
+
+        return $res->successful() && is_numeric($raw) ? (float) $raw : null;
+    }
+
     public function getSendMoneyDetails(string $uuid): array
     {
         $res = Http::withBasicAuth($this->key, $this->secret)->acceptJson()

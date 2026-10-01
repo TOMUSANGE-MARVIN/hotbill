@@ -21,6 +21,7 @@ class PayoutService
     public function __construct(
         private MarzPayService $marzpay,
         private WithdrawalNotifier $notifier,
+        private PlatformWalletService $platformWallet,
     ) {}
 
     public function isEnabled(): bool
@@ -111,6 +112,13 @@ class PayoutService
         }
 
         if (!$withdrawal) {
+            // Not an operator payout - it may be the platform withdrawing its own earnings.
+            foreach ($candidates as $ref) {
+                if ($platform = $this->platformWallet->findByReference($ref)) {
+                    $this->platformWallet->reconcile($platform, strtolower($txn['status'] ?? ''));
+                    return;
+                }
+            }
             return; // unknown transaction
         }
 

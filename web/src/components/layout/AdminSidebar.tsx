@@ -6,14 +6,15 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
 import {
-  LayoutDashboard, Building2, Wallet,
+  LayoutDashboard, Building2, Wallet, Landmark,
   CreditCard, Router as RouterIcon, LogOut, X, FileText,
 } from 'lucide-react'
 
 const navItems = [
   { href: '/admin', label: 'Overview', icon: LayoutDashboard },
   { href: '/admin/tenants', label: 'Tenants', icon: Building2 },
-  { href: '/admin/withdrawals', label: 'Withdrawals', icon: Wallet },
+  { href: '/admin/wallet', label: 'Platform Wallet', icon: Landmark },
+  { href: '/admin/withdrawals', label: 'Operator Withdrawals', icon: Wallet },
   { href: '/admin/transactions', label: 'Transactions', icon: CreditCard },
   { href: '/admin/routers', label: 'All Routers', icon: RouterIcon },
   { href: '/admin/blog', label: 'Blog', icon: FileText },

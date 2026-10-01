@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Models\PlatformWithdrawal;
 use App\Models\WalletTransaction;
+use App\Services\PlatformWalletService;
 use App\Services\PayoutService;
 use Illuminate\Console\Command;
 
@@ -25,7 +27,7 @@ class ReconcilePayouts extends Command
     protected $signature = 'payouts:reconcile {--minutes=2 : Only reconcile withdrawals older than this many minutes}';
     protected $description = 'Re-verify processing withdrawals against MarzPay and settle any the webhook missed';
 
-    public function handle(PayoutService $payouts): int
+    public function handle(PayoutService $payouts, PlatformWalletService $platformWallet): int
     {
         $cutoff = now()->subMinutes((int) $this->option('minutes'));
 
@@ -47,6 +49,15 @@ class ReconcilePayouts extends Command
         }
 
         $this->info("Checked {$stuck->count()} processing withdrawal(s), settled {$settled}.");
+
+        // The platform's own withdrawals go through the same MarzPay send-money.
+        $platform = PlatformWithdrawal::where('status', 'processing')->whereNotNull('marzpay_uuid')
+            ->where('created_at', '<=', $cutoff)->get();
+        foreach ($platform as $w) {
+            if ($result = $platformWallet->reconcile($w)) {
+                $this->line("Platform withdrawal #{$w->id} → {$result}");
+            }
+        }
 
         return self::SUCCESS;
     }
