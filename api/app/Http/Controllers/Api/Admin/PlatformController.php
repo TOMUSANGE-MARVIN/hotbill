@@ -25,8 +25,11 @@ class PlatformController extends Controller
 {
     public function overview(Request $request): JsonResponse
     {
-        $to = Carbon::parse($request->input('to', now()))->endOfDay();
-        $from = Carbon::parse($request->input('from', now()->copy()->subDays(29)))->startOfDay();
+        // Calendar days in East Africa time (where every tenant is), converted to
+        // UTC bounds. Defaults to this month so figures start fresh each month.
+        $tz = 'Africa/Kampala';
+        $to = ($request->filled('to') ? Carbon::parse($request->input('to'), $tz) : now($tz))->endOfDay()->utc();
+        $from = ($request->filled('from') ? Carbon::parse($request->input('from'), $tz) : now($tz)->startOfMonth())->startOfDay()->utc();
 
         $paidOrders = PortalOrder::where('status', 'paid');
 
@@ -192,7 +195,7 @@ class PlatformController extends Controller
                 'pending_amount' => (float) (clone $pendingWithdrawals)->sum('amount'),
             ],
             'revenue_series' => $revenueSeries,
-            'range' => ['from' => $from->toDateString(), 'to' => $to->toDateString()],
+            'range' => ['from' => $from->copy()->timezone($tz)->toDateString(), 'to' => $to->copy()->timezone($tz)->toDateString()],
         ]);
     }
 
@@ -200,16 +203,18 @@ class PlatformController extends Controller
     {
         $since30 = now()->subDays(30);
         $since7 = now()->subDays(7);
+        // Month figures follow East Africa time, where every tenant is.
+        $monthStart = now('Africa/Kampala')->startOfMonth()->utc();
 
         // One grouped query per figure instead of a query per tenant.
         $sales = Transaction::where('status', 'completed')
             ->selectRaw('tenant_id,
                 COALESCE(SUM(amount),0) as gross,
                 COALESCE(SUM(commission),0) as platform_revenue,
-                COALESCE(SUM(CASE WHEN paid_at >= ? THEN amount ELSE 0 END),0) as gross_30d,
+                COALESCE(SUM(CASE WHEN paid_at >= ? THEN amount ELSE 0 END),0) as gross_month,
                 COALESCE(SUM(CASE WHEN paid_at >= ? THEN amount ELSE 0 END),0) as gross_7d,
-                SUM(CASE WHEN paid_at >= ? THEN 1 ELSE 0 END) as sales_30d,
-                MAX(paid_at) as last_sale_at', [$since30, $since7, $since30])
+                SUM(CASE WHEN paid_at >= ? THEN 1 ELSE 0 END) as sales_month,
+                MAX(paid_at) as last_sale_at', [$monthStart, $since7, $monthStart])
             ->groupBy('tenant_id')->get()->keyBy('tenant_id');
 
         $routers = Router::selectRaw('tenant_id, COUNT(*) as total,
@@ -269,9 +274,9 @@ class PlatformController extends Controller
                     'users_count' => $t->users_count,
                     'wallet_balance' => (float) $t->wallet_balance,
                     'gross_revenue' => (float) ($s->gross ?? 0),
-                    'gross_30d' => (float) ($s->gross_30d ?? 0),
+                    'gross_month' => (float) ($s->gross_month ?? 0),
                     'gross_7d' => (float) ($s->gross_7d ?? 0),
-                    'sales_30d' => (int) ($s->sales_30d ?? 0),
+                    'sales_month' => (int) ($s->sales_month ?? 0),
                     'platform_revenue' => (float) ($s->platform_revenue ?? 0),
                     'active_subscribers' => (int) ($subscribers[$t->id] ?? 0),
                     'payment_success_rate' => ($paid + $failed) > 0 ? round($paid / ($paid + $failed) * 100, 1) : null,

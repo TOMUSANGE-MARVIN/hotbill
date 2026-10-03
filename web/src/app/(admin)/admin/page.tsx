@@ -10,13 +10,19 @@ import { format } from 'date-fns'
 import Link from 'next/link'
 import { Building2, Router as RouterIcon, Users, Database, Wallet, TrendingUp, Banknote, Ticket, Wifi, Smartphone, AlertTriangle, Info, ShoppingCart } from 'lucide-react'
 import { Stat } from '@/components/admin/controls'
+import { usePeriod } from '@/lib/period'
+import PeriodPicker from '@/components/PeriodPicker'
 
 export default function AdminOverviewPage() {
+  // Money figures follow the selected period, which starts as this month.
+  const period = usePeriod('this_month')
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-overview'],
-    queryFn: () => api.get('/admin/overview').then((r) => r.data),
+    queryKey: ['admin-overview', period.start, period.end],
+    queryFn: () => api.get('/admin/overview', { params: { from: period.start, to: period.end } }).then((r) => r.data),
     refetchInterval: 60000,
+    placeholderData: (prev) => prev,
   })
+  const pl = period.label
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-brand-500 border-t-transparent rounded-full animate-spin" /></div>
 
@@ -25,9 +31,12 @@ export default function AdminOverviewPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
-        <p className="text-sm text-gray-500">System-wide insights across all operators.</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Overview</h1>
+          <p className="text-sm text-gray-500">System-wide insights across all operators.</p>
+        </div>
+        <PeriodPicker period={period} />
       </div>
 
       {/* Needs attention */}
@@ -52,10 +61,15 @@ export default function AdminOverviewPage() {
 
       {/* Revenue row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat icon={TrendingUp} label="Platform Revenue" value={formatCurrency(f.platform_revenue ?? 0)} accent />
-        <Stat icon={Banknote} label="GMV (gross sales)" value={formatCurrency(f.gmv ?? 0)} />
-        <Stat icon={Wallet} label="Operator Wallets" value={formatCurrency(f.operator_wallet_liability ?? 0)} />
-        <Stat icon={Banknote} label="Gateway Fees" value={formatCurrency(f.gateway_fees ?? 0)} />
+        <Stat icon={TrendingUp} label={`Platform revenue · ${pl}`} value={formatCurrency(f.period_revenue ?? 0)} sub={`All time ${formatCurrency(f.platform_revenue ?? 0)}`} accent />
+        <Stat icon={ShoppingCart} label={`Sales · ${pl}`} value={formatCurrency(data?.sales?.gross ?? 0)} sub={`${data?.sales?.count ?? 0} sale(s) · all time ${formatCurrency(f.gmv ?? 0)} online`} />
+        <Stat icon={Wallet} label="Held for operators" value={formatCurrency(f.operator_wallet_liability ?? 0)} sub="Live wallet balances" />
+        <Stat
+          icon={Smartphone}
+          label={`MoMo success · ${pl}`}
+          value={data?.payments?.success_rate == null ? '-' : `${data.payments.success_rate}%`}
+          sub={`${data?.payments?.paid ?? 0} paid · ${data?.payments?.failed ?? 0} failed`}
+        />
       </div>
 
       {/* System row */}
@@ -67,23 +81,17 @@ export default function AdminOverviewPage() {
         <Stat icon={Wallet} label="Pending Payouts" value={formatCurrency(data?.withdrawals?.pending_amount ?? 0)} sub={`${data?.withdrawals?.pending_count ?? 0} request(s)`} />
       </div>
 
-      {/* Activity row (last 30 days) */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        <Stat icon={ShoppingCart} label="Sales · 30d" value={formatCurrency(data?.sales?.gross ?? 0)} sub={`${data?.sales?.count ?? 0} sale(s)`} />
-        <Stat
-          icon={Smartphone}
-          label="MoMo success · 30d"
-          value={data?.payments?.success_rate == null ? '-' : `${data.payments.success_rate}%`}
-          sub={`${data?.payments?.paid ?? 0} paid · ${data?.payments?.failed ?? 0} failed`}
-        />
-        <Stat icon={Building2} label="Selling tenants · 7d" value={String(data?.tenants?.selling_7d ?? 0)} sub={`${data?.tenants?.new_in_range ?? 0} new sign-up(s) in 30d`} />
+      {/* Activity row */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-4">
+        <Stat icon={Building2} label="Selling tenants · 7d" value={String(data?.tenants?.selling_7d ?? 0)} sub={`${data?.tenants?.new_in_range ?? 0} new sign-up(s) · ${pl.toLowerCase()}`} />
         <Stat icon={Wifi} label="Online now" value={String(data?.routers?.active_users ?? 0)} sub="users on live routers" />
+        <Stat icon={Banknote} label="Gateway fees · all time" value={formatCurrency(f.gateway_fees ?? 0)} sub="Charged by MarzPay on collections" />
       </div>
 
       {/* Top tenants */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-800 mb-1">Top tenants</h2>
-        <p className="text-xs text-gray-400 mb-4">By sales in the last 30 days.</p>
+        <p className="text-xs text-gray-400 mb-4">By sales · {pl.toLowerCase()}.</p>
         {(data?.top_tenants ?? []).length === 0 ? (
           <div className="text-sm text-gray-400 py-4 text-center">No sales in this range.</div>
         ) : (
@@ -109,11 +117,11 @@ export default function AdminOverviewPage() {
       {/* Revenue by source */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h2 className="font-semibold text-gray-800 mb-1">Where revenue comes from</h2>
-        <p className="text-xs text-gray-400 mb-4">Commission earned by source · all-time and selected range.</p>
+        <p className="text-xs text-gray-400 mb-4">Commission earned by source · {pl.toLowerCase()}, with all-time totals.</p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {(data?.revenue_by_source ?? []).map((s: any) => {
-            const total = Number(f.platform_revenue ?? 0)
-            const pct = total > 0 ? Math.round((Number(s.amount) / total) * 100) : 0
+            const total = Number(f.period_revenue ?? 0)
+            const pct = total > 0 ? Math.round((Number(s.period) / total) * 100) : 0
             return (
               <div key={s.source} className="rounded-lg border border-gray-200 p-4">
                 <div className="flex items-center justify-between">
@@ -125,9 +133,9 @@ export default function AdminOverviewPage() {
                   </span>
                   <span className="text-xs text-gray-400">{pct}% of total</span>
                 </div>
-                <p className="text-xl font-bold text-gray-900 mt-2">{formatCurrency(s.amount ?? 0)}</p>
+                <p className="text-xl font-bold text-gray-900 mt-2">{formatCurrency(s.period ?? 0)}</p>
                 <p className="text-xs text-gray-400 mt-1">
-                  {formatCurrency(s.period ?? 0)} this range
+                  All time {formatCurrency(s.amount ?? 0)}
                   {s.source === 'voucher' && s.count != null ? ` · ${s.count} voucher(s)` : ''}
                 </p>
               </div>
@@ -138,7 +146,7 @@ export default function AdminOverviewPage() {
 
       {/* Revenue chart */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="font-semibold text-gray-800 mb-4">Platform Revenue (commission)</h2>
+        <h2 className="font-semibold text-gray-800 mb-4">Platform revenue (commission) · {pl}</h2>
         {series.length === 0 ? (
           <div className="h-[240px] flex items-center justify-center text-sm text-gray-400">No revenue yet.</div>
         ) : (

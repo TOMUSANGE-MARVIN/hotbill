@@ -3,18 +3,13 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { formatBytes } from '@/lib/utils'
-import { useState } from 'react'
+import { usePeriod } from '@/lib/period'
+import PeriodPicker from '@/components/PeriodPicker'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
 } from 'recharts'
 import { format } from 'date-fns'
 import { Database, Users, Clock, BarChart3, TrendingUp, TrendingDown } from 'lucide-react'
-
-const RANGES = [
-  { label: 'Last 7 days', days: 7 },
-  { label: 'Last 30 days', days: 30 },
-  { label: 'Last 90 days', days: 90 },
-]
 
 function fmtDuration(seconds: number) {
   if (!seconds) return '0m'
@@ -24,9 +19,9 @@ function fmtDuration(seconds: number) {
 }
 
 export default function AnalyticsPage() {
-  const [days, setDays] = useState(30)
-  const from = format(new Date(Date.now() - (days - 1) * 86400000), 'yyyy-MM-dd')
-  const to = format(new Date(), 'yyyy-MM-dd')
+  const period = usePeriod('this_month')
+  const from = period.start
+  const to = period.end
 
   const { data, isLoading } = useQuery({
     queryKey: ['usage-analytics', from, to],
@@ -55,10 +50,7 @@ export default function AnalyticsPage() {
             <p className="text-sm text-gray-500">Measured from real hotspot sessions on your routers.</p>
           </div>
         </div>
-        <select value={days} onChange={(e) => setDays(Number(e.target.value))}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500">
-          {RANGES.map((r) => <option key={r.days} value={r.days}>{r.label}</option>)}
-        </select>
+        <PeriodPicker period={period} />
       </div>
 
       {/* Overview cards */}

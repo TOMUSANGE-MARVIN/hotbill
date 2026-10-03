@@ -26,11 +26,25 @@ class TenantInsightController extends Controller
     {
         $tz = $tenant->timezone ?: config('app.timezone');
         $offset = $this->tzOffset($tz);
-        $days = max(1, min(365, (int) $request->input('days', 30)));
+        // A period of calendar days in the business's own timezone. Defaults to
+        // this month so figures start fresh each month; `days` is still accepted.
+        $toLocal = $request->filled('to') ? Carbon::parse($request->input('to'), $tz) : Carbon::now($tz);
+        $fromLocal = match (true) {
+            $request->filled('from') => Carbon::parse($request->input('from'), $tz),
+            $request->filled('days') => $toLocal->copy()->subDays(max(1, min(366, (int) $request->input('days'))) - 1),
+            default => Carbon::now($tz)->startOfMonth(),
+        };
+        if ($fromLocal->gt($toLocal)) {
+            [$fromLocal, $toLocal] = [$toLocal, $fromLocal];
+        }
+        $fromLocal = $fromLocal->startOfDay();
+        $toLocal = $toLocal->endOfDay();
+        $days = min(366, (int) $fromLocal->diffInDays($toLocal) + 1);
+        $fromLocal = $toLocal->copy()->subDays($days - 1)->startOfDay();
 
-        // Calendar days in the business's own timezone, converted to UTC bounds.
-        $to = Carbon::now($tz)->endOfDay()->utc();
-        $from = Carbon::now($tz)->subDays($days - 1)->startOfDay()->utc();
+        // Converted to UTC bounds for the stored timestamps.
+        $to = $toLocal->copy()->utc();
+        $from = $fromLocal->copy()->utc();
 
         $sales = Transaction::where('transactions.tenant_id', $tenant->id)->where('transactions.status', 'completed');
         $period = (clone $sales)->whereBetween('transactions.paid_at', [$from, $to]);
@@ -71,12 +85,12 @@ class TenantInsightController extends Controller
                 COUNT(*) as sales")
             ->groupBy('d')->get()->keyBy('d');
         $dataByDay = DB::table('hotspot_usage_daily')->where('tenant_id', $tenant->id)
-            ->whereBetween('date', [Carbon::now($tz)->subDays($days - 1)->toDateString(), Carbon::now($tz)->toDateString()])
+            ->whereBetween('date', [$fromLocal->toDateString(), $toLocal->toDateString()])
             ->get(['date', 'bytes', 'sessions'])->keyBy(fn ($r) => substr((string) $r->date, 0, 10));
 
         $series = [];
         for ($i = $days - 1; $i >= 0; $i--) {
-            $d = Carbon::now($tz)->subDays($i)->toDateString();
+            $d = $toLocal->copy()->subDays($i)->toDateString();
             $s = $salesByDay[$d] ?? null;
             $series[] = [
                 'date' => $d,
@@ -147,7 +161,7 @@ class TenantInsightController extends Controller
             ->first();
 
         $usage = DB::table('hotspot_usage_daily')->where('tenant_id', $tenant->id)
-            ->where('date', '>=', Carbon::now($tz)->subDays($days - 1)->toDateString())
+            ->whereBetween('date', [$fromLocal->toDateString(), $toLocal->toDateString()])
             ->selectRaw('COALESCE(SUM(bytes),0) as bytes, COALESCE(SUM(sessions),0) as sessions')->first();
 
         $uniqueBuyers = (clone $period)->whereNotNull('phone')->distinct('phone')->count('phone');
@@ -174,7 +188,7 @@ class TenantInsightController extends Controller
                 'trial_ends_at' => $tenant->trial_ends_at,
                 'created_at' => $tenant->created_at,
             ],
-            'range' => ['days' => $days, 'from' => $from->copy()->timezone($tz)->toDateString(), 'to' => $to->copy()->timezone($tz)->toDateString()],
+            'range' => ['days' => $days, 'from' => $fromLocal->toDateString(), 'to' => $toLocal->toDateString()],
             'finance' => [
                 'all_time' => $this->money($allTime),
                 'period' => $this->money($inPeriod),

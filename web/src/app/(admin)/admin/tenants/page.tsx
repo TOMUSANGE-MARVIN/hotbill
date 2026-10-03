@@ -12,7 +12,7 @@ import {
 } from '@/components/admin/controls'
 
 const SORTS = {
-  gross_30d: 'Sales (30d)',
+  gross_month: 'Sales (this month)',
   gross_revenue: 'Sales (all time)',
   wallet_balance: 'Wallet',
   last_sale_at: 'Last sale',
@@ -23,7 +23,7 @@ export default function TenantsPage() {
   const qc = useQueryClient()
   const [q, setQ] = useState('')
   const [health, setHealth] = useState('')
-  const [sort, setSort] = useState<keyof typeof SORTS>('gross_30d')
+  const [sort, setSort] = useState<keyof typeof SORTS>('gross_month')
 
   const { data = [], isLoading } = useQuery<any[]>({
     queryKey: ['admin-tenants'],
@@ -89,7 +89,7 @@ export default function TenantsPage() {
         <table className="w-full text-sm min-w-[1100px]">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {['Operator', 'Health', 'Plan', 'Routers', 'Sales 30d', 'All time', 'Wallet', 'MoMo success', 'Last sale', 'Voucher Commission', 'Status', ''].map((h) => (
+              {['Operator', 'Health', 'Plan', 'Routers', 'Sales this month', 'All time', 'Wallet', 'MoMo success (30d)', 'Last sale', 'Voucher Commission', 'Status', ''].map((h) => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -111,8 +111,8 @@ export default function TenantsPage() {
                   {t.active_users > 0 && <div className="text-xs text-gray-400">{t.active_users} online now</div>}
                 </td>
                 <td className="px-4 py-3 text-gray-700 whitespace-nowrap">
-                  {formatCurrency(t.gross_30d)}
-                  <div className="text-xs text-gray-400">{t.sales_30d} sale(s)</div>
+                  {formatCurrency(t.gross_month)}
+                  <div className="text-xs text-gray-400">{t.sales_month} sale(s)</div>
                 </td>
                 <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{formatCurrency(t.gross_revenue)}</td>
                 <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{formatCurrency(t.wallet_balance)}</td>

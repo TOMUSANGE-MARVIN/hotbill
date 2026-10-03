@@ -13,7 +13,9 @@ import {
   Ticket, UserCircle2, Wallet, ChevronDown, Sigma,
 } from 'lucide-react'
 import { useState } from 'react'
-import { format, subDays } from 'date-fns'
+import { format } from 'date-fns'
+import { usePeriod } from '@/lib/period'
+import PeriodPicker from '@/components/PeriodPicker'
 
 /* ── vibrant palette ─────────────────────────────────────────────── */
 const C = {
@@ -26,10 +28,9 @@ export default function DashboardPage() {
   const { tenant } = useAuthStore()
   const currency = tenant?.currency ?? 'UGX'
 
-  const [range, setRange] = useState({
-    start: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    end: format(new Date(), 'yyyy-MM-dd'),
-  })
+  // Defaults to this month, so the dashboard starts fresh every month.
+  const period = usePeriod('this_month')
+  const range = { start: period.start, end: period.end }
 
   const [overviewFilter, setOverviewFilter] = useState<{
     type: 'all' | 'mobile_money' | 'vouchers' | 'subscriber'
@@ -104,26 +105,20 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
           <p className="text-sm text-slate-400">Welcome back - here&apos;s how {tenant?.name ?? 'your network'} is performing.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-xl px-2 py-1.5 shadow-sm">
-          <input type="date" value={range.start} onChange={(e) => setRange((r) => ({ ...r, start: e.target.value }))}
-            className="text-sm text-slate-600 px-2 py-1 rounded-lg outline-none" />
-          <span className="text-slate-300">→</span>
-          <input type="date" value={range.end} onChange={(e) => setRange((r) => ({ ...r, end: e.target.value }))}
-            className="text-sm text-slate-600 px-2 py-1 rounded-lg outline-none" />
-        </div>
+        <PeriodPicker period={period} />
       </div>
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard title="Net Sales" value={formatCurrency(d.net_sales ?? 0, currency)}
+        <KpiCard title={`Net Sales · ${period.label}`} value={formatCurrency(d.net_sales ?? 0, currency)}
           sub={`MM: ${formatCurrency(d.mm_sales ?? 0, currency)} | Vouchers: ${formatCurrency(d.voucher_sales ?? 0, currency)}`}
           icon={<TrendingUp size={18} />}
           color={C.indigo} spark={daily} sparkKey="net_revenue" />
-        <KpiCard title="Vouchers Sales" value={formatCurrency(d.voucher_sales ?? 0, currency)}
+        <KpiCard title={`Voucher Sales · ${period.label}`} value={formatCurrency(d.voucher_sales ?? 0, currency)}
           sub="Total sales from physical vouchers" icon={<Ticket size={18} />}
           color={C.teal} />
-        <KpiCard title="Balance" value={formatCurrency(d.balance ?? 0, currency)}
-          sub={`Commission: ${formatCurrency(d.commission ?? 0, currency)}`} icon={<Wallet size={18} />}
+        <KpiCard title="Wallet Balance" value={formatCurrency(d.balance ?? 0, currency)}
+          sub={`Available to withdraw · Commission ${period.label.toLowerCase()}: ${formatCurrency(d.commission ?? 0, currency)}`} icon={<Wallet size={18} />}
           color={C.sky} />
         <SystemKpiCard online={!!d.system_online} activeUsers={d.active_users ?? 0} cpu={cpu} dataGb={d.total_data_gb ?? 0} />
       </div>
@@ -200,7 +195,7 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between mb-4">
             <div>
               <h2 className="font-semibold text-slate-900">Recent Sales</h2>
-              <p className="text-xs text-slate-400 mt-0.5">You made {d.sales_today ?? 0} sales today.</p>
+              <p className="text-xs text-slate-400 mt-0.5">{period.label} · you made {d.sales_today ?? 0} sales today.</p>
             </div>
             <span className="text-xs text-slate-400 flex items-center gap-1">Scroll for more <ChevronDown size={12} /></span>
           </div>
@@ -228,9 +223,9 @@ export default function DashboardPage() {
                 </div>
               )
             })}
-            {(d.recent_sales ?? []).length === 0 && <p className="text-sm text-slate-400 text-center py-6">No recent sales.</p>}
+            {(d.recent_sales ?? []).length === 0 && <p className="text-sm text-slate-400 text-center py-6">No sales in this period.</p>}
           </div>
-          <p className="text-xs text-slate-400 text-center mt-3">Showing {d.recent_sales?.length ?? 0} recent sales</p>
+          <p className="text-xs text-slate-400 text-center mt-3">Showing the latest {d.recent_sales?.length ?? 0} sales in this period</p>
         </Card>
       </div>
 

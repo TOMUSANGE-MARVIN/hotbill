@@ -97,9 +97,10 @@ class AnalyticsController extends Controller
         $expiredToday = Subscriber::where('tenant_id', $tenantId)
             ->whereBetween('expires_at', $todayRange)->count();
 
-        // Recent sales
+        // Recent sales - within the selected period, so a new month starts empty.
         $recentSales = Transaction::where('tenant_id', $tenantId)
             ->where('status', 'completed')
+            ->whereBetween('paid_at', $range)
             ->with(['subscriber:id,full_name,username', 'voucher:id,code'])
             ->latest('paid_at')
             ->limit(20)
@@ -228,7 +229,7 @@ class AnalyticsController extends Controller
         $tenantId = $request->user()->tenant_id;
 
         $to = Carbon::parse($request->input('to', now()))->endOfDay();
-        $from = Carbon::parse($request->input('from', now()->copy()->subDays(29)))->startOfDay();
+        $from = Carbon::parse($request->input('from', now()->copy()->startOfMonth()))->startOfDay();
         $days = max(1, $from->diffInDays($to) + 1);
         $prevTo = $from->copy()->subSecond();
         $prevFrom = $from->copy()->subDays($days);

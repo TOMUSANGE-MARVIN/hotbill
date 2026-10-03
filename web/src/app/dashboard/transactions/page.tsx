@@ -5,7 +5,8 @@ import api from '@/lib/api'
 import { useState } from 'react'
 import { formatCurrency, formatDateTime, statusColor, cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth'
-import { format, subDays } from 'date-fns'
+import { usePeriod } from '@/lib/period'
+import PeriodPicker from '@/components/PeriodPicker'
 
 const methodLabel: Record<string, string> = {
   mtn_momo: 'MTN MoMo', airtel_money: 'Airtel Money',
@@ -21,12 +22,10 @@ export default function TransactionsPage() {
       ? 'summary'
       : 'list'
   )
-  const [filters, setFilters] = useState({
-    start_date: format(subDays(new Date(), 30), 'yyyy-MM-dd'),
-    end_date: format(new Date(), 'yyyy-MM-dd'),
-    method: '',
-    status: '',
-  })
+  // Defaults to this month, so a new month starts with a fresh list.
+  const period = usePeriod('this_month')
+  const [extra, setExtra] = useState({ method: '', status: '' })
+  const filters = { start_date: period.start, end_date: period.end, ...extra }
 
   const { data: txData, isLoading } = useQuery({
     queryKey: ['transactions', filters],
@@ -50,18 +49,13 @@ export default function TransactionsPage() {
       <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
 
       <div className="flex gap-3 flex-wrap">
-        <input type="date" value={filters.start_date}
-          onChange={(e) => setFilters({ ...filters, start_date: e.target.value })}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        <input type="date" value={filters.end_date}
-          onChange={(e) => setFilters({ ...filters, end_date: e.target.value })}
-          className="border border-gray-200 rounded-lg px-3 py-2 text-sm" />
-        <select value={filters.method} onChange={(e) => setFilters({ ...filters, method: e.target.value })}
+        <PeriodPicker period={period} />
+        <select value={filters.method} onChange={(e) => setExtra({ ...extra, method: e.target.value })}
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
           <option value="">All Methods</option>
           {Object.entries(methodLabel).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <select value={filters.status} onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+        <select value={filters.status} onChange={(e) => setExtra({ ...extra, status: e.target.value })}
           className="border border-gray-200 rounded-lg px-3 py-2 text-sm">
           <option value="">All Status</option>
           <option value="completed">Completed</option>

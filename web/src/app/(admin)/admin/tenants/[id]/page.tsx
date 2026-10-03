@@ -17,18 +17,22 @@ import {
 import {
   Stat, Card, Spinner, PlanBadge, VoucherCommissionControl, StatusToggle, apiError,
 } from '@/components/admin/controls'
+import { usePeriod } from '@/lib/period'
+import PeriodPicker from '@/components/PeriodPicker'
 
-const RANGES = [7, 30, 90, 365]
 
 export default function TenantDetailPage() {
   const { id } = useParams<{ id: string }>()
   const qc = useQueryClient()
-  const [days, setDays] = useState(30)
+  // Starts on this month so a business's figures reset each month.
+  const period = usePeriod('this_month')
+  const pl = period.label.toLowerCase()
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null)
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['admin-tenant', id, days],
-    queryFn: () => api.get(`/admin/tenants/${id}`, { params: { days } }).then((r) => r.data),
+    queryKey: ['admin-tenant', id, period.start, period.end],
+    queryFn: () => api.get(`/admin/tenants/${id}`, { params: { from: period.start, to: period.end } }).then((r) => r.data),
+    placeholderData: (prev) => prev,
     refetchInterval: 60000,
   })
 
@@ -93,17 +97,7 @@ export default function TenantDetailPage() {
             <span>ID #{t.id}</span>
           </div>
         </div>
-        <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden self-start">
-          {RANGES.map((d) => (
-            <button
-              key={d}
-              onClick={() => setDays(d)}
-              className={`px-3 py-1.5 text-xs font-medium ${days === d ? 'bg-brand-600 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
-            >
-              {d === 365 ? '1y' : `${d}d`}
-            </button>
-          ))}
-        </div>
+        <div className="self-start"><PeriodPicker period={period} /></div>
       </div>
 
       {notice && (
@@ -115,20 +109,20 @@ export default function TenantDetailPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Stat icon={TrendingUp} label={`Sales · ${days}d`} value={money(p.gross)} sub={`${p.sales} sale(s) · all time ${money(a.gross)}`} accent />
-        <Stat icon={Banknote} label={`Platform revenue · ${days}d`} value={money(p.platform_revenue)} sub={`all time ${money(a.platform_revenue)}`} />
+        <Stat icon={TrendingUp} label={`Sales · ${pl}`} value={money(p.gross)} sub={`${p.sales} sale(s) · all time ${money(a.gross)}`} accent />
+        <Stat icon={Banknote} label={`Platform revenue · ${pl}`} value={money(p.platform_revenue)} sub={`all time ${money(a.platform_revenue)}`} />
         <Stat icon={Wallet} label="Wallet balance" value={money(t.wallet_balance)} sub={`${money(data.finance.withdrawn)} withdrawn in ${data.finance.withdrawals_count}`} />
         <Stat
           icon={Smartphone}
-          label={`MoMo success · ${days}d`}
+          label={`MoMo success · ${pl}`}
           value={pay.success_rate == null ? '-' : `${pay.success_rate}%`}
           sub={`${pay.paid} paid · ${pay.failed} failed · ${pay.pending} pending`}
         />
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Stat icon={UserCheck} label="Active sessions" value={String(c.subscribers_active)} sub={`${c.subscribers_total} customer accounts`} />
-        <Stat icon={Users} label={`Paying numbers · ${days}d`} value={String(c.unique_buyers)} sub={`${c.repeat_buyers} bought more than once`} />
-        <Stat icon={Database} label={`Data served · ${days}d`} value={formatBytes(c.data_bytes)} sub={`${c.sessions} sessions`} />
+        <Stat icon={Users} label={`Paying numbers · ${pl}`} value={String(c.unique_buyers)} sub={`${c.repeat_buyers} bought more than once`} />
+        <Stat icon={Database} label={`Data served · ${pl}`} value={formatBytes(c.data_bytes)} sub={`${c.sessions} sessions`} />
         <Stat
           icon={Clock}
           label="Last sale"
@@ -153,7 +147,7 @@ export default function TenantDetailPage() {
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card title="When customers buy" sub={`Sales by hour of day, local time · ${days}d`}>
+        <Card title="When customers buy" sub={`Sales by hour of day, local time · ${pl}`}>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={data.hourly}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
@@ -171,14 +165,14 @@ export default function TenantDetailPage() {
           <div className="grid grid-cols-2 gap-3 mt-5 text-sm">
             <Mini label="Operator earned" value={money(a.operator_net)} />
             <Mini label="Pending withdrawals" value={money(data.finance.pending_withdrawals)} />
-            <Mini label={`Failed MoMo value · ${days}d`} value={money(pay.failed_amount)} />
+            <Mini label={`Failed MoMo value · ${pl}`} value={money(pay.failed_amount)} />
             <Mini label="Voucher commission" value={`${t.effective_voucher_commission}%${t.voucher_commission_enabled ? ' (custom)' : ' (default)'}`} />
           </div>
         </Card>
       </div>
 
       {/* Packages */}
-      <Card title="Package performance" sub={`${days}d`}>
+      <Card title="Package performance" sub={`${pl}`}>
         {data.packages.length === 0 ? <Empty text="No sales in this range." /> : (
           <Table head={['Package', 'Price', 'Sales', 'Via voucher', 'Revenue', 'Share']}>
             {data.packages.map((pk: any) => (
