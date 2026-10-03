@@ -195,8 +195,121 @@ class PlatformController extends Controller
                 'pending_amount' => (float) (clone $pendingWithdrawals)->sum('amount'),
             ],
             'revenue_series' => $revenueSeries,
+            'charts' => $this->charts($from, $to, $tz),
             'range' => ['from' => $from->copy()->timezone($tz)->toDateString(), 'to' => $to->copy()->timezone($tz)->toDateString()],
         ]);
+    }
+
+    /**
+     * Data behind the overview's charts, all for the selected period and grouped
+     * by East Africa calendar time.
+     */
+    private function charts(Carbon $from, Carbon $to, string $tz): array
+    {
+        $offset = Carbon::now($tz)->format('P');
+        $sales = Transaction::where('transactions.status', 'completed')->whereBetween('transactions.paid_at', [$from, $to]);
+
+        // Daily sales by channel, every day present so the chart has no gaps.
+        $byDay = (clone $sales)
+            ->selectRaw("DATE(CONVERT_TZ(paid_at, '+00:00', '{$offset}')) as d,
+                SUM(CASE WHEN type<>'voucher' THEN amount ELSE 0 END) as mobile_money,
+                SUM(CASE WHEN type='voucher' THEN amount ELSE 0 END) as voucher,
+                SUM(commission) as commission, COUNT(*) as sales")
+            ->groupBy('d')->get()->keyBy('d');
+        $daily = [];
+        for ($d = $from->copy()->timezone($tz)->startOfDay(); $d->lte($to->copy()->timezone($tz)); $d->addDay()) {
+            $k = $d->toDateString();
+            $row = $byDay[$k] ?? null;
+            $daily[] = [
+                'date' => $k,
+                'mobile_money' => (float) ($row->mobile_money ?? 0),
+                'voucher' => (float) ($row->voucher ?? 0),
+                'commission' => (float) ($row->commission ?? 0),
+                'sales' => (int) ($row->sales ?? 0),
+            ];
+        }
+
+        // When customers buy: weekday (0 = Monday) x hour, local time.
+        $grid = (clone $sales)
+            ->selectRaw("WEEKDAY(CONVERT_TZ(paid_at, '+00:00', '{$offset}')) as wd, HOUR(CONVERT_TZ(paid_at, '+00:00', '{$offset}')) as h, COUNT(*) as c")
+            ->groupBy('wd', 'h')->get();
+        $heatmap = array_fill(0, 7, array_fill(0, 24, 0));
+        foreach ($grid as $g) {
+            $heatmap[(int) $g->wd][(int) $g->h] = (int) $g->c;
+        }
+
+        // Share of sales by business: top five, the rest folded into "Other".
+        $byTenant = (clone $sales)->join('tenants', 'tenants.id', '=', 'transactions.tenant_id')
+            ->selectRaw('transactions.tenant_id as id, tenants.name, SUM(transactions.amount) as gross')
+            ->groupBy('transactions.tenant_id', 'tenants.name')->orderByDesc('gross')->get();
+        $tenantShare = $byTenant->take(5)->map(fn ($t) => ['id' => $t->id, 'name' => $t->name, 'value' => (float) $t->gross])->values()->all();
+        if ($byTenant->count() > 5) {
+            $tenantShare[] = ['id' => null, 'name' => 'Other', 'value' => (float) $byTenant->slice(5)->sum('gross')];
+        }
+
+        // Mobile Money outcome per network.
+        $networks = PortalOrder::whereBetween('created_at', [$from, $to])
+            ->selectRaw("LOWER(COALESCE(provider,'other')) as net,
+                SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) as paid,
+                SUM(CASE WHEN status='failed' THEN 1 ELSE 0 END) as failed,
+                SUM(CASE WHEN status NOT IN ('paid','failed') THEN 1 ELSE 0 END) as pending")
+            ->groupBy('net')->get()->map(fn ($n) => [
+                'network' => match ($n->net) { 'mtn' => 'MTN', 'airtel' => 'Airtel', default => ucfirst($n->net) },
+                'paid' => (int) $n->paid,
+                'failed' => (int) $n->failed,
+                'pending' => (int) $n->pending,
+                'success_rate' => ($n->paid + $n->failed) > 0 ? round($n->paid / ($n->paid + $n->failed) * 100, 1) : null,
+            ])->sortBy('network')->values();
+
+        // What people buy, grouped by how long the access lasts.
+        $packages = (clone $sales)->join('packages', 'packages.id', '=', 'transactions.package_id')
+            ->selectRaw('COALESCE(packages.duration_days,0)*1440 + COALESCE(packages.duration_hours,0)*60 + COALESCE(packages.duration_minutes,0) as mins,
+                COUNT(*) as sales, SUM(transactions.amount) as gross')
+            ->groupBy('mins')->get();
+        $buckets = ['Up to 6 hours' => 360, 'Daily' => 2160, '2-4 days' => 5760, 'Weekly' => 14400, 'Monthly' => PHP_INT_MAX];
+        $mix = collect($buckets)->map(fn () => ['sales' => 0, 'gross' => 0.0])->all();
+        foreach ($packages as $p) {
+            foreach ($buckets as $label => $max) {
+                if ((int) $p->mins <= $max) {
+                    $mix[$label]['sales'] += (int) $p->sales;
+                    $mix[$label]['gross'] += (float) $p->gross;
+                    break;
+                }
+            }
+        }
+        $packageMix = collect($mix)->map(fn ($v, $k) => ['bucket' => $k] + $v)->values();
+
+        // Businesses on the platform over the last 12 months (cumulative).
+        $before = Tenant::where('created_at', '<', now($tz)->subMonths(11)->startOfMonth()->utc())->count();
+        $joined = Tenant::where('created_at', '>=', now($tz)->subMonths(11)->startOfMonth()->utc())
+            ->selectRaw("DATE_FORMAT(CONVERT_TZ(created_at, '+00:00', '{$offset}'), '%Y-%m') as m, COUNT(*) as c")
+            ->groupBy('m')->pluck('c', 'm');
+        $growth = [];
+        $running = $before;
+        foreach (range(11, 0) as $i) {
+            $m = now($tz)->subMonths($i)->format('Y-m');
+            $running += (int) ($joined[$m] ?? 0);
+            $growth[] = ['month' => $m, 'joined' => (int) ($joined[$m] ?? 0), 'total' => $running];
+        }
+
+        // Router fleet health right now.
+        $routers = Router::get(['last_seen_at']);
+        $fleet = [
+            'online' => $routers->filter(fn ($r) => $r->last_seen_at && $r->last_seen_at->gte(now()->subMinutes(3)))->count(),
+            'offline' => $routers->filter(fn ($r) => $r->last_seen_at && $r->last_seen_at->lt(now()->subMinutes(3)) && $r->last_seen_at->gte(now()->subDays(7)))->count(),
+            'inactive' => $routers->filter(fn ($r) => $r->last_seen_at && $r->last_seen_at->lt(now()->subDays(7)))->count(),
+            'never' => $routers->filter(fn ($r) => !$r->last_seen_at)->count(),
+        ];
+
+        return [
+            'daily' => $daily,
+            'heatmap' => $heatmap,
+            'tenant_share' => $tenantShare,
+            'networks' => $networks,
+            'package_mix' => $packageMix,
+            'growth' => $growth,
+            'fleet' => $fleet,
+        ];
     }
 
     public function tenants(Request $request): JsonResponse

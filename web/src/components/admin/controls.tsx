@@ -3,22 +3,23 @@
 import { useState } from 'react'
 import { CheckCircle, XCircle, ChevronDown } from 'lucide-react'
 
-export function Stat({ icon: Icon, label, value, sub, accent }: { icon: any; label: string; value: string; sub?: string; accent?: boolean }) {
+export function Stat({ icon: Icon, label, value, sub, accent, children }: { icon: any; label: string; value: string; sub?: string; accent?: boolean; children?: React.ReactNode }) {
   return (
-    <div className={`rounded-xl border p-5 ${accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-gray-200'}`}>
+    <div className={`min-w-0 rounded-xl border p-5 ${accent ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-gray-200'}`}>
       <div className="flex items-center justify-between">
         <span className={`text-sm ${accent ? 'text-brand-100' : 'text-gray-500'}`}>{label}</span>
         <Icon size={16} className={accent ? 'text-brand-200' : 'text-gray-400'} />
       </div>
       <p className={`text-2xl font-bold mt-2 ${accent ? 'text-white' : 'text-gray-900'}`}>{value}</p>
       {sub && <p className={`text-xs mt-1 ${accent ? 'text-brand-100' : 'text-gray-400'}`}>{sub}</p>}
+      {children}
     </div>
   )
 }
 
 export function Card({ title, sub, action, children }: { title: string; sub?: string; action?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5">
+    <div className="min-w-0 bg-white rounded-xl border border-gray-200 p-5">
       <div className="flex items-start justify-between gap-3 mb-4">
         <div>
           <h2 className="font-semibold text-gray-800">{title}</h2>
