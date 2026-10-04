@@ -152,12 +152,14 @@ class PlatformWalletService
         }
 
         $status = $hint;
+        $reason = null;
         if ($w->marzpay_uuid) {
             try {
                 $details = $this->marzpay->getSendMoneyDetails($w->marzpay_uuid);
                 $txn = $details['data']['transaction'] ?? $details['transaction'] ?? [];
                 if (!empty($txn['status'])) {
                     $status = strtolower($txn['status']);
+                    $reason = $txn['description'] ?? null;
                 }
             } catch (\Throwable $e) {
                 return null; // try again on the next run
@@ -174,7 +176,12 @@ class PlatformWalletService
         }
 
         $won = PlatformWithdrawal::whereKey($w->id)->where('status', 'processing')
-            ->update(['status' => $to, 'completed_at' => now()]) === 1;
+            ->update(array_filter([
+                'status' => $to,
+                'completed_at' => now(),
+                // MarzPay's own wording, e.g. "Disbursement failed - Refunded amount ...".
+                'error' => $to === 'failed' ? ($reason ?: 'The mobile money network rejected the payout.') : null,
+            ])) === 1;
 
         if ($won) {
             Log::info("Platform withdrawal {$to}", ['id' => $w->id]);

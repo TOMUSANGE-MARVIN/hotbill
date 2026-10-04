@@ -132,8 +132,22 @@ class MarzPayService
     {
         $res = Http::withBasicAuth($this->key, $this->secret)->acceptJson()
             ->get("{$this->base}/send-money/{$uuid}");
+        $json = $res->json() ?? [];
 
-        return $res->json() ?? [];
+        // MarzPay's /send-money/{uuid} has been answering with its own server
+        // error ("Undefined variable $currency") for every payout, which left
+        // withdrawals stuck in 'processing'. The general /transactions/{uuid}
+        // lookup reports the same payout (top-level `transaction.status`), so
+        // fall back to it whenever the first answer has no transaction in it.
+        if (empty($json['data']['transaction']['status']) && empty($json['transaction']['status'])) {
+            $fallback = Http::withBasicAuth($this->key, $this->secret)->acceptJson()
+                ->get("{$this->base}/transactions/{$uuid}")->json() ?? [];
+            if (!empty($fallback['transaction']['status'])) {
+                return $fallback;
+            }
+        }
+
+        return $json;
     }
 
     private function post(string $path, array $body, string $what): array
