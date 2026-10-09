@@ -43,6 +43,29 @@ function Hero() {
 
   return (
     <section className="relative overflow-hidden bg-white -mt-[72px] pt-[136px] pb-24 lg:pt-[152px] lg:pb-28">
+      {/* Light looping background: hotspot routers, Wi-Fi rings and connected
+          devices. Muted + playsInline so it autoplays on phones; people who
+          ask their system for reduced motion get the still poster instead. */}
+      <div aria-hidden className="absolute inset-0 z-0 pointer-events-none">
+        <video
+          className="h-full w-full object-cover opacity-75 motion-reduce:hidden"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          poster="/hero-network-poster.webp"
+        >
+          <source src="/hero-network.webm" type="video/webm" />
+          <source src="/hero-network.mp4" type="video/mp4" />
+        </video>
+        <div
+          className="hidden motion-reduce:block h-full w-full bg-cover bg-center opacity-75"
+          style={{ backgroundImage: 'url(/hero-network-poster.webp)' }}
+        />
+        {/* blend into the section below */}
+        <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-white" />
+      </div>
       <div className="container-1200 relative z-10">
         {/* Giant headline */}
         <Reveal className="text-center mb-16 lg:mb-20">
