@@ -227,12 +227,21 @@ class RouterSetupController extends Controller
             // redirects clients to the branded portal (packages / vouchers /
             // payment). Without this the router shows its stock login screen.
             $loginUrl = rtrim(config('app.url'), '/') . '/api/v1/portal/routers/' . $bridge->router_id . '/login.html';
-            $lines[] = "/tool fetch url=\"{$loginUrl}\" dst-path=hotspot/login.html mode=https";
         }
 
-        // NAT so the hotspot subnet reaches the internet.
+        // NAT so the hotspot subnet reaches the internet. Done before the portal
+        // page download so a failed download can never leave customers offline.
         $lines[] = "/ip firewall nat remove [find comment=\"hotbill-masquerade-{$name}\"]";
         $lines[] = "/ip firewall nat add chain=srcnat src-address={$networkCidr} action=masquerade comment=\"hotbill-masquerade-{$name}\"";
+
+        if ($bridge->hotspot_enabled) {
+            // The hotspot/ folder is created a moment after the hotspot server,
+            // so an immediate download can fail (it did on a new RB951, leaving
+            // MikroTik's stock login page). Wait, retry once, and never abort.
+            $fetch = "/tool fetch url=\"{$loginUrl}\" dst-path=hotspot/login.html mode=https";
+            $lines[] = ":delay 3s";
+            $lines[] = ":do { {$fetch} } on-error={ :delay 5s; :do { {$fetch} } on-error={ :log warning \"HotBill: portal page download failed - use Refresh portal page in HotBill\" } }";
+        }
 
         return implode("\n", $lines);
     }

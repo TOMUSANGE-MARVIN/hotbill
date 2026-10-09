@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Notifications\EmailOtpNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -31,6 +33,20 @@ class TwoFactorService
      * recently (resend cooldown).
      */
     public function sendCode(User $user, string $purpose): int
+    {
+        // A double tap on "Send code" used to fire two requests that both
+        // passed the cooldown check in the same instant, emailing two codes of
+        // which only one would ever verify. Serialise per user + purpose: the
+        // second request waits for the first, then hits the cooldown below.
+        try {
+            return Cache::lock("otp-send:{$user->id}:{$purpose}", 15)
+                ->block(8, fn () => $this->issueCode($user, $purpose));
+        } catch (LockTimeoutException) {
+            throw new \RuntimeException('A code is already being sent. Please wait a few seconds.');
+        }
+    }
+
+    private function issueCode(User $user, string $purpose): int
     {
         $recent = EmailOtp::where('user_id', $user->id)
             ->where('purpose', $purpose)

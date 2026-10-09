@@ -328,6 +328,9 @@ VPN;
 :put "Heartbeat scheduled successfully"
 } on-error={
 :put "FAILED: could not schedule heartbeat"
+:put "  RouterOS 7.17+ may block schedulers in device-mode. Check: /system device-mode print"
+:put "  If scheduler or hotspot is 'no', run: /system device-mode update scheduler=yes hotspot=yes"
+:put "  then UNPLUG the router power within 5 minutes to confirm, and run this install again."
 }
 
 :put "Scheduling command poller..."
@@ -337,6 +340,9 @@ VPN;
 :put "Command poller scheduled successfully"
 } on-error={
 :put "FAILED: could not schedule command poller"
+:put "  RouterOS 7.17+ may block schedulers in device-mode. Check: /system device-mode print"
+:put "  If scheduler or hotspot is 'no', run: /system device-mode update scheduler=yes hotspot=yes"
+:put "  then UNPLUG the router power within 5 minutes to confirm, and run this install again."
 }
 
 :put "=== HotBill: provisioning complete ==="
